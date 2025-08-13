@@ -19,6 +19,7 @@ export class Metronome {
   init() {
     // Инициализация Web Audio Context по запросу
     console.log('Metronome initialized with Web Audio API');
+    return true; // Возвращаем true при успешной инициализации
   }
 
   start() {
