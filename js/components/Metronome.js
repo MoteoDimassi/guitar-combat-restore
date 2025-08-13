@@ -14,6 +14,9 @@ export class Metronome {
     this.scheduleAheadTime = 0.1; // сек — планируем вперед
     this.nextNoteTime = 0.0;
     this.timerID = null;
+    
+    // Для гитарных звуков
+    this.guitarSounds = [];
   }
 
   init() {
@@ -144,14 +147,19 @@ export class Metronome {
       const startIndex = this.currentBeat * ratio;
       
       // Для каждого удара метронома подсвечиваем нужное количество стрелочек последовательно
+      // и воспроизводим звуки для активных стрелочек
       for (let i = 0; i < ratio; i++) {
         const arrowIndex = startIndex + i;
         if (arrowIndex < totalArrows) {
           // Рассчитываем время подсветки для каждой стрелочки
           const arrowTime = this.nextNoteTime + (i * secondsPerBeat / ratio);
           
-          // Планируем подсветку стрелочки
+          // Планируем подсветку стрелочки и воспроизведение звука
           setTimeout(() => {
+            // Воспроизводим гитарный звук для активной стрелочки
+            this.playGuitarSound(arrowIndex);
+            
+            // Обновляем визуальное состояние
             if (this.onBeatCallback) {
               this.onBeatCallback(arrowIndex);
             }
@@ -177,5 +185,110 @@ export class Metronome {
   
   getCurrentBeat() {
     return this.currentBeat;
+  }
+  
+  // Создание гитарного звука с помощью осцилляторов
+  createGuitarSound(frequency = 330, duration = 0.1, volume = 0.3) {
+    if (!this.audioCtx) return;
+    
+    // Создаем осцилляторы для создания богатого тембра
+    const fundamental = this.audioCtx.createOscillator();
+    const harmonic2 = this.audioCtx.createOscillator();
+    const harmonic3 = this.audioCtx.createOscillator();
+    
+    // Создаем узлы усиления для огибающей звука
+    const gainNode = this.audioCtx.createGain();
+    const fundamentalGain = this.audioCtx.createGain();
+    const harmonic2Gain = this.audioCtx.createGain();
+    const harmonic3Gain = this.audioCtx.createGain();
+    
+    // Настройка основной частоты (фундаментальной ноты)
+    fundamental.type = 'sine';
+    fundamental.frequency.setValueAtTime(frequency, this.audioCtx.currentTime);
+    
+    // Настройка гармоник (октавы и квинты)
+    harmonic2.type = 'sine';
+    harmonic2.frequency.setValueAtTime(frequency * 2, this.audioCtx.currentTime); // Октава выше
+    
+    harmonic3.type = 'sine';
+    harmonic3.frequency.setValueAtTime(frequency * 3, this.audioCtx.currentTime); // Квинта
+    
+    // Настройка уровней гармоник
+    fundamentalGain.gain.setValueAtTime(volume * 0.6, this.audioCtx.currentTime);
+    harmonic2Gain.gain.setValueAtTime(volume * 0.3, this.audioCtx.currentTime);
+    harmonic3Gain.gain.setValueAtTime(volume * 0.1, this.audioCtx.currentTime);
+    
+    // Создание огибающей ADSR (Attack, Decay, Sustain, Release)
+    const now = this.audioCtx.currentTime;
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(volume, now + 0.01); // Attack - быстрый подъем
+    gainNode.gain.linearRampToValueAtTime(volume * 0.7, now + 0.03); // Decay - спад
+    gainNode.gain.linearRampToValueAtTime(volume * 0.5, now + duration - 0.02); // Sustain
+    gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release - затухание
+    
+    // Подключение осцилляторов к их усилителям
+    fundamental.connect(fundamentalGain);
+    harmonic2.connect(harmonic2Gain);
+    harmonic3.connect(harmonic3Gain);
+    
+    // Подключение усилителей к общему усилителю
+    fundamentalGain.connect(gainNode);
+    harmonic2Gain.connect(gainNode);
+    harmonic3Gain.connect(gainNode);
+    
+    // Создание фильтра для создания более гитарного тембра
+    const filter = this.audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2000, now);
+    filter.Q.setValueAtTime(1, now);
+    
+    // Подключение к фильтру и затем к выходу
+    gainNode.connect(filter);
+    filter.connect(this.audioCtx.destination);
+    
+    // Запуск осцилляторов
+    const startTime = this.audioCtx.currentTime;
+    fundamental.start(startTime);
+    harmonic2.start(startTime);
+    harmonic3.start(startTime);
+    
+    // Остановка осцилляторов
+    fundamental.stop(startTime + duration);
+    harmonic2.stop(startTime + duration);
+    harmonic3.stop(startTime + duration);
+    
+    // Очистка после завершения
+    fundamental.onended = () => {
+      fundamental.disconnect();
+      harmonic2.disconnect();
+      harmonic3.disconnect();
+      gainNode.disconnect();
+      fundamentalGain.disconnect();
+      harmonic2Gain.disconnect();
+      harmonic3Gain.disconnect();
+      filter.disconnect();
+    };
+  }
+  
+  // Воспроизведение гитарного звука для конкретной стрелочки
+  playGuitarSound(arrowIndex) {
+    // Получаем состояние стрелочки из глобального состояния
+    if (window.app && window.app.state && window.app.state.beats) {
+      const beat = window.app.state.beats[arrowIndex];
+      if (beat && beat.play) {
+        // Стрелочка активна - воспроизводим звук
+        
+        // Выбираем частоту в зависимости от позиции или случайно для разнообразия
+        const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63]; // Частоты гитарных струн E A D G B e
+        const frequency = frequencies[arrowIndex % frequencies.length] || 220;
+        
+        // Добавляем небольшое случайное изменение для естественности
+        const variedFrequency = frequency * (0.95 + Math.random() * 0.1);
+        
+        // Воспроизводим звук
+        this.createGuitarSound(variedFrequency, 0.15, 0.4);
+      }
+      // Если beat.play === false или beat не существует, звук не воспроизводится
+    }
   }
 }
