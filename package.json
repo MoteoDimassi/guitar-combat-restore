@@ -1,0 +1,14 @@
+{
+  "name": "guitar-combat",
+  "version": "1.0.0",
+  "description": "Конструктор боя для гитары",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css",
+    "watch:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css --watch",
+    "dev": "npm run watch:css"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

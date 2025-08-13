@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Стили для кнопок воспроизведения */
+.playback-btn {
+  @apply px-4 py-2 rounded text-white transition-colors duration-200;
+}
+
+.play-btn {
+  @apply bg-indigo-600 hover:bg-indigo-700;
+}
+
+.pause-btn {
+  @apply bg-amber-500 hover:bg-amber-600;
+}
