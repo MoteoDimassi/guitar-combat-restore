@@ -50,10 +50,8 @@ export class Controls {
   }
 
   updateCountButtons(activeCount) {
-  console.log('Обновляем кнопки, активная =', activeCount); // 🟢 проверка
   document.querySelectorAll('.count-btn').forEach(btn => {
     const count = Number(btn.getAttribute('data-count'));
-    console.log('Проверяем кнопку', count, 'классы до:', btn.className); // 🟢
     if (count === activeCount) {
       btn.classList.add('active', 'bg-indigo-600', 'text-white');
       btn.classList.remove('bg-gray-100');
@@ -61,7 +59,6 @@ export class Controls {
       btn.classList.remove('active', 'bg-indigo-600', 'text-white');
       btn.classList.add('bg-gray-100');
     }
-    console.log('Классы после:', btn.className); // 🟢
   });
 }
 

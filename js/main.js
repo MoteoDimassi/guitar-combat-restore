@@ -45,4 +45,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Инициализация метронома с правильным количеством стрелочек
   metronome.setBeatCount(8);
+  
+  // Добавляем обработчик поля ввода аккордов
+  const chordsInput = document.getElementById('chordsInput');
+  if (chordsInput) {
+    // Обновляем аккорды при вводе
+    chordsInput.addEventListener('input', () => {
+      const chordsString = chordsInput.value;
+      if (window.app && window.app.metronome) {
+        window.app.metronome.updateChords(chordsString);
+      }
+    });
+    
+    // Инициализируем аккорды при загрузке
+    window.app.metronome.updateChords(chordsInput.value);
+  }
 });

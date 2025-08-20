@@ -2,7 +2,6 @@
 export class BeatRow {
   constructor() {
     this.beats = [];
-    this.currentIndex = 0;
     this.highlightedIndices = new Set(); // Для подсветки нескольких стрелочек
     this.count = 8;
   }
@@ -26,7 +25,6 @@ export class BeatRow {
     this.highlightedIndices.clear();
     if (arrowIndex >= 0 && arrowIndex < this.beats.length) {
       this.highlightedIndices.add(arrowIndex);
-      this.currentIndex = arrowIndex;
     }
     this.render();
   }
@@ -129,7 +127,6 @@ export class BeatRow {
   
   onArrowClick(index) {
     // Устанавливаем текущую позицию воспроизведения
-    this.currentIndex = index;
     this.highlightedIndices.clear();
     this.highlightedIndices.add(index);
     this.render();

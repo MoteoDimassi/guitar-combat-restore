@@ -1,10 +1,11 @@
 // Компонент метронома с Web Audio API
+import { ChordManager } from './ChordManager.js';
+
 export class Metronome {
   constructor() {
     this.audioCtx = null;
     this.isPlaying = false;
     this.currentBeat = 0;
-    this.currentArrowIndex = 0; // Для последовательной подсветки стрелочек
     this.bpm = 90;
     this.beatCount = 4; // Всегда 4 доли на такт (основной темп)
     this.actualBeatCount = 4; // Фактическое количество стрелочек
@@ -15,8 +16,8 @@ export class Metronome {
     this.nextNoteTime = 0.0;
     this.timerID = null;
     
-    // Для гитарных звуков
-    this.guitarSounds = [];
+    // Менеджер аккордов
+    this.chordManager = new ChordManager();
   }
 
   init() {
@@ -94,10 +95,6 @@ export class Metronome {
   
   setCurrentBeat(beatIndex) {
     this.currentBeat = beatIndex;
-    // Вызываем onBeat для немедленного обновления визуального состояния
-    if (this.onBeat) {
-      this.onBeat(beatIndex);
-    }
   }
 
   // Переход к следующей ноте
@@ -172,13 +169,6 @@ export class Metronome {
     this.timerID = setTimeout(() => this.scheduler(), this.lookahead);
   }
 
-  onBeat(beatIndex, withSound = false) {
-    // Этот метод больше не используется для подсветки
-    if (withSound) {
-      console.log(`Beat ${beatIndex} (sound played)`);
-    }
-  }
-
   isPlaying() {
     return this.isPlaying;
   }
@@ -188,7 +178,7 @@ export class Metronome {
   }
   
   // Создание гитарного звука с помощью осцилляторов
-  createGuitarSound(frequency = 330, duration = 0.1, volume = 0.3) {
+  createGuitarSound(frequency = 330, duration = 0.9, volume = 0.9) {
     if (!this.audioCtx) return;
     
     // Создаем осцилляторы для создания богатого тембра
@@ -278,17 +268,42 @@ export class Metronome {
       if (beat && beat.play) {
         // Стрелочка активна - воспроизводим звук
         
-        // Выбираем частоту в зависимости от позиции или случайно для разнообразия
-        const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63]; // Частоты гитарных струн E A D G B e
-        const frequency = frequencies[arrowIndex % frequencies.length] || 220;
+        // Получаем ноты аккорда для текущей доли
+        const chordNotes = this.chordManager.getNotesForBeat(arrowIndex, this.actualBeatCount);
         
-        // Добавляем небольшое случайное изменение для естественности
-        const variedFrequency = frequency * (0.95 + Math.random() * 0.1);
-        
-        // Воспроизводим звук
-        this.createGuitarSound(variedFrequency, 0.15, 0.4);
+        if (chordNotes) {
+          // Воспроизводим все ноты аккорда строго одновременно для консистентности
+          chordNotes.forEach((frequency, index) => {
+            // Убираем случайные вариации для стабильного звучания
+            const consistentFrequency = frequency;
+            // Воспроизводим звук одновременно без задержек
+            setTimeout(() => {
+              this.createGuitarSound(consistentFrequency, 0.25, 0.8);
+            }, 0); // Нет задержки между нотами
+          });
+        } else {
+          // Если аккорд не найден, воспроизводим одиночную ноту как fallback
+          const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63]; // Частоты гитарных струн E A D G B e
+          const frequency = frequencies[arrowIndex % frequencies.length] || 220;
+          
+          // Убираем случайные вариации для стабильного звучания
+          const consistentFrequency = frequency;
+          
+          // Воспроизводим звук
+          this.createGuitarSound(consistentFrequency, 0.3, 0.9);
+        }
       }
       // Если beat.play === false или beat не существует, звук не воспроизводится
     }
+  }
+  
+  // Метод для обновления аккордов из поля ввода
+  updateChords(chordsString) {
+    this.chordManager.updateChords(chordsString);
+  }
+  
+  // Метод для получения текущего списка аккордов
+  getChords() {
+    return this.chordManager.parsedChords;
   }
 }
