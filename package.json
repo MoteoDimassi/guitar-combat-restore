@@ -6,9 +6,19 @@
   "scripts": {
     "build:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css",
     "watch:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css --watch",
-    "dev": "npm run watch:css"
+    "dev": "npm run watch:css",
+    "build": "webpack --mode=production",
+    "start": "webpack serve --mode=development"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.0"
+    "@babel/core": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "babel-loader": "^10.0.0",
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^3.4.0",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   }
 }
