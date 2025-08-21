@@ -30,7 +30,7 @@ export class ChordManager {
       return this.parsedChords;
     }
     this.parsedChords = chordsString
-      .split('|')
+      .split(' ')
       .map(ch => ch.trim())
       .filter(ch => ch.length > 0)
       .filter(ch => this.hasChord(ch)); // валидация
