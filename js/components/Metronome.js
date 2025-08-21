@@ -1,49 +1,49 @@
-// Компонент метронома с Web Audio API
 import { ChordManager } from './ChordManager.js';
 
+// Метроном - основной компонент для синхронизации визуальных подсветок и звуков
+// Использует Web Audio API для точного тайминга и воспроизведения гитарных аккордов
 export class Metronome {
   constructor() {
     this.audioCtx = null;
     this.isPlaying = false;
     this.currentBeat = 0;
     this.bpm = 90;
-    this.beatCount = 4; // Всегда 4 доли на такт (основной темп)
-    this.actualBeatCount = 4; // Фактическое количество стрелочек
-    
-    // Параметры планирования звука
-    this.lookahead = 25; // мс — как часто проверяем, что планировать
-    this.scheduleAheadTime = 0.1; // сек — планируем вперед
+
+    this.beatCount = 4;           // всегда 4 доли на такт (метр)
+    this.actualBeatCount = 4;     // фактическое число стрелочек в одном такте (цикл боя)
+    this.barIndex = 0;            // <<< НОВОЕ: счётчик тактов
+
+    // планирование
+    this.lookahead = 25;
+    this.scheduleAheadTime = 0.1;
     this.nextNoteTime = 0.0;
     this.timerID = null;
-    
-    // Менеджер аккордов
+
+    // аккорды
     this.chordManager = new ChordManager();
   }
 
   init() {
-    // Инициализация Web Audio Context по запросу
     console.log('Metronome initialized with Web Audio API');
-    return true; // Возвращаем true при успешной инициализации
+    return true;
   }
 
   start() {
     if (this.isPlaying) return;
-    
     this.isPlaying = true;
-    
-    // Создаем AudioContext при первом запуске
+
     if (!this.audioCtx) {
       this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    
+
     this.currentBeat = 0;
+    this.barIndex = 0;                   // <<< сбрасываем номер такта
     this.nextNoteTime = this.audioCtx.currentTime + 0.05;
     this.scheduler();
   }
 
   stop() {
     if (!this.isPlaying) return;
-    
     this.isPlaying = false;
     if (this.timerID) {
       clearTimeout(this.timerID);
@@ -51,258 +51,213 @@ export class Metronome {
     }
   }
 
-  setBpm(bpm) {
-    this.bpm = bpm;
-    // При изменении BPM во время воспроизведения перезапуск не требуется
-    // так как планирование происходит динамически
-  }
+  setBpm(bpm) { this.bpm = bpm; }
 
   setBeatCount(count) {
-    this.beatCount = 4; // Всегда 4 доли на такт (основной темп)
-    this.actualBeatCount = count; // Фактическое количество стрелочек
+    this.beatCount = 4;                  // метр (четверти) остаётся 4
+    this.actualBeatCount = count;        // число стрелочек в такте
+    // <<< ПЕРЕГЕНЕРАЦИЯ chordMap при изменении стрелочек
+    this.chordManager.generateChordMaps(this.actualBeatCount);
   }
-  
-  getBeatCount() {
-    return this.beatCount;
-  }
-  
-  getActualBeatCount() {
-    return this.actualBeatCount;
-  }
-  
-  // Получить соотношение стрелочек к ударам метронома
+
+  getBeatCount() { return this.beatCount; }
+  getActualBeatCount() { return this.actualBeatCount; }
+
   getBeatRatio() {
-    // 4 стрелочки: 1:1 (1 стрелочка на 1 удар)
-    // 8 стрелочек: 2:1 (2 стрелочки на 1 удар)  
-    // 16 стрелочек: 4:1 (4 стрелочки на 1 удар)
     if (this.actualBeatCount === 4) return 1;
     if (this.actualBeatCount === 8) return 2;
     if (this.actualBeatCount === 16) return 4;
-    return 1; // по умолчанию 1:1
-  }
-  
-  // Получить индекс стрелочки для текущего удара метронома
-  getArrowIndexForBeat(beatIndex) {
-    const ratio = this.getBeatRatio();
-    // Рассчитываем, какие стрелочки должны подсвечиваться для текущего удара
-    const startIndex = beatIndex * ratio;
-    return {
-      startIndex: startIndex,
-      count: ratio,
-      actualBeatCount: this.actualBeatCount
-    };
-  }
-  
-  setCurrentBeat(beatIndex) {
-    this.currentBeat = beatIndex;
+    return 1;
   }
 
-  // Переход к следующей ноте
+  getArrowIndexForBeat(beatIndex) {
+    const ratio = this.getBeatRatio();
+    const startIndex = beatIndex * ratio;
+    return { startIndex, count: ratio, actualBeatCount: this.actualBeatCount };
+  }
+
+  setCurrentBeat(beatIndex) { this.currentBeat = beatIndex; }
+
+  // <<< инкремент такта при завершении предыдущего
   nextNote() {
     const secondsPerBeat = 60.0 / this.bpm;
     this.nextNoteTime += secondsPerBeat;
     this.currentBeat++;
     if (this.currentBeat >= this.beatCount) {
       this.currentBeat = 0;
+      this.barIndex = (this.barIndex + 1) % Number.MAX_SAFE_INTEGER; // новый такт
     }
   }
 
-  // Планирование звукового клика
   scheduleClick(time, isAccent) {
     if (!this.audioCtx) return;
-    
     const osc = this.audioCtx.createOscillator();
     const gainNode = this.audioCtx.createGain();
-
     osc.type = 'square';
     osc.frequency.setValueAtTime(isAccent ? 1500 : 1000, time);
-
     gainNode.gain.setValueAtTime(1, time);
     gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-
     osc.connect(gainNode);
     gainNode.connect(this.audioCtx.destination);
-
     osc.start(time);
     osc.stop(time + 0.05);
   }
 
-  // Планировщик звуков и визуальных подсветок
+  // Планировщик звуков и подсветок
   scheduler() {
     if (!this.audioCtx || !this.isPlaying) return;
-    
+
     const secondsPerBeat = 60.0 / this.bpm;
     const totalArrows = this.actualBeatCount;
-    const ratio = this.getBeatRatio(); // Получаем соотношение
-    
+    const ratio = this.getBeatRatio();
+
     while (this.nextNoteTime < this.audioCtx.currentTime + this.scheduleAheadTime) {
-      // Планируем звуковой клик для основного удара метронома
       const isAccent = (this.currentBeat === 0);
       this.scheduleClick(this.nextNoteTime, isAccent);
-      
-      // Планируем последовательную подсветку стрелочек в рамках текущего удара
+
+      // фиксируем номер такта для всех стрелочек ЭТОГО удара
+      const barAtSchedule = this.barIndex;             // <<< ВАЖНО: замыкаем текущее значение
       const startIndex = this.currentBeat * ratio;
-      
-      // Для каждого удара метронома подсвечиваем нужное количество стрелочек последовательно
-      // и воспроизводим звуки для активных стрелочек
+
       for (let i = 0; i < ratio; i++) {
-        const arrowIndex = startIndex + i;
+        const arrowIndex = startIndex + i;             // 0..(totalArrows-1) внутри ТАКТА
         if (arrowIndex < totalArrows) {
-          // Рассчитываем время подсветки для каждой стрелочки
           const arrowTime = this.nextNoteTime + (i * secondsPerBeat / ratio);
-          
-          // Планируем подсветку стрелочки и воспроизведение звука
           setTimeout(() => {
-            // Воспроизводим гитарный звук для активной стрелочки
-            this.playGuitarSound(arrowIndex);
-            
-            // Обновляем визуальное состояние
-            if (this.onBeatCallback) {
-              this.onBeatCallback(arrowIndex);
-            }
+            this.playGuitarSound(arrowIndex, barAtSchedule);  // <<< передаём barIndex
+            if (this.onBeatCallback) this.onBeatCallback(arrowIndex);
           }, (arrowTime - this.audioCtx.currentTime) * 1000);
         }
       }
-      
+
       this.nextNote();
     }
     this.timerID = setTimeout(() => this.scheduler(), this.lookahead);
   }
 
-  isPlaying() {
-    return this.isPlaying;
-  }
-  
-  getCurrentBeat() {
-    return this.currentBeat;
-  }
-  
-  // Создание гитарного звука с помощью осцилляторов
-  createGuitarSound(frequency = 330, duration = 0.9, volume = 0.9) {
+  // --- УЛУЧШЕННЫЙ СИНТЕЗ ГИТАРЫ ---
+  createGuitarSound(frequency = 330, duration = 0.3, volume = 0.8) {
     if (!this.audioCtx) return;
+
+    const time = this.audioCtx.currentTime;
     
-    // Создаем осцилляторы для создания богатого тембра
-    const fundamental = this.audioCtx.createOscillator();
-    const harmonic2 = this.audioCtx.createOscillator();
-    const harmonic3 = this.audioCtx.createOscillator();
+    // Создаем основной осциллятор для чистого звука струны
+    const oscillator = this.audioCtx.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, time);
     
-    // Создаем узлы усиления для огибающей звука
+    // Создаем второй осциллятор для обертона (октава выше)
+    const overtone = this.audioCtx.createOscillator();
+    overtone.type = 'sine';
+    overtone.frequency.setValueAtTime(frequency * 2, time);
+    
+    // Создаем третий осциллятор для второго обертона
+    const secondOvertone = this.audioCtx.createOscillator();
+    secondOvertone.type = 'sine';
+    secondOvertone.frequency.setValueAtTime(frequency * 3, time);
+    
+    // Создаем ADSR огибающую для основного звука
     const gainNode = this.audioCtx.createGain();
-    const fundamentalGain = this.audioCtx.createGain();
-    const harmonic2Gain = this.audioCtx.createGain();
-    const harmonic3Gain = this.audioCtx.createGain();
+    gainNode.gain.setValueAtTime(0, time);
+    gainNode.gain.linearRampToValueAtTime(volume * 0.7, time + 0.001); // Attack
+    gainNode.gain.exponentialRampToValueAtTime(volume * 0.5, time + 0.01); // Decay
+    gainNode.gain.exponentialRampToValueAtTime(volume * 0.3, time + duration * 0.7); // Sustain
+    gainNode.gain.exponentialRampToValueAtTime(0.001, time + duration); // Release
     
-    // Настройка основной частоты (фундаментальной ноты)
-    fundamental.type = 'sine';
-    fundamental.frequency.setValueAtTime(frequency, this.audioCtx.currentTime);
+    // Создаем огибающую для обертонов (более короткую)
+    const overtoneGain = this.audioCtx.createGain();
+    overtoneGain.gain.setValueAtTime(0, time);
+    overtoneGain.gain.linearRampToValueAtTime(volume * 0.3, time + 0.001);
+    overtoneGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.5);
     
-    // Настройка гармоник (октавы и квинты)
-    harmonic2.type = 'sine';
-    harmonic2.frequency.setValueAtTime(frequency * 2, this.audioCtx.currentTime); // Октава выше
+    const secondOvertoneGain = this.audioCtx.createGain();
+    secondOvertoneGain.gain.setValueAtTime(0, time);
+    secondOvertoneGain.gain.linearRampToValueAtTime(volume * 0.1, time + 0.001);
+    secondOvertoneGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.3);
     
-    harmonic3.type = 'sine';
-    harmonic3.frequency.setValueAtTime(frequency * 3, this.audioCtx.currentTime); // Квинта
-    
-    // Настройка уровней гармоник
-    fundamentalGain.gain.setValueAtTime(volume * 0.6, this.audioCtx.currentTime);
-    harmonic2Gain.gain.setValueAtTime(volume * 0.3, this.audioCtx.currentTime);
-    harmonic3Gain.gain.setValueAtTime(volume * 0.1, this.audioCtx.currentTime);
-    
-    // Создание огибающей ADSR (Attack, Decay, Sustain, Release)
-    const now = this.audioCtx.currentTime;
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(volume, now + 0.01); // Attack - быстрый подъем
-    gainNode.gain.linearRampToValueAtTime(volume * 0.7, now + 0.03); // Decay - спад
-    gainNode.gain.linearRampToValueAtTime(volume * 0.5, now + duration - 0.02); // Sustain
-    gainNode.gain.linearRampToValueAtTime(0, now + duration); // Release - затухание
-    
-    // Подключение осцилляторов к их усилителям
-    fundamental.connect(fundamentalGain);
-    harmonic2.connect(harmonic2Gain);
-    harmonic3.connect(harmonic3Gain);
-    
-    // Подключение усилителей к общему усилителю
-    fundamentalGain.connect(gainNode);
-    harmonic2Gain.connect(gainNode);
-    harmonic3Gain.connect(gainNode);
-    
-    // Создание фильтра для создания более гитарного тембра
+    // Создаем фильтр для гитарного тембра
     const filter = this.audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2000, now);
-    filter.Q.setValueAtTime(1, now);
+    filter.frequency.setValueAtTime(2000, time);
+    filter.Q.setValueAtTime(1, time);
     
-    // Подключение к фильтру и затем к выходу
+    // Соединяем узлы
+    oscillator.connect(gainNode);
+    overtone.connect(overtoneGain);
+    secondOvertone.connect(secondOvertoneGain);
+    
     gainNode.connect(filter);
+    overtoneGain.connect(filter);
+    secondOvertoneGain.connect(filter);
+    
     filter.connect(this.audioCtx.destination);
     
-    // Запуск осцилляторов
-    const startTime = this.audioCtx.currentTime;
-    fundamental.start(startTime);
-    harmonic2.start(startTime);
-    harmonic3.start(startTime);
+    // Запускаем осцилляторы
+    oscillator.start(time);
+    overtone.start(time);
+    secondOvertone.start(time);
     
-    // Остановка осцилляторов
-    fundamental.stop(startTime + duration);
-    harmonic2.stop(startTime + duration);
-    harmonic3.stop(startTime + duration);
-    
-    // Очистка после завершения
-    fundamental.onended = () => {
-      fundamental.disconnect();
-      harmonic2.disconnect();
-      harmonic3.disconnect();
-      gainNode.disconnect();
-      fundamentalGain.disconnect();
-      harmonic2Gain.disconnect();
-      harmonic3Gain.disconnect();
-      filter.disconnect();
-    };
+    // Останавливаем осцилляторы
+    oscillator.stop(time + duration);
+    overtone.stop(time + duration * 0.8);
+    secondOvertone.stop(time + duration * 0.6);
   }
-  
-  // Воспроизведение гитарного звука для конкретной стрелочки
-  playGuitarSound(arrowIndex) {
-    // Получаем состояние стрелочки из глобального состояния
+
+  // <<< УЛУЧШЕННАЯ ЛОГИКА ВОСПРОИЗВЕДЕНИЯ ЗВУКОВ АККОРДОВ >>>
+  playGuitarSound(arrowIndex, barIndex) {
     if (window.app && window.app.state && window.app.state.beats) {
       const beat = window.app.state.beats[arrowIndex];
       if (beat && beat.play) {
-        // Стрелочка активна - воспроизводим звук
-        
-        // Получаем ноты аккорда для текущей доли
-        const chordNotes = this.chordManager.getNotesForBeat(arrowIndex, this.actualBeatCount);
-        
-        if (chordNotes) {
-          // Воспроизводим все ноты аккорда строго одновременно для консистентности
-          chordNotes.forEach((frequency, index) => {
-            // Убираем случайные вариации для стабильного звучания
-            const consistentFrequency = frequency;
-            // Воспроизводим звук одновременно без задержек
-            setTimeout(() => {
-              this.createGuitarSound(consistentFrequency, 0.25, 0.8);
-            }, 0); // Нет задержки между нотами
-          });
+        const arrowInBar = arrowIndex;
+        const chordNotes = this.chordManager.getNotesForPosition(
+          barIndex,
+          arrowInBar,
+          this.actualBeatCount
+        );
+
+        if (Array.isArray(chordNotes) && chordNotes.length) {
+          // Определяем инверсию аккорда на основе позиции в такте для разнообразия
+          const inversion = arrowInBar % 3; // 0, 1, 2 - три разных инверсии
+          const invertedNotes = this.chordManager.getChordNotesWithInversion(
+            this.chordManager.getChordNameForPosition(barIndex, arrowInBar, this.actualBeatCount),
+            inversion
+          );
+
+          if (invertedNotes && invertedNotes.length) {
+            // Воспроизводим аккорд с небольшой задержкой между нотами для реалистичности
+            invertedNotes.forEach((freq, index) => {
+              setTimeout(() => {
+                // Разная громкость для разных нот аккорда
+                const volumes = [0.8, 0.6, 0.7]; // Тоника, терция, квинта
+                const volume = volumes[index] || 0.6;
+                this.createGuitarSound(freq, 0.25, volume);
+              }, index * 8); // Небольшая арпеджио-задержка
+            });
+          } else {
+            // Если инверсия не удалась, используем оригинальные ноты
+            chordNotes.forEach((freq, index) => {
+              setTimeout(() => {
+                const volumes = [0.8, 0.6, 0.7];
+                const volume = volumes[index] || 0.6;
+                this.createGuitarSound(freq, 0.25, volume);
+              }, index * 8);
+            });
+          }
         } else {
-          // Если аккорд не найден, воспроизводим одиночную ноту как fallback
-          const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63]; // Частоты гитарных струн E A D G B e
-          const frequency = frequencies[arrowIndex % frequencies.length] || 220;
-          
-          // Убираем случайные вариации для стабильного звучания
-          const consistentFrequency = frequency;
-          
-          // Воспроизводим звук
-          this.createGuitarSound(consistentFrequency, 0.3, 0.9);
+          // Если нет аккорда, воспроизводим одиночную ноту
+          const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63];
+          const f = frequencies[arrowIndex % frequencies.length] || 220;
+          this.createGuitarSound(f, 0.3, 0.9);
         }
       }
-      // Если beat.play === false или beat не существует, звук не воспроизводится
     }
   }
-  
-  // Метод для обновления аккордов из поля ввода
+
+  // обновление аккордов из поля ввода → сразу пересоздать chordMaps
   updateChords(chordsString) {
-    this.chordManager.updateChords(chordsString);
+    this.chordManager.updateChords(chordsString, this.actualBeatCount);
   }
-  
-  // Метод для получения текущего списка аккордов
+
   getChords() {
     return this.chordManager.parsedChords;
   }

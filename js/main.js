@@ -1,11 +1,11 @@
-// Точка входа приложения
+// Точка входа приложения - инициализирует все компоненты и управляет глобальным состоянием
 import { BeatRow } from './components/BeatRow.js';
 import { Controls } from './components/Controls.js';
 import { Playback } from './components/Playback.js';
 import { ExportUtils } from './utils/ExportUtils.js';
 import { Metronome } from './components/Metronome.js';
 
-// Инициализация приложения
+// Инициализация приложения при загрузке DOM
 document.addEventListener('DOMContentLoaded', async () => {
   // Создание экземпляров компонентов
   const beatRow = new BeatRow();
