@@ -11,22 +11,29 @@ export class Controls {
   }
 
   bindEvents() {
-    // Кнопки выбора количества битов
-    document.querySelectorAll('.count-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        this.setCount(Number(btn.getAttribute('data-count')));
+    // Выбор количества стрелок
+    const countSelect = document.getElementById('countSelect');
+    if (countSelect) {
+      countSelect.addEventListener('change', (e) => {
+        this.setCount(Number(e.target.value));
       });
-    });
+    }
 
     // Кнопка генерации случайных битов
-    document.getElementById('generateBtn').addEventListener('click', () => {
-      this.generateRandom();
-    });
+    const generateBtn = document.getElementById('generateBtn');
+    if (generateBtn) {
+      generateBtn.addEventListener('click', () => {
+        this.generateRandom();
+      });
+    }
 
-    // Изменение BPM
-    document.getElementById('bpm').addEventListener('input', () => {
-      this.updateBpmLabel();
-    });
+    // Изменение BPM через слайдер
+    const bpmSlider = document.getElementById('bpm');
+    if (bpmSlider) {
+      bpmSlider.addEventListener('input', () => {
+        this.updateBpmLabel();
+      });
+    }
   }
 
   setCount(n) {
@@ -34,6 +41,10 @@ export class Controls {
     const beats = this.makeBeats(n);
     this.beatRow.setBeats(beats);
     this.beatRow.setCount(n);
+    
+    // Инициализируем состояния кружочков
+    const circleStates = beats.map(beat => beat.play || false);
+    this.beatRow.setCircleStates(circleStates);
     
     // Обновление глобального состояния
     if (window.app) {
@@ -51,17 +62,11 @@ export class Controls {
   }
 
   updateCountButtons(activeCount) {
-  document.querySelectorAll('.count-btn').forEach(btn => {
-    const count = Number(btn.getAttribute('data-count'));
-    if (count === activeCount) {
-      btn.classList.add('active', 'bg-indigo-600', 'text-white');
-      btn.classList.remove('bg-gray-100');
-    } else {
-      btn.classList.remove('active', 'bg-indigo-600', 'text-white');
-      btn.classList.add('bg-gray-100');
+    const countSelect = document.getElementById('countSelect');
+    if (countSelect) {
+      countSelect.value = activeCount.toString();
     }
-  });
-}
+  }
 
   makeBeats(n) {
     const arr = [];
@@ -74,10 +79,14 @@ export class Controls {
 
   generateRandom() {
     const beats = this.makeBeats(this.count);
+    const circleStates = [true]; // Первый кружочек всегда включен
     for (let i = 1; i < beats.length; i++) {
-      beats[i].play = Math.random() > 0.5;
+      const shouldPlay = Math.random() > 0.5;
+      beats[i].play = shouldPlay;
+      circleStates.push(shouldPlay);
     }
     this.beatRow.setBeats(beats);
+    this.beatRow.setCircleStates(circleStates);
     
     // Обновление глобального состояния
     if (window.app) {

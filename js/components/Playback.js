@@ -82,12 +82,22 @@ export class Playback {
 
   updateButtonState() {
     const toggleBtn = document.getElementById('toggleBtn');
+    if (!toggleBtn) return;
+    
     if (this.playing) {
-      toggleBtn.textContent = 'Pause';
-      toggleBtn.className = 'playback-btn pause-btn';
+      // Изменяем иконку на паузу
+      toggleBtn.innerHTML = `
+        <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"></path>
+        </svg>
+      `;
     } else {
-      toggleBtn.textContent = 'Play';
-      toggleBtn.className = 'playback-btn play-btn';
+      // Изменяем иконку на play
+      toggleBtn.innerHTML = `
+        <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 5v14l11-7z"></path>
+        </svg>
+      `;
     }
   }
 

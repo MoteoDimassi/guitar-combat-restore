@@ -205,9 +205,13 @@ export class Metronome {
 
   // <<< УЛУЧШЕННАЯ ЛОГИКА ВОСПРОИЗВЕДЕНИЯ ЗВУКОВ АККОРДОВ >>>
   playGuitarSound(arrowIndex, barIndex) {
-    if (window.app && window.app.state && window.app.state.beats) {
-      const beat = window.app.state.beats[arrowIndex];
-      if (beat && beat.play) {
+    // Проверяем состояние кружочка вместо beat.play
+    if (window.app && window.app.beatRow) {
+      const circleStates = window.app.beatRow.getCircleStates();
+      const shouldPlay = arrowIndex < circleStates.length ? circleStates[arrowIndex] : false;
+      
+      if (shouldPlay) {
+        // Получаем аккордные ноты (можно использовать любую логику, не привязанную к beat.play)
         const arrowInBar = arrowIndex;
         const chordNotes = this.chordManager.getNotesForPosition(
           barIndex,

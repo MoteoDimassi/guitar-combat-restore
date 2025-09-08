@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Инициализация метронома с правильным количеством стрелочек
   metronome.setBeatCount(8);
   
-  // Добавляем обработчик поля ввода аккордов
+  // Добаваем обработчик поля ввода аккордов
   const chordsInput = document.getElementById('chordsInput');
   if (chordsInput) {
     // Обновляем аккорды при вводе

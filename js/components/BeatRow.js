@@ -3,6 +3,7 @@
 export class BeatRow {
   constructor() {
     this.beats = [];
+    this.circleStates = []; // Состояние кружочков (вкл/выкл звук)
     this.highlightedIndices = new Set(); // Для подсветки нескольких стрелочек
     this.count = 8;
   }
@@ -13,6 +14,15 @@ export class BeatRow {
 
   setBeats(beats) {
     this.beats = beats;
+    // Инициализируем состояния кружочков если они не заданы
+    if (this.circleStates.length !== beats.length) {
+      this.circleStates = beats.map(beat => beat.play || false);
+    }
+    this.render();
+  }
+
+  setCircleStates(states) {
+    this.circleStates = states;
     this.render();
   }
 
@@ -44,10 +54,16 @@ export class BeatRow {
   updateLayout() {
     if (!this.element) return;
     
-    // Обновление классов flex в зависимости от количества элементов
-    this.element.className = 'flex items-end justify-center gap-2 md:gap-3 px-2 py-6';
-    if (this.count > 8) {
-      this.element.classList.add('flex-wrap');
+    // Обновление классов в зависимости от количества элементов
+    this.element.className = 'grid gap-4 w-full px-4';
+    
+    // Устанавливаем количество колонок в зависимости от count
+    if (this.count <= 4) {
+      this.element.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    } else if (this.count <= 8) {
+      this.element.style.gridTemplateColumns = 'repeat(8, 1fr)';
+    } else {
+      this.element.style.gridTemplateColumns = 'repeat(8, 1fr)';
     }
   }
 
@@ -84,9 +100,11 @@ export class BeatRow {
       // Круг переключения
       const circle = document.createElement('div');
       circle.className = 'circle-container';
-      circle.innerHTML = this.circleSvg(beat.play);
+      // Используем состояние кружочка вместо beat.play
+      const circleState = i < this.circleStates.length ? this.circleStates[i] : (beat.play || false);
+      circle.innerHTML = this.circleSvg(circleState);
       circle.addEventListener('click', () => {
-        this.toggleBeat(i);
+        this.toggleCircle(i);
       });
 
       wrapper.appendChild(arrow);
@@ -96,7 +114,7 @@ export class BeatRow {
   }
 
   arrowSvg(dir, highlighted) {
-    const stroke = highlighted ? '#06b6d4' : '#374151';
+    const stroke = highlighted ? '#38e07b' : '#374151';
     const opacity = highlighted ? '1' : '0.9';
     if (dir === 'down') return `
       <svg width="36" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -122,8 +140,23 @@ export class BeatRow {
     }
   }
 
+  toggleCircle(index) {
+    if (index >= 0 && index < this.circleStates.length) {
+      this.circleStates[index] = !this.circleStates[index];
+      this.render();
+    }
+  }
+
   getBeats() {
-    return this.beats;
+    // Возвращаем beats с актуальным состоянием circleStates
+    return this.beats.map((beat, index) => ({
+      ...beat,
+      play: index < this.circleStates.length ? this.circleStates[index] : (beat.play || false)
+    }));
+  }
+
+  getCircleStates() {
+    return this.circleStates;
   }
   
   onArrowClick(index) {
