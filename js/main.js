@@ -5,6 +5,11 @@ import { Playback } from './components/Playback.js';
 import { ExportUtils } from './utils/ExportUtils.js';
 import { Metronome } from './components/Metronome.js';
 
+// Проверка поддержки Web Audio API
+if (!window.AudioContext && !window.webkitAudioContext) {
+  console.warn('Web Audio API не поддерживается в этом браузере. Некоторые функции могут не работать.');
+}
+
 // Инициализация приложения при загрузке DOM
 document.addEventListener('DOMContentLoaded', async () => {
   // Создание экземпляров компонентов

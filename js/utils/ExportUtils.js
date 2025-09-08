@@ -68,8 +68,16 @@ export class ExportUtils {
         this.importData(data);
       } catch (error) {
         console.error('Ошибка при импорте JSON:', error);
-        alert('Ошибка при импорте файла. Проверьте формат файла.');
+        // Добавить более подробную обработку ошибок
+        if (error instanceof SyntaxError) {
+          alert('Неверный формат JSON файла');
+        } else {
+          alert('Ошибка при импорте файла: ' + error.message);
+        }
       }
+    };
+    reader.onerror = () => {
+      alert('Ошибка чтения файла');
     };
     reader.readAsText(file);
     

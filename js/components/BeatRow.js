@@ -63,7 +63,7 @@ export class BeatRow {
     } else if (this.count <= 8) {
       this.element.style.gridTemplateColumns = 'repeat(8, 1fr)';
     } else {
-      this.element.style.gridTemplateColumns = 'repeat(8, 1fr)';
+      this.element.style.gridTemplateColumns = 'repeat(16, 1fr)';
     }
   }
 
