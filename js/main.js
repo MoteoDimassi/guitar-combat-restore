@@ -4,6 +4,8 @@ import { Controls } from './components/Controls.js';
 import { Playback } from './components/Playback.js';
 import { ExportUtils } from './utils/ExportUtils.js';
 import { Metronome } from './components/Metronome.js';
+import { Modal } from './components/Modal.js';
+import { MobileMenu } from './components/MobileMenu.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -18,24 +20,6 @@ function handleResize() {
   }
 }
 
-// Функция для инициализации мобильного меню
-function initMobileMenu() {
-  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-  const mobileMenu = document.getElementById('mobileMenu');
-  
-  if (mobileMenuBtn && mobileMenu) {
-    mobileMenuBtn.addEventListener('click', () => {
-      mobileMenu.classList.toggle('hidden');
-    });
-    
-    // Закрытие меню при клике вне его области
-    document.addEventListener('click', (e) => {
-      if (!mobileMenuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
-        mobileMenu.classList.add('hidden');
-      }
-    });
-  }
-}
 
 // Инициализация приложения при загрузке DOM
 document.addEventListener('DOMContentLoaded', async () => {
@@ -54,7 +38,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   metronome.init();
 
   // Инициализация мобильного меню
-  initMobileMenu();
+  const mobileMenu = new MobileMenu();
+  mobileMenu.init();
+
+  // Инициализация модального окна
+  const modal = new Modal();
+  modal.init();
 
   // Глобальное состояние приложения
   window.app = {
@@ -63,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     playback,
     exportUtils,
     metronome,
+    modal,
     state: {
       count: 8,
       beats: [],
@@ -98,4 +88,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Добавляем обработчик изменения размера окна для адаптивности
   window.addEventListener('resize', handleResize);
+
+  // Добавляем обработчик для ссылки политики конфиденциальности в футере
+  
+  // Обработчик клика делегируем на документ
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('footer a[href="#"]');
+  if (!link) return;
+
+  if (link.textContent.includes('Политика конфиденциальности')) {
+    e.preventDefault();
+    if (window.app && window.app.modal) {
+      window.app.modal.showPrivacyPolicy();
+      console.log('Модальное окно открыто', window.app.modal);
+    }
+  }
+  
+  if (link.textContent.includes('Условия использования')) {
+    e.preventDefault();
+    if (window.app && window.app.modal) {
+      window.app.modal.showTermsOfUse();
+    }
+  }
+});
 });

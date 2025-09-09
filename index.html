@@ -29,14 +29,14 @@
           </svg>
           <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em]">StrumGen</h2>
           <!-- Кнопка для мобильного меню -->
-          <button id="mobileMenuBtn" class="md:hidden ml-auto text-white">
+          <button id="mobileMenuBtn" class="md:hidden ml-auto text-white active">
             <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
         <!-- Мобильное меню (по умолчанию скрыто) -->
-        <div id="mobileMenu" class="md:hidden hidden w-full">
+        <div id="mobileMenu" class="md:hidden w-full">
           <div class="flex flex-col gap-4 py-4 border-t border-gray-800 mt-4">
             <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="#">Конструктор</a>
             <a class="text-gray-300 hover:text-white text-base font-bold leading-normal transition-colors" href="https://www.soundslice.com/guitar-pro-viewer/" target="_blank">GuitarPro ONLINE</a>
@@ -72,7 +72,7 @@
             <div class="flex flex-1 flex-col items-center gap-6 rounded-lg bg-gray-900/50 p-4 md:p-6 border border-gray-800 w-full">
               <div class="w-full">
                 <label class="text-white text-lg font-medium leading-normal pb-2 block" for="chordsInput">Аккорды</label>
-                <input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-md text-white focus:outline-0 focus:ring-2 focus:ring-[#38e07b] border border-gray-700 bg-gray-900 h-12 placeholder:text-gray-500 p-4 text-base font-normal leading-normal" id="chordsInput" placeholder="Введите аккорды (например, Am, G, C, F)" value="Am F Dm E"/>
+                <input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-md text-white focus:outline-0 focus:ring-2 focus:ring-[#38e07b] border border-gray-700 bg-gray-900 h-12 placeholder:text-gray-500 p-4 text-base font-normal leading-normal" id="chordsInput" placeholder="Введите аккорды через пробел (например, Am G C F)" value="Am F Dm E"/>
               </div>
               
               <!-- Область визуализации боя -->
@@ -148,7 +148,7 @@
       <!-- Footer -->
       <footer class="w-full border-t border-solid border-gray-800 mt-10">
         <div class="max-w-6xl mx-auto px-4">
-          <footer class="flex flex-col gap-6 px-5 py-10 text-center">
+          <div class="flex flex-col gap-6 px-5 py-10 text-center">
           <div class="flex flex-wrap items-center justify-center gap-4 md:gap-6">
             <a class="text-gray-400 hover:text-white text-sm md:text-base font-normal leading-normal min-w-32 md:min-w-40 transition-colors" href="#">Политика конфиденциальности</a>
             <a class="text-gray-400 hover:text-white text-sm md:text-base font-normal leading-normal min-w-32 md:min-w-40 transition-colors" href="#">Условия использования</a>
@@ -175,7 +175,7 @@
               </a>
             </div>
             <p class="text-gray-400 text-base font-normal leading-normal">©2025 StrumGen. Все права защищены.</p>
-          </footer>
+          </div>
         </div>
       </footer>
     </div>

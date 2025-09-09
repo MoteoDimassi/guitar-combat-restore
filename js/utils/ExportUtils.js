@@ -86,73 +86,73 @@ export class ExportUtils {
   }
 
   importData(data) {
-    if (!data || !data.beats) {
-      alert('Неверный формат файла. Файл должен содержать данные боя.');
-      return;
-    }
-
-    try {
-      // Проверяем структуру данных и нормализуем если нужно
-      const normalizedBeats = data.beats.map(beat => ({
-        direction: beat.direction || 'down',
-        play: Boolean(beat.play)
-      }));
-
-      // Сбрасываем подсветку перед импортом
-      if (this.beatRow) {
-        this.beatRow.highlightedIndices.clear();
-      }
-      
-      // Устанавливаем биты (направления стрелочек)
-      this.beatRow.setBeats(normalizedBeats);
-      
-      // Применяем настройки "play" к кружочкам
-      const circleStates = normalizedBeats.map(beat => beat.play);
-      this.beatRow.setCircleStates(circleStates);
-      
-      // Обновляем количество стрелок
-      const count = normalizedBeats.length;
-      if (window.app && window.app.controls) {
-        window.app.controls.setCount(count);
-      }
-      
-      // Обновляем BPM если есть
-      if (data.bpm && document.getElementById('bpm')) {
-        const bpmSlider = document.getElementById('bpm');
-        const bpmLabel = document.getElementById('bpmLabel');
-        bpmSlider.value = data.bpm;
-        bpmLabel.textContent = data.bpm;
-        if (window.app) {
-          window.app.state.bpm = data.bpm;
-        }
-      }
-      
-      // Обновляем аккорды если есть
-      if (data.chords && document.getElementById('chordsInput')) {
-        const chordsInput = document.getElementById('chordsInput');
-        chordsInput.value = Array.isArray(data.chords) ? data.chords.join(' ') : data.chords;
-        if (window.app && window.app.metronome) {
-          window.app.metronome.updateChords(chordsInput.value);
-        }
-      }
-      
-      // Обновляем speed если есть
-      if (data.speed && window.app) {
-        window.app.state.speed = data.speed;
-      }
-      
-      // Обновляем глобальное состояние с новыми битами
-      if (window.app) {
-        window.app.state.beats = normalizedBeats;
-        window.app.state.currentIndex = 0;
-      }
-      
-      alert('Данные успешно импортированы!');
-    } catch (error) {
-      console.error('Ошибка при импорте данных:', error);
-      alert('Ошибка при импорте данных. Проверьте содержимое файла.');
-    }
+  if (!data || !data.beats) {
+    alert('Неверный формат файла. Файл должен содержать данные боя.');
+    return;
   }
+
+  try {
+    // 1. Нормализуем биты
+    const normalizedBeats = data.beats.map(beat => ({
+      direction: beat.direction || 'down',
+      play: !!beat.play  // строго булевое значение
+    }));
+
+    if (!this.beatRow) return;
+
+    // 2. Сбрасываем подсветку
+    this.beatRow.highlightedIndices.clear();
+
+    // 3. Применяем play к кружкам
+    const circleStates = normalizedBeats.map(beat => beat.play);
+    this.beatRow.setCircleStates(circleStates);
+
+    // 4. Устанавливаем биты (стрелочки)
+    this.beatRow.setBeats(normalizedBeats);
+
+    // 5. Обновляем количество стрелок
+    const count = normalizedBeats.length;
+    if (window.app && window.app.controls) {
+      window.app.controls.setCount(count);
+    }
+
+    // 6. Обновляем BPM
+    if (data.bpm && document.getElementById('bpm')) {
+      const bpmSlider = document.getElementById('bpm');
+      const bpmLabel = document.getElementById('bpmLabel');
+      bpmSlider.value = data.bpm;
+      bpmLabel.textContent = data.bpm;
+      if (window.app) {
+        window.app.state.bpm = data.bpm;
+      }
+    }
+
+    // 7. Обновляем аккорды
+    if (data.chords && document.getElementById('chordsInput')) {
+      const chordsInput = document.getElementById('chordsInput');
+      chordsInput.value = Array.isArray(data.chords) ? data.chords.join(' ') : data.chords;
+      if (window.app && window.app.metronome) {
+        window.app.metronome.updateChords(chordsInput.value);
+      }
+    }
+
+    // 8. Обновляем speed
+    if (data.speed && window.app) {
+      window.app.state.speed = data.speed;
+    }
+
+    // 9. Обновляем глобальное состояние с новыми битами
+    if (window.app) {
+      window.app.state.beats = normalizedBeats;
+      window.app.state.currentIndex = 0;
+    }
+
+    alert('Данные успешно импортированы!');
+  } catch (error) {
+    console.error('Ошибка при импорте данных:', error);
+    alert('Ошибка при импорте данных. Проверьте содержимое файла.');
+  }
+}
 
   exportPNG() {
     const area = document.getElementById('beatArea');
