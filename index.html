@@ -189,24 +189,24 @@
   tg.expand();
 
   // Можно поменять цвет верхней панели (в Telegram)
-  tg.MainButton.setText("Отправить данные");
-  tg.MainButton.show();
+  // tg.MainButton.setText("Отправить данные");
+  // tg.MainButton.show();
 
-  // Обработка нажатия основной кнопки Telegram
-  tg.MainButton.onClick(() => {
-    const chords = document.getElementById("chordsInput").value;
-    const bpm = document.getElementById("bpm").value;
-    const count = document.getElementById("countSelect").value;
+  // // Обработка нажатия основной кнопки Telegram
+  // tg.MainButton.onClick(() => {
+  //   const chords = document.getElementById("chordsInput").value;
+  //   const bpm = document.getElementById("bpm").value;
+  //   const count = document.getElementById("countSelect").value;
 
-    const data = {
-      chords,
-      bpm,
-      count
-    };
+  //   const data = {
+  //     chords,
+  //     bpm,
+  //     count
+  //   };
 
-    // Отправляем данные в бота
-    tg.sendData(JSON.stringify(data));
-  });
+  //   // Отправляем данные в бота
+  //   tg.sendData(JSON.stringify(data));
+  //});
   </script>
   <!-- Подключение основного JavaScript модуля -->
   <script type="module" src="js/main.js"></script>
