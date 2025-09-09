@@ -10,6 +10,33 @@ if (!window.AudioContext && !window.webkitAudioContext) {
   console.warn('Web Audio API не поддерживается в этом браузере. Некоторые функции могут не работать.');
 }
 
+// Функция для обработки изменения размера окна
+function handleResize() {
+  // Перерендерим компоненты при изменении размера для адаптации
+  if (window.app && window.app.beatRow) {
+    window.app.beatRow.render();
+  }
+}
+
+// Функция для инициализации мобильного меню
+function initMobileMenu() {
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  
+  if (mobileMenuBtn && mobileMenu) {
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+    
+    // Закрытие меню при клике вне его области
+    document.addEventListener('click', (e) => {
+      if (!mobileMenuBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
+        mobileMenu.classList.add('hidden');
+      }
+    });
+  }
+}
+
 // Инициализация приложения при загрузке DOM
 document.addEventListener('DOMContentLoaded', async () => {
   // Создание экземпляров компонентов
@@ -25,6 +52,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   playback.init();
   exportUtils.init();
   metronome.init();
+
+  // Инициализация мобильного меню
+  initMobileMenu();
 
   // Глобальное состояние приложения
   window.app = {
@@ -65,4 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Инициализируем аккорды при загрузке
     window.app.metronome.updateChords(chordsInput.value);
   }
+  
+  // Добавляем обработчик изменения размера окна для адаптивности
+  window.addEventListener('resize', handleResize);
 });
