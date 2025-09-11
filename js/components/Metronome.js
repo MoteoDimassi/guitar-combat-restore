@@ -1,4 +1,5 @@
 import { ChordManager } from './ChordManager.js';
+import { AudioPolyfill } from '../utils/AudioPolyfill.js';
 
 // Метроном - основной компонент для синхронизации визуальных подсветок и звуков
 // Использует Web Audio API для точного тайминга и воспроизведения гитарных аккордов
@@ -28,12 +29,26 @@ export class Metronome {
     return true;
   }
 
-  start() {
+  async start() {
     if (this.isPlaying) return;
     this.isPlaying = true;
 
+    // ДОБАВИТЬ: Используем AudioPolyfill для создания/проверки AudioContext
     if (!this.audioCtx) {
-      this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioCtx = AudioPolyfill.createAudioContext();
+      if (!this.audioCtx) {
+        console.error('Metronome: Failed to create AudioContext, using fallback');
+        this.isPlaying = false;
+        return;
+      }
+    }
+
+    // ДОБАВИТЬ: Проверяем готовность AudioContext с помощью AudioPolyfill
+    const isReady = await AudioPolyfill.ensureAudioContextReady(this.audioCtx);
+    if (!isReady) {
+      console.error('Metronome: AudioContext not ready');
+      this.isPlaying = false;
+      return;
     }
 
     this.currentBeat = 0;
@@ -105,7 +120,24 @@ export class Metronome {
 
   // Планировщик звуков и подсветок
   scheduler() {
+    // ДОБАВИТЬ: Проверка состояния AudioContext перед планированием
     if (!this.audioCtx || !this.isPlaying) return;
+
+    // Проверка состояния AudioContext для мобильных браузеров
+    if (this.audioCtx.state === 'suspended') {
+      console.warn('Metronome: AudioContext suspended during scheduling, attempting resume');
+      this.audioCtx.resume().catch(error => {
+        console.error('Metronome: Failed to resume AudioContext in scheduler:', error);
+        this.stop(); // Останавливаем если не можем возобновить
+        return;
+      });
+      return; // Пропускаем планирование в этом цикле
+    }
+
+    if (this.audioCtx.state !== 'running') {
+      console.warn('Metronome: AudioContext not in running state:', this.audioCtx.state);
+      return;
+    }
 
     const secondsPerBeat = 60.0 / this.bpm;
     const totalArrows = this.actualBeatCount;
@@ -137,7 +169,13 @@ export class Metronome {
 
   // --- УЛУЧШЕННЫЙ СИНТЕЗ ГИТАРЫ ---
   createGuitarSound(frequency = 330, duration = 0.3, volume = 0.8) {
-    if (!this.audioCtx) return;
+    // ДОБАВИТЬ: Проверка доступности AudioContext с fallback
+    if (!this.audioCtx || this.audioCtx.state !== 'running') {
+      console.warn('Metronome: AudioContext not available, using fallback sound');
+      // ДОБАВИТЬ: Используем fallback для браузеров без Web Audio API
+      AudioPolyfill.fallbackPlaySound(frequency, duration * 1000);
+      return;
+    }
 
     const time = this.audioCtx.currentTime;
     

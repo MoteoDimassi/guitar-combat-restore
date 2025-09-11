@@ -32,12 +32,12 @@ export class Playback {
     const bpm = Number(document.getElementById('bpm').value) || 90;
     const count = window.app ? window.app.state.count : 8;
     const currentIndex = window.app ? window.app.state.currentIndex : 0;
-    
+
     // Используем метроном вместо собственной логики
     if (window.app && window.app.metronome) {
       window.app.metronome.setBpm(bpm);
       window.app.metronome.setBeatCount(count);
-      
+
       // Устанавливаем текущую позицию перед запуском
       if (currentIndex >= 0) {
         // Рассчитываем, какой удар метронома соответствует текущей стрелочке
@@ -45,20 +45,30 @@ export class Playback {
         const beatIndex = Math.floor(currentIndex / ratio);
         window.app.metronome.setCurrentBeat(beatIndex);
       }
-      
-      window.app.metronome.start();
-      
-      // Подписываемся на события метронома
-      window.app.metronome.onBeatCallback = (arrowIndex) => {
-        // Передаем информацию в beatRow для правильной подсветки
-        this.beatRow.setCurrentIndex(arrowIndex);
-        
-        // Обновление глобального состояния
-        if (window.app) {
-          window.app.state.currentIndex = arrowIndex;
-          window.app.state.playing = this.playing;
-        }
-      };
+
+      // ДОБАВИТЬ: Асинхронный запуск с обработкой ошибок
+      try {
+        await window.app.metronome.start();
+        console.log('Playback: Metronome started successfully');
+
+        // Подписываемся на события метронома
+        window.app.metronome.onBeatCallback = (arrowIndex) => {
+          // Передаем информацию в beatRow для правильной подсветки
+          this.beatRow.setCurrentIndex(arrowIndex);
+
+          // Обновление глобального состояния
+          if (window.app) {
+            window.app.state.currentIndex = arrowIndex;
+            window.app.state.playing = this.playing;
+          }
+        };
+      } catch (error) {
+        console.error('Playback: Failed to start metronome:', error);
+        // Если не удалось запустить, возвращаем состояние
+        this.playing = false;
+        this.updateButtonState();
+        return;
+      }
     }
   }
 

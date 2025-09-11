@@ -97,6 +97,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Добавляем обработчик изменения размера окна для адаптивности
   window.addEventListener('resize', handleResize);
 
+  // ДОБАВИТЬ: Мобильная оптимизация для AudioContext
+  // Обработчик изменения видимости страницы (для мобильных браузеров)
+  document.addEventListener('visibilitychange', () => {
+    if (window.app && window.app.metronome && window.app.playback) {
+      if (document.hidden) {
+        // Страница скрыта - можно приостановить для экономии ресурсов
+        console.log('Page hidden, stopping playback for mobile optimization');
+        window.app.playback.stopPlayback();
+      } else {
+        // Страница стала видимой - возобновляем если пользователь ожидает этого
+        // Не автоматически возобновляем, чтобы избежать неожиданного звука
+        console.log('Page visible again');
+      }
+    }
+  });
+
+  // ДОБАВИТЬ: Обработка взаимодействия пользователя для разблокировки AudioContext
+  const unlockAudioContext = async () => {
+    if (window.app && window.app.metronome && window.app.metronome.audioCtx) {
+      if (window.app.metronome.audioCtx.state === 'suspended') {
+        try {
+          await window.app.metronome.audioCtx.resume();
+          console.log('AudioContext unlocked by user interaction');
+        } catch (error) {
+          console.error('Failed to unlock AudioContext:', error);
+        }
+      }
+    }
+    // Удаляем обработчики после первого успешного взаимодействия
+    document.removeEventListener('touchstart', unlockAudioContext);
+    document.removeEventListener('touchend', unlockAudioContext);
+    document.removeEventListener('click', unlockAudioContext);
+  };
+
+  // Добавляем обработчики для разблокировки AudioContext при первом взаимодействии
+  document.addEventListener('touchstart', unlockAudioContext, { once: true });
+  document.addEventListener('touchend', unlockAudioContext, { once: true });
+  document.addEventListener('click', unlockAudioContext, { once: true });
+
   // Добавляем обработчик для ссылки политики конфиденциальности в футере
   
   // Обработчик клика делегируем на документ

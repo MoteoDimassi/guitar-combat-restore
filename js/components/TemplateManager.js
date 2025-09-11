@@ -132,8 +132,28 @@ export class TemplateManager {
    * @param {string} message - сообщение об ошибке
    */
   showError(message) {
-    // Можно заменить на более красивый уведомление
-    alert(message);
+    // ДОБАВИТЬ: Не-блокирующее уведомление вместо alert
+    this.showErrorNotification(message);
+  }
+
+  /**
+   * Показать уведомление об ошибке
+   * @param {string} message - сообщение об ошибке
+   */
+  showErrorNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'notification error';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.classList.add('fade-out');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 5000); // Показываем ошибки дольше
   }
 
   /**

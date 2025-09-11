@@ -52,16 +52,16 @@ export class ImportUtils {
         this.importData(data);
       } catch (error) {
         console.error('Ошибка при импорте JSON:', error);
-        // Добавить более подробную обработку ошибок
+        // Заменяем alert() на не-блокирующие уведомления
         if (error instanceof SyntaxError) {
-          alert('Неверный формат JSON файла');
+          this.showErrorNotification('Неверный формат JSON файла');
         } else {
-          alert('Ошибка при импорте файла: ' + error.message);
+          this.showErrorNotification('Ошибка при импорте файла: ' + error.message);
         }
       }
     };
     reader.onerror = () => {
-      alert('Ошибка чтения файла');
+      this.showErrorNotification('Ошибка чтения файла');
     };
     reader.readAsText(file);
 
@@ -71,7 +71,7 @@ export class ImportUtils {
 
   importData(data) {
     if (!data || !data.beats) {
-      alert('Неверный формат файла. Файл должен содержать данные боя.');
+      this.showErrorNotification('Неверный формат файла. Файл должен содержать данные боя.');
       return;
     }
 
@@ -133,10 +133,51 @@ export class ImportUtils {
         window.app.state.currentIndex = 0;
       }
 
-      alert('Данные успешно импортированы!');
+      this.showSuccessNotification('Данные успешно импортированы!');
     } catch (error) {
       console.error('Ошибка при импорте данных:', error);
-      alert('Ошибка при импорте данных. Проверьте содержимое файла.');
+      this.showErrorNotification('Ошибка при импорте данных. Проверьте содержимое файла.');
     }
+  }
+
+  /**
+   * Показать уведомление об успехе
+   * @param {string} message - сообщение
+   */
+  showSuccessNotification(message) {
+    this.showNotification(message, 'success');
+  }
+
+  /**
+   * Показать уведомление об ошибке
+   * @param {string} message - сообщение
+   */
+  showErrorNotification(message) {
+    this.showNotification(message, 'error');
+  }
+
+  /**
+   * Показать уведомление
+   * @param {string} message - сообщение
+   * @param {string} type - тип уведомления ('success' или 'error')
+   */
+  showNotification(message, type = 'success') {
+    // Создаем элемент уведомления
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+
+    // Добавляем в DOM
+    document.body.appendChild(notification);
+
+    // Автоматически скрываем через 3 секунды
+    setTimeout(() => {
+      notification.classList.add('fade-out');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
   }
 }
