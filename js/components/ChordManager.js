@@ -1,7 +1,12 @@
 // Компонент управления аккордами
+import { ChordAnalyzer } from './ChordAnalyzer.js';
+// Компонент управления аккордами
 export class ChordManager {
   constructor() {
-    // Словарь аккордов: название -> массив частот (3 ноты)
+    // Анализатор аккордов для динамического определения
+    this.chordAnalyzer = new ChordAnalyzer();
+
+    // Старый словарь сохранен для обратной совместимости
     this.chords = {
       'Am': [220, 261.63, 329.63],      // A, C, E
       'A': [220, 277.18, 329.63],       // A, C#, E
@@ -153,13 +158,25 @@ export class ChordManager {
 
   // --- БАЗОВЫЕ УТИЛИТЫ ---
   getChordNotes(chordName) {
+    // Сначала пробуем новый динамический метод
+    const dynamicNotes = this.chordAnalyzer.getChordNotes(chordName);
+    if (dynamicNotes) return dynamicNotes;
+
+    // Fallback на старый статический словарь для обратной совместимости
     return this.chords[chordName] || null;
   }
+
   getAvailableChords() {
-    return Object.keys(this.chords);
-  }
-  hasChord(chordName) {
-    return this.chords.hasOwnProperty(chordName);
+    // Комбинируем динамические и статические аккорды
+    const dynamicChords = this.chordAnalyzer.getSupportedTypes().map(type =>
+      this.chordAnalyzer.getSupportedNotes().slice(0, 12).map(note => note + type)
+    ).flat().filter(chord => this.chordAnalyzer.isValidChord(chord));
+
+    return [...new Set([...Object.keys(this.chords), ...dynamicChords])];
   }
 
+  hasChord(chordName) {
+    // Проверяем через новый анализатор или старый словарь
+    return this.chordAnalyzer.isValidChord(chordName) || this.chords.hasOwnProperty(chordName);
+  }
 }
