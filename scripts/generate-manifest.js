@@ -119,7 +119,10 @@ class ManifestGenerator {
       'blues': 'Blues',
       'rock': 'Rock',
       'popular': 'Popular',
-      'custom': 'Custom'
+      'custom': 'Custom',
+      // Добавляем маппинги для транслитерированных имен
+      'бои-восьме-рка': 'Бой Восьмёрка',
+      'бои-пяте-рка': 'Бой Пятёрка'
     };
 
     return nameMap[fileName] || this.capitalizeFirstLetter(fileName.replace(/[-_]/g, ' '));
