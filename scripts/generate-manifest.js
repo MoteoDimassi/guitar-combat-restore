@@ -73,11 +73,31 @@ class ManifestGenerator {
   generateTemplateMetadata(fileName, templateData) {
     const nameWithoutExt = path.parse(fileName).name;
     const displayName = this.fileNameToDisplayName(nameWithoutExt);
+    const id = this.generateId(nameWithoutExt);
+    const newFileName = `${id}.json`;
+
+    // Переименовать файл в ASCII-имя, если оно отличается
+    if (fileName !== newFileName) {
+      const oldPath = path.join(this.templatesDir, fileName);
+      const newPath = path.join(this.templatesDir, newFileName);
+
+      try {
+        if (fs.existsSync(newPath)) {
+          console.warn(`⚠️  Файл ${newFileName} уже существует, пропускаем переименование ${fileName}`);
+        } else {
+          fs.renameSync(oldPath, newPath);
+          console.log(`🔄 Переименован: ${fileName} → ${newFileName}`);
+        }
+      } catch (error) {
+        console.error(`❌ Ошибка переименования ${fileName}: ${error.message}`);
+        // Если переименование не удалось, используем оригинальное имя
+      }
+    }
 
     return {
       name: displayName,
-      file: fileName,
-      id: this.generateId(nameWithoutExt),
+      file: newFileName,
+      id: id,
       description: this.generateDescription(templateData, displayName)
     };
   }
