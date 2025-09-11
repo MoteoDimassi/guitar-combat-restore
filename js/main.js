@@ -3,6 +3,7 @@ import { BeatRow } from './components/BeatRow.js';
 import { Controls } from './components/Controls.js';
 import { Playback } from './components/Playback.js';
 import { ExportUtils } from './utils/ExportUtils.js';
+import { ImportUtils } from './utils/ImportUtils.js';
 import { Metronome } from './components/Metronome.js';
 import { Modal } from './components/Modal.js';
 import { MobileMenu } from './components/MobileMenu.js';
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const controls = new Controls(beatRow);
   const playback = new Playback(beatRow);
   const exportUtils = new ExportUtils(beatRow);
+  const importUtils = new ImportUtils(beatRow);
   const metronome = new Metronome();
 
   // Инициализация компонентов
@@ -35,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   controls.init();
   playback.init();
   exportUtils.init();
+  importUtils.init();
   metronome.init();
 
   // Инициализация мобильного меню
@@ -51,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     controls,
     playback,
     exportUtils,
+    importUtils,
     metronome,
     modal,
     state: {

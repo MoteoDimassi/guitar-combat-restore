@@ -54,7 +54,8 @@ guitar-combat-restore/
 │   │   ├── MobileMenu.js  # Мобильное меню
 │   │   └── Modal.js       # Модальное окно
 │   └── utils/             # Вспомогательные утилиты
-│       └── ExportUtils.js # Утилиты экспорта/импорта
+│       ├── ExportUtils.js # Утилиты экспорта данных
+│       └── ImportUtils.js # Утилиты импорта данных
 ├── css/                   # Стили
 │   ├── input.css          # Входной файл Tailwind
 │   └── styles.css         # Сгенерированные стили
