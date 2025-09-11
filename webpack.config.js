@@ -36,7 +36,8 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'css/styles.css', to: 'css/' }
+        { from: 'css/styles.css', to: 'css/' },
+        { from: 'songs.html', to: 'songs.html' }
       ]
     })
   ],
