@@ -7,6 +7,7 @@ import { ImportUtils } from './utils/ImportUtils.js';
 import { Metronome } from './components/Metronome.js';
 import { Modal } from './components/Modal.js';
 import { MobileMenu } from './components/MobileMenu.js';
+import { TemplateManager } from './components/TemplateManager.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const exportUtils = new ExportUtils(beatRow);
   const importUtils = new ImportUtils(beatRow);
   const metronome = new Metronome();
+  const templateManager = new TemplateManager(beatRow, controls);
 
   // Инициализация компонентов
   beatRow.init();
@@ -39,6 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   exportUtils.init();
   importUtils.init();
   metronome.init();
+  templateManager.init();
 
   // Инициализация мобильного меню
   const mobileMenu = new MobileMenu();
@@ -57,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     importUtils,
     metronome,
     modal,
+    templateManager,
     state: {
       count: 8,
       beats: [],

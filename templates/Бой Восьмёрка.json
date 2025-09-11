@@ -1,0 +1,74 @@
+{
+  "beats": [
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": false
+    },
+    {
+      "direction": "down",
+      "play": false
+    },
+    {
+      "direction": "up",
+      "play": false
+    },
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": false
+    },
+    {
+      "direction": "down",
+      "play": false
+    },
+    {
+      "direction": "up",
+      "play": true
+    },
+    {
+      "direction": "down",
+      "play": false
+    },
+    {
+      "direction": "up",
+      "play": true
+    },
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": false
+    },
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": false
+    },
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": true
+    }
+  ],
+  "bpm": 88,
+  "speed": 100,
+  "chords": [
+    "Em7 C G Dsus4"
+  ],
+  "timestamp": "2025-09-11T14:18:02.052Z"
+}

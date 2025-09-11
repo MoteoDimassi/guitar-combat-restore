@@ -114,4 +114,37 @@ export class Controls {
   getCount() {
     return this.count;
   }
+
+  /**
+   * Применение данных шаблона без генерации новых beats
+   * @param {Object} templateData - данные шаблона
+   */
+  applyTemplateData(templateData) {
+    console.log('Controls: Применяем данные шаблона:', templateData);
+
+    this.count = templateData.count;
+    this.beatRow.setBeats(templateData.beats);
+    this.beatRow.setCount(templateData.count);
+
+    // Применяем состояния кружков из шаблона
+    const circleStates = templateData.beats.map(beat => beat.play);
+    this.beatRow.setCircleStates(circleStates);
+
+    // Обновление глобального состояния
+    if (window.app) {
+      window.app.state.count = templateData.count;
+      window.app.state.beats = templateData.beats;
+      window.app.state.currentIndex = 0;
+
+      // Обновляем количество стрелочек в метрономе
+      if (window.app.metronome) {
+        window.app.metronome.setBeatCount(templateData.count);
+      }
+    }
+
+    // Обновление визуального состояния селектора количества
+    this.updateCountButtons(templateData.count);
+
+    console.log('Controls: Данные шаблона применены');
+  }
 }
