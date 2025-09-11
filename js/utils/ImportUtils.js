@@ -89,9 +89,11 @@ export class ImportUtils {
 
       // 3. Применяем play к кружкам
       const circleStates = normalizedBeats.map(beat => beat.play);
+      console.log('Import: Setting circleStates:', circleStates);
       this.beatRow.setCircleStates(circleStates);
 
       // 4. Устанавливаем биты (стрелочки)
+      console.log('Import: Setting beats:', normalizedBeats);
       this.beatRow.setBeats(normalizedBeats);
 
       // 5. Обновляем количество стрелок

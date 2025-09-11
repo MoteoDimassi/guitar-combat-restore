@@ -41,22 +41,29 @@ export class Controls {
     const beats = this.makeBeats(n);
     this.beatRow.setBeats(beats);
     this.beatRow.setCount(n);
-    
-    // Инициализируем состояния кружочков
-    const circleStates = beats.map(beat => beat.play || false);
-    this.beatRow.setCircleStates(circleStates);
-    
+
+    // Инициализируем состояния кружочков только если они не установлены или имеют неправильную длину
+    const currentCircleStates = this.beatRow.getCircleStates();
+    console.log('Controls setCount: currentCircleStates:', currentCircleStates, 'length:', currentCircleStates ? currentCircleStates.length : 'null', 'n:', n);
+    if (!currentCircleStates || currentCircleStates.length !== n) {
+      const circleStates = beats.map(beat => beat.play || false);
+      console.log('Controls setCount: Setting new circleStates:', circleStates);
+      this.beatRow.setCircleStates(circleStates);
+    } else {
+      console.log('Controls setCount: Keeping existing circleStates');
+    }
+
     // Обновление глобального состояния
     if (window.app) {
       window.app.state.count = n;
       window.app.state.beats = beats;
-      
+
       // Обновляем количество стрелочек в метрономе
       if (window.app.metronome) {
         window.app.metronome.setBeatCount(n);
       }
     }
-    
+
     // Обновление визуального состояния кнопок
     this.updateCountButtons(n);
   }
