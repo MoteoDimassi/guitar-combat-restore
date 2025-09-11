@@ -44,33 +44,21 @@ export class TemplateScanner {
       // Валидируем структуру manifest
       this.validateManifest(manifest);
 
-      // Получаем список всех JSON файлов в директории templates
-      const discoveredTemplates = await this.discoverTemplates();
-
-      // Объединяем manifest с автоматически найденными шаблонами
-      const mergedTemplates = this.mergeManifestWithDiscovered(manifest.templates, discoveredTemplates);
-
       // Кэшируем результат
-      this.cache = mergedTemplates;
+      this.cache = manifest.templates;
       this.templates = [...this.cache];
 
-      console.log('TemplateScanner: Загружено', this.templates.length, 'шаблонов (', manifest.templates.length, 'из manifest +', discoveredTemplates.length, 'автоматически)');
+      console.log('TemplateScanner: Загружено', this.templates.length, 'шаблонов из manifest.json');
       return this.templates;
 
     } catch (error) {
       console.error('TemplateScanner: Ошибка загрузки manifest:', error);
 
-      // Fallback: сканируем директорию напрямую
-      const discoveredTemplates = await this.discoverTemplates();
-      if (discoveredTemplates.length > 0) {
-        console.log('TemplateScanner: Используем автоматически найденные шаблоны как fallback');
-        this.cache = discoveredTemplates;
-        this.templates = [...this.cache];
-        return this.templates;
-      }
-
-      // Последний fallback: hardcoded список
-      return this.getFallbackTemplates();
+      // Fallback: используем hardcoded список
+      console.log('TemplateScanner: Используем fallback список шаблонов');
+      this.cache = this.getFallbackTemplates();
+      this.templates = [...this.cache];
+      return this.templates;
     }
   }
 
@@ -120,13 +108,13 @@ export class TemplateScanner {
     // Проверяем каждый шаблон
     manifest.templates.forEach((template, index) => {
       if (!template.name) {
-        throw new Error(`Шаблон ${index}: отсутствует поле 'name'`);
+        console.warn(`Шаблон ${index}: отсутствует поле 'name'`);
       }
       if (!template.file) {
         throw new Error(`Шаблон ${index}: отсутствует поле 'file'`);
       }
       if (!template.id) {
-        throw new Error(`Шаблон ${index}: отсутствует поле 'id'`);
+        console.warn(`Шаблон ${index}: отсутствует поле 'id'`);
       }
     });
   }
@@ -165,147 +153,6 @@ export class TemplateScanner {
     ];
   }
 
-  /**
-   * Автоматическое обнаружение шаблонов в директории templates
-   * @returns {Promise<Array<Object>>} - массив найденных шаблонов
-   */
-  async discoverTemplates() {
-    const discoveredTemplates = [];
-    const basePath = this.getBasePath();
-
-    // Список потенциальных имен файлов шаблонов (без расширения)
-    const potentialNames = [
-      'блюз', 'рок', 'популярный', 'кастомный', 'Бой Пятёрка', 'Бой Восьмёрка',
-      'custom', 'blues', 'rock', 'popular', 'boy-pyaterka', 'boy-vosmerka'
-    ];
-
-    console.log('TemplateScanner: Начинаем автоматическое обнаружение шаблонов');
-
-    // Проверяем каждый потенциальный файл
-    for (const name of potentialNames) {
-      try {
-        const fileName = `${name}.json`;
-        const filePath = `${basePath}templates/${fileName}`;
-
-        console.log(`TemplateScanner: Проверяем файл ${fileName}`);
-
-        const response = await fetch(filePath, { method: 'HEAD' });
-
-        if (response.ok) {
-          console.log(`TemplateScanner: Найден файл ${fileName}`);
-
-          // Загружаем содержимое файла для генерации метаданных
-          const contentResponse = await fetch(filePath);
-          if (contentResponse.ok) {
-            const templateData = await contentResponse.json();
-
-            // Генерируем метаданные для найденного шаблона
-            const template = this.generateTemplateMetadata(name, fileName, templateData);
-            discoveredTemplates.push(template);
-          }
-        }
-      } catch (error) {
-        // Файл не найден или ошибка - пропускаем
-        console.log(`TemplateScanner: Файл ${name}.json не найден или ошибка загрузки`);
-      }
-    }
-
-    console.log(`TemplateScanner: Автоматически обнаружено ${discoveredTemplates.length} шаблонов`);
-    return discoveredTemplates;
-  }
-
-  /**
-   * Генерация метаданных для автоматически найденного шаблона
-   * @param {string} name - имя шаблона (латиницей)
-   * @param {string} fileName - имя файла
-   * @param {Object} templateData - данные шаблона
-   * @returns {Object} - объект шаблона с метаданными
-   */
-  generateTemplateMetadata(name, fileName, templateData) {
-    // Преобразуем имя файла в человеко-читаемое имя
-    const displayName = this.fileNameToDisplayName(name);
-
-    return {
-      name: displayName,
-      file: fileName,
-      id: name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-      description: this.generateDescription(templateData, displayName),
-      autoDiscovered: true // метка для автоматически найденных шаблонов
-    };
-  }
-
-  /**
-   * Преобразование имени файла в отображаемое имя
-   * @param {string} fileName - имя файла без расширения
-   * @returns {string} - человеко-читаемое имя
-   */
-  fileNameToDisplayName(fileName) {
-    const nameMap = {
-      'блюз': 'Блюз',
-      'рок': 'Рок',
-      'популярный': 'Популярный',
-      'кастомный': 'Кастомный',
-      'Бой Пятёрка': 'Бой Пятёрка',
-      'Бой Восьмёрка': 'Бой Восьмёрка',
-      'boy-pyaterka': 'Бой Пятёрка',
-      'boy-vosmerka': 'Бой Восьмёрка',
-      'blues': 'Blues',
-      'rock': 'Rock',
-      'popular': 'Popular',
-      'custom': 'Custom'
-    };
-
-    return nameMap[fileName] || fileName;
-  }
-
-  /**
-   * Генерация описания на основе данных шаблона
-   * @param {Object} templateData - данные шаблона
-   * @param {string} displayName - отображаемое имя
-   * @returns {string} - описание шаблона
-   */
-  generateDescription(templateData, displayName) {
-    if (templateData.bpm && templateData.count) {
-      return `${displayName} паттерн (${templateData.count} стрелок, ${templateData.bpm} BPM)`;
-    }
-    return `${displayName} паттерн боя`;
-  }
-
-  /**
-   * Объединение шаблонов из manifest с автоматически найденными
-   * @param {Array<Object>} manifestTemplates - шаблоны из manifest
-   * @param {Array<Object>} discoveredTemplates - автоматически найденные шаблоны
-   * @returns {Array<Object>} - объединенный список шаблонов
-   */
-  mergeManifestWithDiscovered(manifestTemplates, discoveredTemplates) {
-    const merged = [...manifestTemplates];
-    const manifestIds = new Set(manifestTemplates.map(t => t.id));
-
-    console.log('TemplateScanner: Объединяем manifest с автоматически найденными шаблонами');
-
-    // Добавляем новые шаблоны, которых нет в manifest
-    for (const discovered of discoveredTemplates) {
-      if (!manifestIds.has(discovered.id)) {
-        console.log(`TemplateScanner: Добавляем новый шаблон "${discovered.name}" (автоматически найден)`);
-        merged.push(discovered);
-      } else {
-        console.log(`TemplateScanner: Шаблон "${discovered.name}" уже есть в manifest`);
-      }
-    }
-
-    // Удаляем из списка шаблоны, файлы которых больше не существуют
-    const discoveredFiles = new Set(discoveredTemplates.map(t => t.file));
-    const filtered = merged.filter(template => {
-      if (template.autoDiscovered !== true && !discoveredFiles.has(template.file)) {
-        console.log(`TemplateScanner: Удаляем шаблон "${template.name}" - файл ${template.file} не найден`);
-        return false;
-      }
-      return true;
-    });
-
-    console.log(`TemplateScanner: Итоговый список: ${filtered.length} шаблонов`);
-    return filtered;
-  }
 
   /**
    * Очистить кэш
