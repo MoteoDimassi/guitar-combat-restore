@@ -1,62 +1,88 @@
 import { ChordManager } from './ChordManager.js';
-import { AudioPolyfill } from '../utils/AudioPolyfill.js';
+import { AudioManager } from '../audio/AudioManager.js';
+import { AudioEngine } from '../audio/AudioEngine.js';
 
-// Метроном - основной компонент для синхронизации визуальных подсветок и звуков
-// Использует Web Audio API для точного тайминга и воспроизведения гитарных аккордов
+/**
+ * Metronome - main component for synchronizing visual highlights and guitar sounds.
+ * Uses Web Audio API for precise timing and guitar chord playback.
+ * Manages beat scheduling, audio playback, and visual synchronization.
+ */
 export class Metronome {
+  /**
+   * Creates a new Metronome instance.
+   * Initializes audio components, scheduling parameters, and chord management.
+   */
   constructor() {
-    this.audioCtx = null;
+    /** @type {AudioManager} */
+    this.audioManager = new AudioManager();
+    /** @type {AudioEngine} */
+    this.audioEngine = new AudioEngine(this.audioManager);
+
+    /** @type {boolean} */
     this.isPlaying = false;
+    /** @type {number} */
     this.currentBeat = 0;
+    /** @type {number} */
     this.bpm = 90;
 
-    this.beatCount = 4;           // всегда 4 доли на такт (метр)
-    this.actualBeatCount = 4;     // фактическое число стрелочек в одном такте (цикл боя)
-    this.barIndex = 0;            // <<< НОВОЕ: счётчик тактов
+    /** @type {number} Always 4 beats per bar (time signature) */
+    this.beatCount = 4;
+    /** @type {number} Actual number of arrows in one bar (fight cycle) */
+    this.actualBeatCount = 4;
+    /** @type {number} Bar counter */
+    this.barIndex = 0;
 
-    // планирование
+    // Scheduling parameters
+    /** @type {number} Scheduler lookahead time in milliseconds */
     this.lookahead = 25;
+    /** @type {number} How far ahead to schedule audio in seconds */
     this.scheduleAheadTime = 0.1;
+    /** @type {number} When the next note is due */
     this.nextNoteTime = 0.0;
+    /** @type {number|null} Scheduler timer ID */
     this.timerID = null;
 
-    // аккорды
+    // Chords
+    /** @type {ChordManager} */
     this.chordManager = new ChordManager();
   }
 
+  /**
+   * Initializes the metronome component.
+   * @returns {boolean} Always returns true
+   */
   init() {
-    console.log('Metronome initialized with Web Audio API');
     return true;
   }
 
+  /**
+   * Starts the metronome playback.
+   * Initializes audio context, resets beat counters, and begins scheduling.
+   * @async
+   * @returns {Promise<void>}
+   * @throws {Error} If audio initialization fails
+   */
   async start() {
     if (this.isPlaying) return;
     this.isPlaying = true;
 
-    // ДОБАВИТЬ: Используем AudioPolyfill для создания/проверки AudioContext
-    if (!this.audioCtx) {
-      this.audioCtx = AudioPolyfill.createAudioContext();
-      if (!this.audioCtx) {
-        console.error('Metronome: Failed to create AudioContext, using fallback');
-        this.isPlaying = false;
-        return;
-      }
-    }
-
-    // ДОБАВИТЬ: Проверяем готовность AudioContext с помощью AudioPolyfill
-    const isReady = await AudioPolyfill.ensureAudioContextReady(this.audioCtx);
-    if (!isReady) {
-      console.error('Metronome: AudioContext not ready');
+    // Initialize AudioManager
+    const audioInitialized = await this.audioManager.initialize();
+    if (!audioInitialized) {
+      console.error('Metronome: Failed to initialize audio');
       this.isPlaying = false;
       return;
     }
 
     this.currentBeat = 0;
-    this.barIndex = 0;                   // <<< сбрасываем номер такта
-    this.nextNoteTime = this.audioCtx.currentTime + 0.05;
+    this.barIndex = 0;                   // Reset bar number
+    this.nextNoteTime = this.audioManager.getCurrentTime() + 0.05;
     this.scheduler();
   }
 
+  /**
+   * Stops the metronome playback and clears the scheduler.
+   */
   stop() {
     if (!this.isPlaying) return;
     this.isPlaying = false;
@@ -66,18 +92,40 @@ export class Metronome {
     }
   }
 
+  /**
+   * Sets the beats per minute (tempo).
+   * @param {number} bpm - New BPM value
+   */
   setBpm(bpm) { this.bpm = bpm; }
 
+  /**
+   * Sets the beat count and regenerates chord maps.
+   * Time signature remains 4/4, but actual beat count changes.
+   * @param {number} count - Number of arrows/beats per bar
+   */
   setBeatCount(count) {
-    this.beatCount = 4;                  // метр (четверти) остаётся 4
-    this.actualBeatCount = count;        // число стрелочек в такте
-    // <<< ПЕРЕГЕНЕРАЦИЯ chordMap при изменении стрелочек
+    this.beatCount = 4;                  // Time signature (quarters) stays 4
+    this.actualBeatCount = count;        // Number of arrows per bar
+    // Regenerate chordMap when arrows change
     this.chordManager.generateChordMaps(this.actualBeatCount);
   }
 
+  /**
+   * Gets the time signature beat count (always 4 for 4/4).
+   * @returns {number} Time signature beat count
+   */
   getBeatCount() { return this.beatCount; }
+
+  /**
+   * Gets the actual number of arrows/beats per bar.
+   * @returns {number} Actual beat count
+   */
   getActualBeatCount() { return this.actualBeatCount; }
 
+  /**
+   * Calculates the ratio between time signature beats and actual arrows.
+   * @returns {number} Beat ratio (1 for 4 beats, 2 for 8 beats, 4 for 16 beats)
+   */
   getBeatRatio() {
     if (this.actualBeatCount === 4) return 1;
     if (this.actualBeatCount === 8) return 2;
@@ -85,163 +133,133 @@ export class Metronome {
     return 1;
   }
 
+  /**
+   * Gets arrow indices for a given beat index.
+   * @param {number} beatIndex - The beat index (0-3 for 4/4 time)
+   * @returns {Object} Object with startIndex, count, and actualBeatCount
+   * @returns {number} return.startIndex - Starting arrow index
+   * @returns {number} return.count - Number of arrows for this beat
+   * @returns {number} return.actualBeatCount - Total actual beat count
+   */
   getArrowIndexForBeat(beatIndex) {
     const ratio = this.getBeatRatio();
     const startIndex = beatIndex * ratio;
     return { startIndex, count: ratio, actualBeatCount: this.actualBeatCount };
   }
 
+  /**
+   * Sets the current beat index.
+   * @param {number} beatIndex - New beat index
+   */
   setCurrentBeat(beatIndex) { this.currentBeat = beatIndex; }
 
-  // <<< инкремент такта при завершении предыдущего
+  /**
+   * Advances to the next note and increments bar counter when needed.
+   * Updates timing for the next scheduled beat.
+   */
   nextNote() {
     const secondsPerBeat = 60.0 / this.bpm;
     this.nextNoteTime += secondsPerBeat;
     this.currentBeat++;
     if (this.currentBeat >= this.beatCount) {
       this.currentBeat = 0;
-      this.barIndex = (this.barIndex + 1) % Number.MAX_SAFE_INTEGER; // новый такт
+      this.barIndex = (this.barIndex + 1) % Number.MAX_SAFE_INTEGER; // New bar
     }
   }
 
-  scheduleClick(time, isAccent) {
-    if (!this.audioCtx) return;
-    const osc = this.audioCtx.createOscillator();
-    const gainNode = this.audioCtx.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(isAccent ? 1500 : 1000, time);
-    gainNode.gain.setValueAtTime(1, time);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-    osc.connect(gainNode);
-    gainNode.connect(this.audioCtx.destination);
-    osc.start(time);
-    osc.stop(time + 0.05);
-  }
 
-  // Планировщик звуков и подсветок
+  /**
+   * Main scheduler for sounds and visual highlights.
+   * Continuously schedules beats ahead of time to ensure precise timing.
+   * Uses lookahead scheduling to prevent audio delays.
+   */
   scheduler() {
-    // ДОБАВИТЬ: Проверка состояния AudioContext перед планированием
-    if (!this.audioCtx || !this.isPlaying) return;
+    if (!this.isPlaying) return;
 
-    // Проверка состояния AudioContext для мобильных браузеров
-    if (this.audioCtx.state === 'suspended') {
-      console.warn('Metronome: AudioContext suspended during scheduling, attempting resume');
-      this.audioCtx.resume().catch(error => {
-        console.error('Metronome: Failed to resume AudioContext in scheduler:', error);
-        this.stop(); // Останавливаем если не можем возобновить
-        return;
-      });
-      return; // Пропускаем планирование в этом цикле
-    }
-
-    if (this.audioCtx.state !== 'running') {
-      console.warn('Metronome: AudioContext not in running state:', this.audioCtx.state);
-      return;
-    }
+    // Check audio state
+    if (!this.checkAudioState()) return;
 
     const secondsPerBeat = 60.0 / this.bpm;
     const totalArrows = this.actualBeatCount;
     const ratio = this.getBeatRatio();
 
-    while (this.nextNoteTime < this.audioCtx.currentTime + this.scheduleAheadTime) {
-      const isAccent = (this.currentBeat === 0);
-      this.scheduleClick(this.nextNoteTime, isAccent);
-
-      // фиксируем номер такта для всех стрелочек ЭТОГО удара
-      const barAtSchedule = this.barIndex;             // <<< ВАЖНО: замыкаем текущее значение
-      const startIndex = this.currentBeat * ratio;
-
-      for (let i = 0; i < ratio; i++) {
-        const arrowIndex = startIndex + i;             // 0..(totalArrows-1) внутри ТАКТА
-        if (arrowIndex < totalArrows) {
-          const arrowTime = this.nextNoteTime + (i * secondsPerBeat / ratio);
-          setTimeout(() => {
-            this.playGuitarSound(arrowIndex, barAtSchedule);  // <<< передаём barIndex
-            if (this.onBeatCallback) this.onBeatCallback(arrowIndex);
-          }, (arrowTime - this.audioCtx.currentTime) * 1000);
-        }
-      }
-
+    while (this.nextNoteTime < this.audioManager.getCurrentTime() + this.scheduleAheadTime) {
+      this.scheduleBeat(secondsPerBeat, totalArrows, ratio);
       this.nextNote();
     }
     this.timerID = setTimeout(() => this.scheduler(), this.lookahead);
   }
 
-  // --- УЛУЧШЕННЫЙ СИНТЕЗ ГИТАРЫ ---
-  createGuitarSound(frequency = 330, duration = 0.3, volume = 0.8) {
-    // ДОБАВИТЬ: Проверка доступности AudioContext с fallback
-    if (!this.audioCtx || this.audioCtx.state !== 'running') {
-      console.warn('Metronome: AudioContext not available, using fallback sound');
-      // ДОБАВИТЬ: Используем fallback для браузеров без Web Audio API
-      AudioPolyfill.fallbackPlaySound(frequency, duration * 1000);
-      return;
+  /**
+   * Checks AudioContext state and attempts to resume if suspended.
+   * @returns {boolean} True if AudioContext is ready, false if suspended/failed
+   * @async
+   */
+  checkAudioState() {
+    if (!this.audioManager.isReady()) {
+      // Пытаемся возобновить если приостановлен
+      this.audioManager.resume().then(success => {
+        if (!success) {
+          console.error('Metronome: Failed to resume AudioContext in scheduler');
+          this.stop();
+        }
+      }).catch(error => {
+        console.error('Metronome: Error resuming AudioContext:', error);
+        this.stop();
+      });
+      return false; // Пропускаем планирование в этом цикле
     }
-
-    const time = this.audioCtx.currentTime;
-    
-    // Создаем основной осциллятор для чистого звука струны
-    const oscillator = this.audioCtx.createOscillator();
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, time);
-    
-    // Создаем второй осциллятор для обертона (октава выше)
-    const overtone = this.audioCtx.createOscillator();
-    overtone.type = 'sine';
-    overtone.frequency.setValueAtTime(frequency * 2, time);
-    
-    // Создаем третий осциллятор для второго обертона
-    const secondOvertone = this.audioCtx.createOscillator();
-    secondOvertone.type = 'sine';
-    secondOvertone.frequency.setValueAtTime(frequency * 3, time);
-    
-    // Создаем ADSR огибающую для основного звука
-    const gainNode = this.audioCtx.createGain();
-    gainNode.gain.setValueAtTime(0, time);
-    gainNode.gain.linearRampToValueAtTime(volume * 0.7, time + 0.001); // Attack
-    gainNode.gain.exponentialRampToValueAtTime(volume * 0.5, time + 0.01); // Decay
-    gainNode.gain.exponentialRampToValueAtTime(volume * 0.3, time + duration * 0.7); // Sustain
-    gainNode.gain.exponentialRampToValueAtTime(0.001, time + duration); // Release
-    
-    // Создаем огибающую для обертонов (более короткую)
-    const overtoneGain = this.audioCtx.createGain();
-    overtoneGain.gain.setValueAtTime(0, time);
-    overtoneGain.gain.linearRampToValueAtTime(volume * 0.3, time + 0.001);
-    overtoneGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.5);
-    
-    const secondOvertoneGain = this.audioCtx.createGain();
-    secondOvertoneGain.gain.setValueAtTime(0, time);
-    secondOvertoneGain.gain.linearRampToValueAtTime(volume * 0.1, time + 0.001);
-    secondOvertoneGain.gain.exponentialRampToValueAtTime(0.001, time + duration * 0.3);
-    
-    // Создаем фильтр для гитарного тембра
-    const filter = this.audioCtx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2000, time);
-    filter.Q.setValueAtTime(1, time);
-    
-    // Соединяем узлы
-    oscillator.connect(gainNode);
-    overtone.connect(overtoneGain);
-    secondOvertone.connect(secondOvertoneGain);
-    
-    gainNode.connect(filter);
-    overtoneGain.connect(filter);
-    secondOvertoneGain.connect(filter);
-    
-    filter.connect(this.audioCtx.destination);
-    
-    // Запускаем осцилляторы
-    oscillator.start(time);
-    overtone.start(time);
-    secondOvertone.start(time);
-    
-    // Останавливаем осцилляторы
-    oscillator.stop(time + duration);
-    overtone.stop(time + duration * 0.8);
-    secondOvertone.stop(time + duration * 0.6);
+    return true;
   }
 
-  // <<< УЛУЧШЕННАЯ ЛОГИКА ВОСПРОИЗВЕДЕНИЯ ЗВУКОВ АККОРДОВ >>>
+  /**
+   * Schedules one beat (hit) including click sound and arrow highlights.
+   * @param {number} secondsPerBeat - Duration of one beat in seconds
+   * @param {number} totalArrows - Total number of arrows
+   * @param {number} ratio - Beat/arrow ratio
+   */
+  scheduleBeat(secondsPerBeat, totalArrows, ratio) {
+    const isAccent = (this.currentBeat === 0);
+    this.audioEngine.scheduleClick(this.nextNoteTime, isAccent);
+
+    // фиксируем номер такта для всех стрелочек ЭТОГО удара
+    const barAtSchedule = this.barIndex;
+    const startIndex = this.currentBeat * ratio;
+
+    for (let i = 0; i < ratio; i++) {
+      const arrowIndex = startIndex + i;
+      if (arrowIndex < totalArrows) {
+        this.scheduleArrow(arrowIndex, barAtSchedule, secondsPerBeat, ratio, i);
+      }
+    }
+  }
+
+  /**
+   * Schedules sound for one arrow with precise timing.
+   * @param {number} arrowIndex - Arrow index
+   * @param {number} barAtSchedule - Bar number at schedule time
+   * @param {number} secondsPerBeat - Beat duration
+   * @param {number} ratio - Beat/arrow ratio
+   * @param {number} arrowOffset - Offset within the beat
+   */
+  scheduleArrow(arrowIndex, barAtSchedule, secondsPerBeat, ratio, arrowOffset) {
+    const arrowTime = this.nextNoteTime + (arrowOffset * secondsPerBeat / ratio);
+    const delay = (arrowTime - this.audioManager.getCurrentTime()) * 1000;
+
+    setTimeout(() => {
+      this.playGuitarSound(arrowIndex, barAtSchedule);
+      if (this.onBeatCallback) this.onBeatCallback(arrowIndex);
+    }, delay);
+  }
+
+
+  /**
+   * Enhanced chord sound playback logic.
+   * Plays guitar chords based on arrow position and circle states.
+   * Supports chord inversions and arpeggio effects for realism.
+   * @param {number} arrowIndex - Index of the arrow being played
+   * @param {number} barIndex - Current bar number for chord progression
+   */
   playGuitarSound(arrowIndex, barIndex) {
     // Проверяем состояние кружочка вместо beat.play
     if (window.app && window.app.beatRow) {
@@ -272,7 +290,7 @@ export class Metronome {
                 // Разная громкость для разных нот аккорда
                 const volumes = [0.8, 0.6, 0.7]; // Тоника, терция, квинта
                 const volume = volumes[index] || 0.6;
-                this.createGuitarSound(freq, 0.25, volume);
+                this.audioEngine.createGuitarSound(freq, 0.25, volume);
               }, index * 8); // Небольшая арпеджио-задержка
             });
           } else {
@@ -281,7 +299,7 @@ export class Metronome {
               setTimeout(() => {
                 const volumes = [0.8, 0.6, 0.7];
                 const volume = volumes[index] || 0.6;
-                this.createGuitarSound(freq, 0.25, volume);
+                this.audioEngine.createGuitarSound(freq, 0.25, volume);
               }, index * 8);
             });
           }
@@ -289,17 +307,25 @@ export class Metronome {
           // Если нет аккорда, воспроизводим одиночную ноту
           const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63];
           const f = frequencies[arrowIndex % frequencies.length] || 220;
-          this.createGuitarSound(f, 0.3, 0.9);
+          this.audioEngine.createGuitarSound(f, 0.3, 0.9);
         }
       }
     }
   }
 
-  // обновление аккордов из поля ввода → сразу пересоздать chordMaps
+  /**
+   * Updates chords from input field and regenerates chord maps immediately.
+   * Called when user changes chord progression in the UI.
+   * @param {string} chordsString - Chord progression string (e.g., "Cm F G")
+   */
   updateChords(chordsString) {
     this.chordManager.updateChords(chordsString, this.actualBeatCount);
   }
 
+  /**
+   * Gets the current parsed chords array.
+   * @returns {Array} Array of parsed chord objects
+   */
   getChords() {
     return this.chordManager.parsedChords;
   }

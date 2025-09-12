@@ -48,7 +48,6 @@ export class ChordManager {
     if (Number.isInteger(arrowCount) && arrowCount > 0) {
       this.generateChordMaps(arrowCount);
     }
-    console.log('Аккорды обновлены:', this.parsedChords);
   }
 
   // --- Настройка правил смен (на будущее; можно не трогать) ---
@@ -100,7 +99,6 @@ export class ChordManager {
 
       this.chordMaps.push(map);
     }
-    console.log('ChordMaps сгенерированы:', this.chordMaps);
   }
 
   // --- Получение имени аккорда по позиции (тактовая логика) ---

@@ -1,4 +1,9 @@
-// Точка входа приложения - инициализирует все компоненты и управляет глобальным состоянием
+/**
+ * @fileoverview Main entry point of the Guitar Combat application.
+ * Initializes all components, manages global state, and handles application lifecycle events.
+ * This file serves as the central orchestrator for the guitar rhythm training application.
+ */
+
 import { BeatRow } from './components/BeatRow.js';
 import { Controls } from './components/Controls.js';
 import { Playback } from './components/Playback.js';
@@ -14,18 +19,32 @@ if (!window.AudioContext && !window.webkitAudioContext) {
   console.warn('Web Audio API не поддерживается в этом браузере. Некоторые функции могут не работать.');
 }
 
-// Функция для обработки изменения размера окна
+/**
+ * Handles window resize events to adapt the application layout.
+ * Re-renders components to ensure proper responsiveness on different screen sizes.
+ * Called automatically when the window is resized.
+ *
+ * @function handleResize
+ */
 function handleResize() {
-  // Перерендерим компоненты при изменении размера для адаптации
+  // Re-render beat row component to adapt to new screen size
   if (window.app && window.app.beatRow) {
     window.app.beatRow.render();
   }
 }
 
 
-// Инициализация приложения при загрузке DOM
+/**
+ * Main application initialization function.
+ * Sets up all components, initializes global state, and binds event handlers.
+ * Called when the DOM content has finished loading.
+ *
+ * @async
+ * @event DOMContentLoaded
+ * @param {Event} event - DOM content loaded event
+ */
 document.addEventListener('DOMContentLoaded', async () => {
-  // Создание экземпляров компонентов
+  // Create component instances
   const beatRow = new BeatRow();
   const controls = new Controls(beatRow);
   const playback = new Playback(beatRow);
@@ -103,29 +122,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.app && window.app.metronome && window.app.playback) {
       if (document.hidden) {
         // Страница скрыта - можно приостановить для экономии ресурсов
-        console.log('Page hidden, stopping playback for mobile optimization');
         window.app.playback.stopPlayback();
       } else {
         // Страница стала видимой - возобновляем если пользователь ожидает этого
         // Не автоматически возобновляем, чтобы избежать неожиданного звука
-        console.log('Page visible again');
       }
     }
   });
 
-  // ДОБАВИТЬ: Обработка взаимодействия пользователя для разблокировки AudioContext
+  /**
+   * Unlocks the AudioContext on user interaction to comply with browser autoplay policies.
+   * This is required for audio playback to work in modern browsers.
+   * Removes event listeners after successful unlock to prevent unnecessary processing.
+   *
+   * @async
+   * @function unlockAudioContext
+   * @throws {Error} If AudioContext resume fails
+   */
   const unlockAudioContext = async () => {
     if (window.app && window.app.metronome && window.app.metronome.audioCtx) {
       if (window.app.metronome.audioCtx.state === 'suspended') {
         try {
           await window.app.metronome.audioCtx.resume();
-          console.log('AudioContext unlocked by user interaction');
         } catch (error) {
           console.error('Failed to unlock AudioContext:', error);
         }
       }
     }
-    // Удаляем обработчики после первого успешного взаимодействия
+    // Remove event listeners after first successful interaction
     document.removeEventListener('touchstart', unlockAudioContext);
     document.removeEventListener('touchend', unlockAudioContext);
     document.removeEventListener('click', unlockAudioContext);
@@ -147,7 +171,6 @@ document.addEventListener('click', (e) => {
     e.preventDefault();
     if (window.app && window.app.modal) {
       window.app.modal.showPrivacyPolicy();
-      console.log('Модальное окно открыто', window.app.modal);
     }
   }
   

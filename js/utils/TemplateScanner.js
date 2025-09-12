@@ -24,14 +24,10 @@ export class TemplateScanner {
     try {
       // Проверяем кэш сначала
       if (this.cache) {
-        console.log('TemplateScanner: Используем кэшированный список шаблонов');
         return this.cache;
       }
 
-      console.log('TemplateScanner: Загружаем список шаблонов из manifest.json');
-
       const fullPath = `${this.getBasePath()}${this.manifestPath}`;
-      console.log('TemplateScanner: Полный путь к manifest:', fullPath);
 
       const response = await fetch(fullPath);
 
@@ -48,14 +44,12 @@ export class TemplateScanner {
       this.cache = manifest.templates;
       this.templates = [...this.cache];
 
-      console.log('TemplateScanner: Загружено', this.templates.length, 'шаблонов из manifest.json');
       return this.templates;
 
     } catch (error) {
       console.error('TemplateScanner: Ошибка загрузки manifest:', error);
 
       // Fallback: используем hardcoded список
-      console.log('TemplateScanner: Используем fallback список шаблонов');
       this.cache = this.getFallbackTemplates();
       this.templates = [...this.cache];
       return this.templates;
@@ -159,6 +153,5 @@ export class TemplateScanner {
    */
   clearCache() {
     this.cache = null;
-    console.log('TemplateScanner: Кэш очищен');
   }
 }

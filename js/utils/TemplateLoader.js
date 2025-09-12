@@ -26,7 +26,6 @@ export class TemplateLoader {
     try {
       // Проверяем кэш сначала
       if (this.cache.has(templateName)) {
-        console.log(`TemplateLoader: Используем кэшированный шаблон "${templateName}"`);
         return this.cache.get(templateName);
       }
 
@@ -38,7 +37,6 @@ export class TemplateLoader {
 
       const basePath = this.getBasePath();
       const filePath = `${basePath}templates/${templateInfo.file}`;
-      console.log(`TemplateLoader: Загружаем шаблон "${templateName}" из ${filePath}`);
 
       const response = await fetch(filePath);
 
@@ -54,7 +52,6 @@ export class TemplateLoader {
       // Кэшируем загруженный шаблон
       this.cache.set(templateName, normalizedData);
 
-      console.log(`TemplateLoader: Шаблон "${templateName}" успешно загружен и закэширован`);
       return normalizedData;
 
     } catch (error) {
@@ -71,9 +68,7 @@ export class TemplateLoader {
    */
   async getAvailableTemplates() {
     try {
-      console.log('TemplateLoader: Получаем список доступных шаблонов через TemplateScanner');
       const templateNames = await this.scanner.getTemplateNames();
-      console.log('TemplateLoader: Получен список доступных шаблонов:', templateNames);
       return templateNames;
 
     } catch (error) {
@@ -105,7 +100,6 @@ export class TemplateLoader {
     // Нормализуем поле count - если отсутствует, берем длину массива beats
     if (typeof data.count !== 'number') {
       data.count = data.beats.length;
-      console.log(`TemplateLoader: Поле count отсутствует, установлено значение ${data.count}`);
     }
 
     if (data.count < 4 || data.count > 16) {
@@ -161,7 +155,6 @@ export class TemplateLoader {
   clearCache() {
     this.cache.clear();
     this.scanner.clearCache();
-    console.log('TemplateLoader: Кэш очищен');
   }
 
   /**

@@ -49,7 +49,6 @@ export class Playback {
       // ДОБАВИТЬ: Асинхронный запуск с обработкой ошибок
       try {
         await window.app.metronome.start();
-        console.log('Playback: Metronome started successfully');
 
         // Подписываемся на события метронома
         window.app.metronome.onBeatCallback = (arrowIndex) => {

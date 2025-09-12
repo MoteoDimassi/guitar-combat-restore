@@ -16,7 +16,6 @@ export class TemplateManager {
    * Инициализация менеджера шаблонов
    */
   async init() {
-    console.log('TemplateManager: Инициализация...');
     this.templatesSelect = document.getElementById('templates-select');
 
     if (!this.templatesSelect) {
@@ -33,8 +32,6 @@ export class TemplateManager {
 
       // Привязываем обработчик события
       this.bindTemplateEvents();
-
-      console.log('TemplateManager: Инициализация завершена успешно');
     } catch (error) {
       console.error('TemplateManager: Ошибка инициализации:', error);
     }
@@ -46,7 +43,6 @@ export class TemplateManager {
   async loadAvailableTemplates() {
     try {
       this.availableTemplates = await this.loader.getAvailableTemplates();
-      console.log('TemplateManager: Загружены шаблоны:', this.availableTemplates);
     } catch (error) {
       console.error('TemplateManager: Ошибка загрузки списка шаблонов:', error);
       // Используем hardcoded список как fallback
@@ -76,8 +72,6 @@ export class TemplateManager {
       option.textContent = this.formatTemplateName(templateName);
       this.templatesSelect.appendChild(option);
     });
-
-    console.log('TemplateManager: Селект шаблонов заполнен', this.availableTemplates.length, 'шаблонами');
   }
 
   /**
@@ -110,16 +104,11 @@ export class TemplateManager {
    */
   async applyTemplate(templateName) {
     try {
-      console.log(`TemplateManager: Применяем шаблон "${templateName}"`);
-
       // Загружаем данные шаблона
       const templateData = await this.loader.loadTemplate(templateName);
 
       // Используем ImportUtils для применения шаблона (уже готовый и протестированный алгоритм)
-      console.log('TemplateManager: Используем ImportUtils для применения шаблона');
       this.importUtils.importData(templateData);
-
-      console.log(`TemplateManager: Шаблон "${templateName}" успешно применен`);
     } catch (error) {
       console.error(`TemplateManager: Ошибка применения шаблона "${templateName}":`, error);
       this.showError(`Не удалось загрузить шаблон "${templateName}". ${error.message}`);
@@ -171,6 +160,5 @@ export class TemplateManager {
   clearCache() {
     this.loader.clearCache();
     this.availableTemplates = [];
-    console.log('TemplateManager: Кэш очищен');
   }
 }

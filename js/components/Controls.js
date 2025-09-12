@@ -1,17 +1,34 @@
-// Компонент управления - отвечает за обработку пользовательских взаимодействий с интерфейсом
-// Управляет количеством битов, генерацией случайных последовательностей и настройкой BPM
+/**
+ * Controls component - handles user interactions with the interface.
+ * Manages beat count, random sequence generation, and BPM settings.
+ * Serves as the main control panel for the guitar combat application.
+ */
 export class Controls {
+  /**
+   * Creates a new Controls instance.
+   * @param {BeatRow} beatRow - The beat row component to control
+   */
   constructor(beatRow) {
+    /** @type {BeatRow} */
     this.beatRow = beatRow;
+    /** @type {number} */
     this.count = 8;
   }
 
+  /**
+   * Initializes the controls component.
+   * Binds event listeners for user interactions.
+   */
   init() {
     this.bindEvents();
   }
 
+  /**
+   * Binds event listeners to DOM elements for user interactions.
+   * Sets up handlers for count selection, random generation, and BPM slider.
+   */
   bindEvents() {
-    // Выбор количества стрелок
+    // Beat count selection
     const countSelect = document.getElementById('countSelect');
     if (countSelect) {
       countSelect.addEventListener('change', (e) => {
@@ -19,7 +36,7 @@ export class Controls {
       });
     }
 
-    // Кнопка генерации случайных битов
+    // Random generation button
     const generateBtn = document.getElementById('generateBtn');
     if (generateBtn) {
       generateBtn.addEventListener('click', () => {
@@ -27,7 +44,7 @@ export class Controls {
       });
     }
 
-    // Изменение BPM через слайдер
+    // BPM slider changes
     const bpmSlider = document.getElementById('bpm');
     if (bpmSlider) {
       bpmSlider.addEventListener('input', () => {
@@ -36,38 +53,43 @@ export class Controls {
     }
   }
 
+  /**
+   * Sets the number of beats and updates all related components.
+   * Creates new beats array, updates beat row, circle states, and metronome.
+   * @param {number} n - Number of beats to set (must be positive integer)
+   */
   setCount(n) {
     this.count = n;
     const beats = this.makeBeats(n);
     this.beatRow.setBeats(beats);
     this.beatRow.setCount(n);
 
-    // Инициализируем состояния кружочков только если они не установлены или имеют неправильную длину
+    // Initialize circle states only if not set or incorrect length
     const currentCircleStates = this.beatRow.getCircleStates();
-    console.log('Controls setCount: currentCircleStates:', currentCircleStates, 'length:', currentCircleStates ? currentCircleStates.length : 'null', 'n:', n);
     if (!currentCircleStates || currentCircleStates.length !== n) {
       const circleStates = beats.map(beat => beat.play || false);
-      console.log('Controls setCount: Setting new circleStates:', circleStates);
       this.beatRow.setCircleStates(circleStates);
-    } else {
-      console.log('Controls setCount: Keeping existing circleStates');
     }
 
-    // Обновление глобального состояния
+    // Update global state
     if (window.app) {
       window.app.state.count = n;
       window.app.state.beats = beats;
 
-      // Обновляем количество стрелочек в метрономе
+      // Update metronome beat count
       if (window.app.metronome) {
         window.app.metronome.setBeatCount(n);
       }
     }
 
-    // Обновление визуального состояния кнопок
+    // Update UI button states
     this.updateCountButtons(n);
   }
 
+  /**
+   * Updates the count selector UI to reflect the current active count.
+   * @param {number} activeCount - The currently selected beat count
+   */
   updateCountButtons(activeCount) {
     const countSelect = document.getElementById('countSelect');
     if (countSelect) {
@@ -75,18 +97,28 @@ export class Controls {
     }
   }
 
+  /**
+   * Creates an array of beat objects with alternating directions.
+   * First beat is always set to play.
+   * @param {number} n - Number of beats to create
+   * @returns {Array<{direction: string, play: boolean}>} Array of beat objects
+   */
   makeBeats(n) {
     const arr = [];
     for (let i = 0; i < n; i++) {
       arr.push({ direction: i % 2 === 0 ? 'down' : 'up', play: false });
     }
-    arr[0].play = true; // первый всегда playable
+    arr[0].play = true; // First beat is always playable
     return arr;
   }
 
+  /**
+   * Generates a random beat sequence with random play states.
+   * First beat is always enabled, others have 50% chance to play.
+   */
   generateRandom() {
     const beats = this.makeBeats(this.count);
-    const circleStates = [true]; // Первый кружочек всегда включен
+    const circleStates = [true]; // First circle always enabled
     for (let i = 1; i < beats.length; i++) {
       const shouldPlay = Math.random() > 0.5;
       beats[i].play = shouldPlay;
@@ -94,34 +126,43 @@ export class Controls {
     }
     this.beatRow.setBeats(beats);
     this.beatRow.setCircleStates(circleStates);
-    
-    // Обновление глобального состояния
+
+    // Update global state
     if (window.app) {
       window.app.state.beats = beats;
     }
   }
 
+  /**
+   * Updates the BPM label display with current slider value.
+   * Also updates the global state with the new BPM value.
+   */
   updateBpmLabel() {
     const bpmValue = document.getElementById('bpm').value;
     document.getElementById('bpmLabel').textContent = bpmValue;
-    
-    // Обновление глобального состояния
+
+    // Update global state
     if (window.app) {
       window.app.state.bpm = Number(bpmValue) || 90;
     }
   }
 
+  /**
+   * Gets the current beat count.
+   * @returns {number} Current number of beats
+   */
   getCount() {
     return this.count;
   }
 
   /**
-   * Применение данных шаблона без генерации новых beats
-   * @param {Object} templateData - данные шаблона
+   * Applies template data without generating new beats.
+   * Updates beat count, beat row, circle states, and global state.
+   * @param {Object} templateData - Template data object
+   * @param {number} templateData.count - Number of beats in template
+   * @param {Array<{direction: string, play: boolean}>} templateData.beats - Array of beat objects
    */
   applyTemplateData(templateData) {
-    console.log('Controls: Применяем данные шаблона:', templateData);
-
     this.count = templateData.count;
     this.beatRow.setBeats(templateData.beats);
     this.beatRow.setCount(templateData.count);
@@ -144,7 +185,5 @@ export class Controls {
 
     // Обновление визуального состояния селектора количества
     this.updateCountButtons(templateData.count);
-
-    console.log('Controls: Данные шаблона применены');
   }
 }

@@ -58,7 +58,6 @@ export class AudioPolyfill {
     // Воспроизводим тишину для разблокировки
     try {
       source.start(0);
-      console.log('iOS AudioContext initialized');
     } catch (error) {
       console.warn('Failed to initialize iOS AudioContext:', error);
     }
@@ -78,7 +77,6 @@ export class AudioPolyfill {
 
     try {
       await audioCtx.resume();
-      console.log('AudioContext resumed to:', audioCtx.state);
       return audioCtx.state === 'running';
     } catch (error) {
       console.error('Failed to resume AudioContext:', error);
