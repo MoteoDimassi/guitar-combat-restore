@@ -1,7 +1,8 @@
 import { AudioPolyfill } from '../utils/AudioPolyfill.js';
+import { ChordAnalyzer } from '../components/ChordAnalyzer.js';
 
 /**
- * AudioManager - manages AudioContext for the metronome.
+ * AudioManager - manages AudioContext for the metronome and guitar.
  * Responsible for creating, initializing, and managing AudioContext state.
  * Handles Web Audio API context lifecycle and state transitions.
  */
@@ -12,6 +13,8 @@ export class AudioManager {
   constructor() {
     /** @type {AudioContext|null} */
     this.audioCtx = null;
+    /** @type {ChordAnalyzer} */
+    this.chordAnalyzer = new ChordAnalyzer();
   }
 
   /**

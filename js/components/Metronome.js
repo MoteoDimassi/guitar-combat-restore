@@ -32,6 +32,12 @@ export class Metronome {
     /** @type {number} Bar counter */
     this.barIndex = 0;
 
+    // Volume controls
+    /** @type {number} Metronome click volume (0-1) */
+    this.metronomeVolume = 0.5; // Decreased from default 1.0
+    /** @type {number} Guitar chord volume (0-1) */
+    this.guitarVolume = 0.9; // Increased from default 0.8
+
     // Scheduling parameters
     /** @type {number} Scheduler lookahead time in milliseconds */
     this.lookahead = 25;
@@ -97,6 +103,22 @@ export class Metronome {
    * @param {number} bpm - New BPM value
    */
   setBpm(bpm) { this.bpm = bpm; }
+
+  /**
+   * Sets the metronome volume.
+   * @param {number} volume - Volume level (0-1)
+   */
+  setMetronomeVolume(volume) {
+    this.metronomeVolume = Math.max(0, Math.min(1, volume));
+  }
+
+  /**
+   * Sets the guitar volume.
+   * @param {number} volume - Volume level (0-1)
+   */
+  setGuitarVolume(volume) {
+    this.guitarVolume = Math.max(0, Math.min(1, volume));
+  }
 
   /**
    * Sets the beat count and regenerates chord maps.
@@ -220,7 +242,7 @@ export class Metronome {
    */
   scheduleBeat(secondsPerBeat, totalArrows, ratio) {
     const isAccent = (this.currentBeat === 0);
-    this.audioEngine.scheduleClick(this.nextNoteTime, isAccent);
+    this.audioEngine.scheduleClick(this.nextNoteTime, isAccent, this.metronomeVolume);
 
     // фиксируем номер такта для всех стрелочек ЭТОГО удара
     const barAtSchedule = this.barIndex;
@@ -265,49 +287,24 @@ export class Metronome {
     if (window.app && window.app.beatRow) {
       const circleStates = window.app.beatRow.getCircleStates();
       const shouldPlay = arrowIndex < circleStates.length ? circleStates[arrowIndex] : false;
-      
+
       if (shouldPlay) {
-        // Получаем аккордные ноты (можно использовать любую логику, не привязанную к beat.play)
+        // Получаем название аккорда по позиции
         const arrowInBar = arrowIndex;
-        const chordNotes = this.chordManager.getNotesForPosition(
+        const chordName = this.chordManager.getChordNameForPosition(
           barIndex,
           arrowInBar,
           this.actualBeatCount
         );
 
-        if (Array.isArray(chordNotes) && chordNotes.length) {
-          // Определяем инверсию аккорда на основе позиции в такте для разнообразия
-          const inversion = arrowInBar % 3; // 0, 1, 2 - три разных инверсии
-          const invertedNotes = this.chordManager.getChordNotesWithInversion(
-            this.chordManager.getChordNameForPosition(barIndex, arrowInBar, this.actualBeatCount),
-            inversion
-          );
-
-          if (invertedNotes && invertedNotes.length) {
-            // Воспроизводим аккорд с небольшой задержкой между нотами для реалистичности
-            invertedNotes.forEach((freq, index) => {
-              setTimeout(() => {
-                // Разная громкость для разных нот аккорда
-                const volumes = [0.8, 0.6, 0.7]; // Тоника, терция, квинта
-                const volume = volumes[index] || 0.6;
-                this.audioEngine.createGuitarSound(freq, 0.25, volume);
-              }, index * 8); // Небольшая арпеджио-задержка
-            });
-          } else {
-            // Если инверсия не удалась, используем оригинальные ноты
-            chordNotes.forEach((freq, index) => {
-              setTimeout(() => {
-                const volumes = [0.8, 0.6, 0.7];
-                const volume = volumes[index] || 0.6;
-                this.audioEngine.createGuitarSound(freq, 0.25, volume);
-              }, index * 8);
-            });
-          }
+        if (chordName) {
+          // Используем новый MIDI метод для воспроизведения аккорда
+          this.audioEngine.playChord(chordName, 0.3, this.guitarVolume);
         } else {
-          // Если нет аккорда, воспроизводим одиночную ноту
+          // Если нет аккорда, воспроизводим одиночную ноту через старый метод
           const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63];
           const f = frequencies[arrowIndex % frequencies.length] || 220;
-          this.audioEngine.createGuitarSound(f, 0.3, 0.9);
+          this.audioEngine.createGuitarSound(f, 0.3, this.guitarVolume);
         }
       }
     }

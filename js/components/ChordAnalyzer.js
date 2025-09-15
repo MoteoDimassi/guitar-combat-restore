@@ -1,3 +1,4 @@
+import { MidiUtils } from '../utils/MidiUtils.js';
 // === ДОКУМЕНТАЦИЯ ДЛЯ РАСШИРЕНИЯ СИСТЕМЫ АККОРДОВ ===
 
 /*
@@ -203,6 +204,60 @@ export class ChordAnalyzer {
   // Получение всех поддерживаемых типов аккордов
   getSupportedTypes() {
     return Object.keys(this.chordTypes);
+  }
+  // Получение всех поддерживаемых нот
+  getSupportedNotes() {
+    return Object.keys(this.noteFrequencies);
+  }
+
+  /**
+   * Конвертирует частоту в название ноты (например, 440 -> "A4")
+   * @param {number} frequency - Частота в Гц
+   * @returns {string} Название ноты с октавой или null
+   */
+  frequencyToNoteName(frequency) {
+    // Находим ближайшую ноту по частоте
+    let closestNote = null;
+    let minDiff = Infinity;
+
+    for (const [note, freq] of Object.entries(this.noteFrequencies)) {
+      const diff = Math.abs(freq - frequency);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestNote = note;
+      }
+    }
+
+    if (!closestNote) return null;
+
+    // Определяем октаву на основе ключа
+    // 'D' -> D4, 'D2' -> D5
+    let noteName;
+    let octave;
+
+    if (closestNote.endsWith('2')) {
+      noteName = closestNote.slice(0, -1); // Убираем '2'
+      octave = 5;
+    } else {
+      noteName = closestNote;
+      octave = 4;
+    }
+
+    return noteName + octave;
+  }
+
+  /**
+   * Получение MIDI-номеров для аккорда
+   * @param {string} chordName - Название аккорда
+   * @returns {number[]} Массив MIDI-номеров
+   */
+  getMidiNotes(chordName) {
+    const frequencies = this.getChordNotes(chordName);
+    if (!frequencies) return null;
+
+    // Конвертируем частоты в названия нот, затем в MIDI
+    const noteNames = frequencies.map(freq => this.frequencyToNoteName(freq)).filter(name => name);
+    return MidiUtils.notesToMidi(noteNames);
   }
 
   // Получение всех поддерживаемых нот
