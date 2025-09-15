@@ -3,20 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>StrumGen - Конструктор боя</title>
+  <title>Songs - StrumGen</title>
   <!-- Tailwind CSS из CDN -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&family=Space+Grotesk%3Awght%40400%3B500%3B700" onload="this.rel='stylesheet'">
-  <!-- html2canvas (для экспорта в PNG) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <style>
-    body {
-      font-family: "Space Grotesk", "Noto Sans", sans-serif;
-    }
-  </style>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Material Symbols Outlined -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+  <!-- Local CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/input.css">
 </head>
 <body>
   <div class="relative flex size-full min-h-screen flex-col bg-gray-950 dark group/design-root overflow-x-hidden">
@@ -24,12 +21,12 @@
       <!-- Header -->
       <header class="fixed top-0 left-0 right-0 z-50 flex flex-col md:flex-row items-center justify-between whitespace-nowrap border-b border-solid border-gray-800 px-4 md:px-10 py-4 gap-4 bg-gray-950">
         <div class="flex items-center gap-4 text-white w-full md:w-auto">
-          <svg class="size-6 text-[#38e07b]" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg class="size-6 primary-color" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 4h6.5v6.5h6.5v6.5h6.5V20H4V4Z" fill="currentColor"></path>
           </svg>
           <h2 class="text-white text-xl font-bold leading-tight tracking-[-0.015em]">StrumGen</h2>
           <!-- Кнопка для мобильного меню -->
-          <button id="mobileMenuBtn" class="md:hidden ml-auto text-white active">
+          <button id="mobileMenuBtn" class="md:hidden ml-auto text-white">
             <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -38,20 +35,20 @@
         <!-- Мобильное меню (по умолчанию скрыто) -->
         <div id="mobileMenu" class="md:hidden w-full">
           <div class="flex flex-col gap-4 py-4 border-t border-gray-800 mt-4">
-            <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="#">Конструктор</a>
+            <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="index.html">Конструктор</a>
             <a class="text-gray-300 hover:text-white text-base font-bold leading-normal transition-colors" href="https://www.soundslice.com/guitar-pro-viewer/" target="_blank">GuitarPro ONLINE</a>
             <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="#">Обучение</a>
-            <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="songs.html">Песни</a>
+            <a class="text-gray-300 primary-color text-base font-medium leading-normal transition-colors" href="#">Песни</a>
             <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 mt-2" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBepsoz0Ttndewom09t3rZe9woL7Juaz7eIy3urj96ozolywdfPnY8w_mYG72-Z6AEQCgY4Lwzbcj4NwxrdaSp2LqGCzeo92oCMkJqP4vniQ9ZdPXF8y7DVFPTxYDYycAq7oRGcfc_MM6VwS6QD03Px1DjvfebmJsR0oy5QmOu8gfPjJShKZwJDLjCX85GGTFRphJ_ZrvrTGMgNiKVjJGarsdiosqULem5APpkG0f7wI37_FBWWUwSqHfXngOrWqZC7hWRTcJ575y-p");'></div>
           </div>
         </div>
         <!-- Десктопное меню -->
         <div class="hidden md:flex flex-1 justify-end gap-6">
           <div class="flex items-center gap-8">
-            <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="#">Конструктор</a>
+            <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="index.html">Конструктор</a>
             <a class="text-gray-300 hover:text-white text-base font-bold leading-normal transition-colors" href="https://www.soundslice.com/guitar-pro-viewer/" target="_blank">GuitarPro ONLINE</a>
             <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="#">Обучение</a>
-            <a class="text-gray-300 hover:text-white text-base font-medium leading-normal transition-colors" href="songs.html">Песни</a>
+            <a class="text-gray-300 primary-color text-base font-medium leading-normal transition-colors" href="#">Песни</a>
           </div>
           <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBepsoz0Ttndewom09t3rZe9woL7Juaz7eIy3urj96ozolywdfPnY8w_mYG72-Z6AEQCgY4Lwzbcj4NwxrdaSp2LqGCzeo92oCMkJqP4vniQ9ZdPXF8y7DVFPTxYDYycAq7oRGcfc_MM6VwS6QD03Px1DjvfebmJsR0oy5QmOu8gfPjJShKZwJDLjCX85GGTFRphJ_ZrvrTGMgNiKVjJGarsdiosqULem5APpkG0f7wI37_FBWWUwSqHfXngOrWqZC7hWRTcJ575y-p");'></div>
         </div>
@@ -61,105 +58,113 @@
       <main class="flex flex-1 justify-center py-10 px-4">
         <div class="layout-content-container flex w-full max-w-6xl flex-col items-center gap-8">
           <div class="w-full max-w-2xl text-center">
-            <h1 class="text-white text-4xl md:text-5xl font-bold leading-tight tracking-tighter">Guitar Strumming Pattern Generator</h1>
+            <h1 class="text-white text-4xl md:text-5xl font-bold leading-tight tracking-tighter">Guitar Songs</h1>
             <p class="text-gray-400 text-base md:text-lg font-normal leading-normal mt-4">
-              Мгновенно создавайте и визуализируйте гитарные бои для ваших любимых песен. Введите аккорды, настройте темп и начните практиковаться.
+              Исследуйте популярные песни для гитарных боев. Найдите аккорды и темпы.
             </p>
           </div>
-          
-          <div class="flex w-full flex-col md:flex-row items-start gap-6 md:gap-8">
-            <!-- Основная область боя -->
-            <div class="flex flex-1 flex-col items-center gap-6 rounded-lg bg-gray-900/50 p-4 md:p-6 border border-gray-800 w-full">
-              <div class="w-full">
-                <label class="text-white text-lg font-medium leading-normal pb-2 block" for="chordsInput">Аккорды</label>
-                <input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-md text-white focus:outline-0 focus:ring-2 focus:ring-[#38e07b] border border-gray-700 bg-gray-900 h-12 placeholder:text-gray-500 p-4 text-base font-normal leading-normal" id="chordsInput" placeholder="Введите аккорды через пробел (например, Am G C F)" value="Am F Dm E"/>
-              </div>
-              
-              <!-- Область визуализации боя -->
-              <div class="relative w-full h-[400px] bg-gray-900 rounded-md border border-gray-800 overflow-hidden flex flex-col items-center justify-center">
-                <div id="beatRow" class="grid grid-cols-8 gap-4 w-full px-4">
-                  <!-- Стрелки будут генерироваться здесь динамически -->
-                </div>
-                <div class="absolute bottom-6 left-1/2 -translate-x-1/2">
-                  <button id="toggleBtn" class="flex items-center justify-center rounded-full bg-[#38e07b] p-4 text-gray-950 shadow-lg transition-transform hover:scale-110">
-                    <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M8 5v14l11-7z"></path>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <p class="text-gray-400 text-sm font-normal leading-normal text-center">
-                Заполненные кружки указывают на удар по струнам, пустые кружки указывают на отсутствие удара в этом направлении руки.
-              </p>
-            </div>
-            
-            <!-- Панель управления -->
-            <div class="w-full md:w-80 flex-shrink-0 flex flex-col gap-6 rounded-lg bg-gray-900/50 p-4 md:p-6 border border-gray-800">
-              <!-- Шаблоны-->
-               <div class="w-full">
-                <label class="text-white text-lg font-medium leading-normal pb-2 block" for="templates-select">Шаблоны</label>
-                  <div class="relative">
-                    <select class="form-select w-full min-w-0 flex-1 resize-none overflow-hidden rounded-md text-white focus:outline-0 focus:ring-2 focus:ring-[#38e07b] border border-gray-700 bg-gray-900 h-12 placeholder:text-gray-500 px-4 text-base font-normal leading-normal appearance-none" id="templates-select">
-                    <option value="">Выберите шаблон</option>
-                    </select>
-                      <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                      <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path clip-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" fill-rule="evenodd"></path>
-                      </svg>
-                      </div>
-                  </div>
-                </div> 
 
-              <!-- Темп (BPM) -->
-              <div class="w-full">
-                <div class="flex w-full items-center justify-between pb-2">
-                  <label class="text-white text-lg font-medium leading-normal" for="bpm">Темп (BPM)</label>
+          <div class="flex w-full flex-col md:flex-row items-start gap-6 md:gap-8">
+            <!-- Поиск и список песен -->
+            <div class="flex flex-1 flex-col items-center gap-6 rounded-lg bg-gray-900/50 p-4 md:p-6 border border-gray-800 w-full">
+              <div class="flex flex-row items-end gap-4 mb-4">
+                <div class="relative flex-1">
+                  <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                  <input id="songsSearch" class="form-input w-full rounded-md border-none btn-bg py-3 pl-12 pr-4 text-lg text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus-primary" placeholder="Введите название песни или артиста..." type="text"/>
                 </div>
-                <div class="flex items-center gap-4">
-                  <input class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#38e07b]" id="bpm" max="200" min="40" type="range" value="90"/>
-                  <div class="w-16 h-10 flex items-center justify-center rounded-md bg-gray-800 border border-gray-700 text-white text-lg font-medium">
-                    <span id="bpmLabel">90</span>
-                  </div>
-                </div>
+                <button class="flex h-12 shrink-0 items-center justify-center gap-x-2 btn-bg rounded-md px-4 text-white transition-colors hover:bg-gray-700">
+                  <span class="material-symbols-outlined">filter_list</span>
+                  <p class="text-base font-medium">Filters</p>
+                </button>
               </div>
-              
-              <!-- Количество стрелок -->
+              <div class="mb-8 flex flex-wrap gap-4">
+                <button class="filter-btn flex h-10 items-center justify-center gap-x-2 btn-bg rounded-md px-4 text-white transition-colors hover:bg-gray-700" data-filter="Genre">
+                  <p class="text-sm font-medium">Жанр</p>
+                  <span class="material-symbols-outlined text-base">expand_more</span>
+                </button>
+                <button class="filter-btn flex h-10 items-center justify-center gap-x-2 btn-bg rounded-md px-4 text-white transition-colors hover:bg-gray-700" data-filter="Difficulty">
+                  <p class="text-sm font-medium">Сложность</p>
+                  <span class="material-symbols-outlined text-base">expand_more</span>
+                </button>
+                <button class="filter-btn flex h-10 items-center justify-center gap-x-2 btn-bg rounded-md px-4 text-white transition-colors hover:bg-gray-700" data-filter="Chords">
+                  <p class="text-sm font-medium">Количество аккордов</p>
+                  <span class="material-symbols-outlined text-base">expand_more</span>
+                </button>
+              </div>
+
               <div class="w-full">
-                <label class="text-white text-lg font-medium leading-normal pb-2 block" for="countSelect">Количество стрелок</label>
-                <div class="relative">
-                  <select class="form-select w-full min-w-0 flex-1 resize-none overflow-hidden rounded-md text-white focus:outline-0 focus:ring-2 focus:ring-[#38e07b] border border-gray-700 bg-gray-900 h-12 placeholder:text-gray-500 px-4 text-base font-normal leading-normal appearance-none" id="countSelect">
-                    <option value="4">4</option>
-                    <option value="8" selected>8</option>
-                    <option value="16">16</option>
-                  </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path clip-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" fill-rule="evenodd"></path>
+                <h2 class="text-white text-2xl font-bold tracking-tight mb-4">Популярные песни</h2>
+                <div class="grid grid-cols-1 divide-y divide-[#29382f]">
+                  <a class="song-item flex items-center justify-between gap-4 py-4 px-2 hover:bg-[#1a221d] rounded-md transition-colors" href="#">
+                    <div class="flex flex-col">
+                      <p class="text-base font-medium text-white">Ho Hey</p>
+                      <p class="text-sm artist-text">The Lumineers</p>
+                    </div>
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
                     </svg>
-                  </div>
+                  </a>
+                  <a class="song-item flex items-center justify-between gap-4 py-4 px-2 btn-hover rounded-md transition-colors" href="#">
+                     <div class="flex flex-col">
+                       <p class="text-base font-medium text-white">Perfect</p>
+                       <p class="text-sm artist-text">Ed Sheeran</p>
+                    </div>
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+                    </svg>
+                  </a>
+                  <a class="song-item flex items-center justify-between gap-4 py-4 px-2 hover:bg-[#1a221d] rounded-md transition-colors" href="#">
+                    <div class="flex flex-col">
+                      <p class="text-base font-medium text-white">I'm Yours</p>
+                      <p class="text-sm text-[#9eb7a8]">Jason Mraz</p>
+                    </div>
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+                    </svg>
+                  </a>
+                  <a class="song-item flex items-center justify-between gap-4 py-4 px-2 hover:bg-[#1a221d] rounded-md transition-colors" href="#">
+                    <div class="flex flex-col">
+                      <p class="text-base font-medium text-white">Someone Like You</p>
+                      <p class="text-sm text-[#9eb7a8]">Adele</p>
+                    </div>
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+                    </svg>
+                  </a>
+                  <a class="song-item flex items-center justify-between gap-4 py-4 px-2 btn-hover rounded-md transition-colors" href="#">
+                    <div class="flex flex-col">
+                      <p class="text-base font-medium text-white">The Scientist</p>
+                      <p class="text-sm text-[#9eb7a8]">Coldplay</p>
+                    </div>
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+                    </svg>
+                  </a>
+                  <a class="song-item flex items-center justify-between gap-4 py-4 px-2 hover:bg-[#1a221d] rounded-md transition-colors" href="#">
+                    <div class="flex flex-col">
+                      <p class="text-base font-medium text-white">All of Me</p>
+                      <p class="text-sm text-[#9eb7a8]">John Legend</p>
+                    </div>
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+                    </svg>
+                  </a>
+                  <a class="song-item flex items-center justify-between gap-4 py-4 px-2 hover:bg-[#1a221d] rounded-md transition-colors" href="#">
+                    <div class="flex flex-col">
+                      <p class="text-base font-medium text-white">Love Story</p>
+                      <p class="text-sm text-[#9eb7a8]">Taylor Swift</p>
+                    </div>
+                    <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"></path>
+                    </svg>
+                  </a>
                 </div>
-              </div>
-              
-              <!-- Кнопки действий -->
-              <div class="flex flex-col gap-3 pt-4">
-                <button id="generateBtn" class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-md h-12 px-4 bg-[#38e07b] text-gray-950 text-base font-bold leading-normal tracking-wide hover:bg-emerald-400 transition-colors">
-                  <span class="truncate">Случайный бой</span>
-                </button>
-                <button id="exportPng" class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-md h-12 px-4 bg-gray-800 text-white text-base font-bold leading-normal tracking-wide hover:bg-gray-700 transition-colors">
-                  <span class="truncate">Экспорт в PNG</span>
-                </button>
-                <button id="downloadJson" class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-md h-12 px-4 bg-gray-800 text-white text-base font-bold leading-normal tracking-wide hover:bg-gray-700 transition-colors">
-                  <span class="truncate">Скачать JSON</span>
-                </button>
-                <button id="importJson" class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-md h-12 px-4 bg-gray-800 text-white text-base font-bold leading-normal tracking-wide hover:bg-gray-700 transition-colors">
-                  <span class="truncate">Импорт из JSON</span>
-                </button>
               </div>
             </div>
           </div>
         </div>
       </main>
-      
+
       <!-- Footer -->
       <footer class="w-full border-t border-solid border-gray-800 mt-10">
         <div class="max-w-6xl mx-auto px-4">
@@ -194,39 +199,71 @@
       </footer>
     </div>
   </div>
-
+</body>
+</html>
   <script>
-  // Получаем объект Telegram WebApp
-  const tg = window.Telegram.WebApp;
+    // Обработка мобильного меню
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
 
-  // Разворачиваем приложение на весь экран
-  tg.expand();
+    if (mobileMenuBtn && mobileMenu) {
+      mobileMenuBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+    }
 
-  // Можно поменять цвет верхней панели (в Telegram)
-  // tg.MainButton.setText("Отправить данные");
-  // tg.MainButton.show();
+    // Функциональность поиска и фильтров
+    const searchInput = document.getElementById('songsSearch');
+    const songItems = document.querySelectorAll('.song-item');
+    const filterButtons = document.querySelectorAll('.filter-btn');
 
-  // // Обработка нажатия основной кнопки Telegram
-  // tg.MainButton.onClick(() => {
-  //   const chords = document.getElementById("chordsInput").value;
-  //   const bpm = document.getElementById("bpm").value;
-  //   const count = document.getElementById("countSelect").value;
+    // Данные для песен (добавляем атрибуты через JS)
+    const songData = [
+      { genre: 'Folk', difficulty: 'Easy', chords: 4 },
+      { genre: 'Pop', difficulty: 'Medium', chords: 6 },
+      { genre: 'Pop', difficulty: 'Easy', chords: 5 },
+      { genre: 'Pop', difficulty: 'Medium', chords: 7 },
+      { genre: 'Alternative', difficulty: 'Medium', chords: 6 },
+      { genre: 'Pop', difficulty: 'Medium', chords: 5 },
+      { genre: 'Country', difficulty: 'Easy', chords: 5 }
+    ];
 
-  //   const data = {
-  //     chords,
-  //     bpm,
-  //     count
-  //   };
+    songItems.forEach((item, index) => {
+      if (songData[index]) {
+        Object.entries(songData[index]).forEach(([key, value]) => {
+          item.setAttribute(`data-${key}`, value);
+        });
+      }
+    });
 
-  //   // Отправляем данные в бота
-  //   tg.sendData(JSON.stringify(data));
-  //});
-  </script>
-  <!-- Подключение основного JavaScript модуля -->
-  <script type="module" src="js/main.js"></script>
-  
-  <!-- JavaScript для активных стилей навигации -->
-  <script>
+    // Обработка ввода в поисковое поле
+    if (searchInput && songItems.length > 0) {
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        songItems.forEach(item => {
+          const title = item.querySelector('p').textContent.toLowerCase();
+          const artist = item.querySelector('p:last-child').textContent.toLowerCase();
+          if (title.includes(query) || artist.includes(query)) {
+            item.style.display = '';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Обработка кнопок фильтров (placeholder для будущих dropdown меню)
+    if (filterButtons.length > 0) {
+      filterButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const filterType = this.getAttribute('data-filter');
+          console.log('Нажата кнопка фильтра:', filterType);
+          // Здесь можно добавить логику для показа/скрытия dropdown меню
+          // Пока только placeholder - можно расширить для реальной фильтрации по data-атрибутам
+        });
+      });
+    }
+    
     // Функция для установки активных стилей навигации
     function setActiveNavigation() {
       // Определяем текущую страницу

@@ -1,103 +1,189 @@
-// Компонент управления
+/**
+ * Controls component - handles user interactions with the interface.
+ * Manages beat count, random sequence generation, and BPM settings.
+ * Serves as the main control panel for the guitar combat application.
+ */
 export class Controls {
+  /**
+   * Creates a new Controls instance.
+   * @param {BeatRow} beatRow - The beat row component to control
+   */
   constructor(beatRow) {
+    /** @type {BeatRow} */
     this.beatRow = beatRow;
+    /** @type {number} */
     this.count = 8;
   }
 
+  /**
+   * Initializes the controls component.
+   * Binds event listeners for user interactions.
+   */
   init() {
     this.bindEvents();
   }
 
+  /**
+   * Binds event listeners to DOM elements for user interactions.
+   * Sets up handlers for count selection, random generation, and BPM slider.
+   */
   bindEvents() {
-    // Кнопки выбора количества битов
-    document.querySelectorAll('.count-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        this.setCount(Number(btn.getAttribute('data-count')));
+    // Beat count selection
+    const countSelect = document.getElementById('countSelect');
+    if (countSelect) {
+      countSelect.addEventListener('change', (e) => {
+        this.setCount(Number(e.target.value));
       });
-    });
+    }
 
-    // Кнопка генерации случайных битов
-    document.getElementById('generateBtn').addEventListener('click', () => {
-      this.generateRandom();
-    });
+    // Random generation button
+    const generateBtn = document.getElementById('generateBtn');
+    if (generateBtn) {
+      generateBtn.addEventListener('click', () => {
+        this.generateRandom();
+      });
+    }
 
-    // Изменение BPM
-    document.getElementById('bpm').addEventListener('input', () => {
-      this.updateBpmLabel();
-    });
+    // BPM slider changes
+    const bpmSlider = document.getElementById('bpm');
+    if (bpmSlider) {
+      bpmSlider.addEventListener('input', () => {
+        this.updateBpmLabel();
+      });
+    }
   }
 
+  /**
+   * Sets the number of beats and updates all related components.
+   * Creates new beats array, updates beat row, circle states, and metronome.
+   * @param {number} n - Number of beats to set (must be positive integer)
+   */
   setCount(n) {
     this.count = n;
     const beats = this.makeBeats(n);
     this.beatRow.setBeats(beats);
     this.beatRow.setCount(n);
-    
-    // Обновление глобального состояния
+
+    // Initialize circle states only if not set or incorrect length
+    const currentCircleStates = this.beatRow.getCircleStates();
+    if (!currentCircleStates || currentCircleStates.length !== n) {
+      const circleStates = beats.map(beat => beat.play || false);
+      this.beatRow.setCircleStates(circleStates);
+    }
+
+    // Update global state
     if (window.app) {
       window.app.state.count = n;
       window.app.state.beats = beats;
-      
-      // Обновляем количество стрелочек в метрономе
+
+      // Update metronome beat count
       if (window.app.metronome) {
         window.app.metronome.setBeatCount(n);
       }
     }
-    
-    // Обновление визуального состояния кнопок
+
+    // Update UI button states
     this.updateCountButtons(n);
   }
 
+  /**
+   * Updates the count selector UI to reflect the current active count.
+   * @param {number} activeCount - The currently selected beat count
+   */
   updateCountButtons(activeCount) {
-  console.log('Обновляем кнопки, активная =', activeCount); // 🟢 проверка
-  document.querySelectorAll('.count-btn').forEach(btn => {
-    const count = Number(btn.getAttribute('data-count'));
-    console.log('Проверяем кнопку', count, 'классы до:', btn.className); // 🟢
-    if (count === activeCount) {
-      btn.classList.add('active', 'bg-indigo-600', 'text-white');
-      btn.classList.remove('bg-gray-100');
-    } else {
-      btn.classList.remove('active', 'bg-indigo-600', 'text-white');
-      btn.classList.add('bg-gray-100');
+    const countSelect = document.getElementById('countSelect');
+    if (countSelect) {
+      countSelect.value = activeCount.toString();
     }
-    console.log('Классы после:', btn.className); // 🟢
-  });
-}
+  }
 
+  /**
+   * Creates an array of beat objects with alternating directions.
+   * First beat is always set to play.
+   * @param {number} n - Number of beats to create
+   * @returns {Array<{direction: string, play: boolean}>} Array of beat objects
+   */
   makeBeats(n) {
     const arr = [];
     for (let i = 0; i < n; i++) {
       arr.push({ direction: i % 2 === 0 ? 'down' : 'up', play: false });
     }
-    arr[0].play = true; // первый всегда playable
+    arr[0].play = true; // First beat is always playable
     return arr;
   }
 
+  /**
+   * Generates a random beat sequence with random play states.
+   * First beat is always enabled, others have 50% chance to play.
+   */
   generateRandom() {
     const beats = this.makeBeats(this.count);
+    const circleStates = [true]; // First circle always enabled
     for (let i = 1; i < beats.length; i++) {
-      beats[i].play = Math.random() > 0.5;
+      const shouldPlay = Math.random() > 0.5;
+      beats[i].play = shouldPlay;
+      circleStates.push(shouldPlay);
     }
     this.beatRow.setBeats(beats);
-    
-    // Обновление глобального состояния
+    this.beatRow.setCircleStates(circleStates);
+
+    // Update global state
     if (window.app) {
       window.app.state.beats = beats;
     }
   }
 
+  /**
+   * Updates the BPM label display with current slider value.
+   * Also updates the global state with the new BPM value.
+   */
   updateBpmLabel() {
     const bpmValue = document.getElementById('bpm').value;
     document.getElementById('bpmLabel').textContent = bpmValue;
-    
-    // Обновление глобального состояния
+
+    // Update global state
     if (window.app) {
       window.app.state.bpm = Number(bpmValue) || 90;
     }
   }
 
+  /**
+   * Gets the current beat count.
+   * @returns {number} Current number of beats
+   */
   getCount() {
     return this.count;
+  }
+
+  /**
+   * Applies template data without generating new beats.
+   * Updates beat count, beat row, circle states, and global state.
+   * @param {Object} templateData - Template data object
+   * @param {number} templateData.count - Number of beats in template
+   * @param {Array<{direction: string, play: boolean}>} templateData.beats - Array of beat objects
+   */
+  applyTemplateData(templateData) {
+    this.count = templateData.count;
+    this.beatRow.setBeats(templateData.beats);
+    this.beatRow.setCount(templateData.count);
+
+    // Применяем состояния кружков из шаблона
+    const circleStates = templateData.beats.map(beat => beat.play);
+    this.beatRow.setCircleStates(circleStates);
+
+    // Обновление глобального состояния
+    if (window.app) {
+      window.app.state.count = templateData.count;
+      window.app.state.beats = templateData.beats;
+      window.app.state.currentIndex = 0;
+
+      // Обновляем количество стрелочек в метрономе
+      if (window.app.metronome) {
+        window.app.metronome.setBeatCount(templateData.count);
+      }
+    }
+
+    // Обновление визуального состояния селектора количества
+    this.updateCountButtons(templateData.count);
   }
 }

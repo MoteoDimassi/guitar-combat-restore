@@ -1,0 +1,42 @@
+{
+  "beats": [
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": false
+    },
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": true
+    },
+    {
+      "direction": "down",
+      "play": false
+    },
+    {
+      "direction": "up",
+      "play": true
+    },
+    {
+      "direction": "down",
+      "play": true
+    },
+    {
+      "direction": "up",
+      "play": false
+    }
+  ],
+  "bpm": 80,
+  "speed": 100,
+  "chords": [
+    "Am F Dm E"
+  ],
+  "timestamp": "2025-09-11T13:21:24.550Z"
+}

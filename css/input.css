@@ -2,6 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Корневые переменные для цветов */
+:root {
+  --primary-color: #38e07b;
+  --button-bg: #29382f;
+  --hover-bg: #1a221d;
+  --divider-color: #29382f;
+  --artist-text: #9eb7a8;
+}
+
+/* Стили тела */
+body {
+  font-family: "Space Grotesk", "Noto Sans", sans-serif;
+}
+
+/* Кастомные классы для цветов */
+.primary-color {
+  color: var(--primary-color);
+}
+
+.btn-bg {
+  background-color: var(--button-bg);
+}
+
+.btn-hover:hover {
+  background-color: var(--hover-bg);
+  @apply transition-colors;
+}
+
+.divider-color {
+  --tw-divide-color-hack: var(--divider-color);
+  border-color: var(--divider-color);
+}
+
+.artist-text {
+  color: var(--artist-text);
+}
+
+.focus-primary:focus {
+  --tw-ring-color: var(--primary-color);
+  box-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+}
+
 /* Стили для кнопок воспроизведения */
 .playback-btn {
   @apply px-4 py-2 rounded text-white transition-colors duration-200;
