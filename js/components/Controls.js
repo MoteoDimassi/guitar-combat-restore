@@ -50,6 +50,9 @@ export class Controls {
       bpmSlider.addEventListener('input', () => {
         this.updateBpmLabel();
       });
+      bpmSlider.addEventListener('change', () => {
+        this.applyBpmToMetronome();
+      });
     }
   }
 
@@ -135,7 +138,7 @@ export class Controls {
 
   /**
    * Updates the BPM label display with current slider value.
-   * Also updates the global state with the new BPM value.
+   * Also updates the global state.
    */
   updateBpmLabel() {
     const bpmValue = document.getElementById('bpm').value;
@@ -144,6 +147,20 @@ export class Controls {
     // Update global state
     if (window.app) {
       window.app.state.bpm = Number(bpmValue) || 90;
+    }
+  }
+
+  /**
+   * Applies the current BPM value to the metronome if it's playing.
+   * This ensures tempo changes are applied immediately during playback.
+   */
+  applyBpmToMetronome() {
+    const bpmValue = document.getElementById('bpm').value;
+    const bpm = Number(bpmValue) || 90;
+
+    // Apply BPM change to metronome immediately if playing
+    if (window.app && window.app.metronome && window.app.playback && window.app.playback.isPlaying()) {
+      window.app.metronome.setBpm(bpm);
     }
   }
 
