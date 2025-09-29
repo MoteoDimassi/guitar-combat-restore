@@ -109,6 +109,18 @@ export class TemplateManager {
 
       // Используем ImportUtils для применения шаблона (уже готовый и протестированный алгоритм)
       this.importUtils.importData(templateData);
+
+      // Обновляем отображение аккордов после применения шаблона
+      setTimeout(() => {
+        if (window.app && window.app.chordDisplay && window.app.metronome) {
+          const chords = window.app.metronome.getChords();
+          if (chords && chords.length > 0) {
+            window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+          } else {
+            window.app.chordDisplay.setChords('--', '--');
+          }
+        }
+      }, 100); // Небольшая задержка для гарантированного завершения importData
     } catch (error) {
       console.error(`TemplateManager: Ошибка применения шаблона "${templateName}":`, error);
       this.showError(`Не удалось загрузить шаблон "${templateName}". ${error.message}`);

@@ -76,9 +76,23 @@ export class Controls {
       window.app.state.count = n;
       window.app.state.beats = beats;
 
-      // Update metronome beat count
+      // Update metronome beat count and chords
       if (window.app.metronome) {
         window.app.metronome.setBeatCount(n);
+
+        // Обновляем аккорды с новым количеством стрелочек
+        const chordsInput = document.getElementById('chordsInput');
+        if (chordsInput) {
+          window.app.metronome.updateChords(chordsInput.value);
+        }
+
+        // Обновляем отображение аккордов
+        if (window.app.chordDisplay) {
+          const chords = window.app.metronome.getChords();
+          if (chords && chords.length > 0) {
+            window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+          }
+        }
       }
     }
 
@@ -177,9 +191,23 @@ export class Controls {
       window.app.state.beats = templateData.beats;
       window.app.state.currentIndex = 0;
 
-      // Обновляем количество стрелочек в метрономе
+      // Обновляем количество стрелочек в метрономе и аккорды
       if (window.app.metronome) {
         window.app.metronome.setBeatCount(templateData.count);
+
+        // Обновляем аккорды с новым количеством стрелочек
+        const chordsInput = document.getElementById('chordsInput');
+        if (chordsInput) {
+          window.app.metronome.updateChords(chordsInput.value);
+        }
+
+        // Обновляем отображение аккордов
+        if (window.app.chordDisplay) {
+          const chords = window.app.metronome.getChords();
+          if (chords && chords.length > 0) {
+            window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+          }
+        }
       }
     }
 

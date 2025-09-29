@@ -117,6 +117,16 @@ export class ImportUtils {
         chordsInput.value = Array.isArray(data.chords) ? data.chords.join(' ') : data.chords;
         if (window.app && window.app.metronome) {
           window.app.metronome.updateChords(chordsInput.value);
+
+          // Обновляем отображение аккордов
+          if (window.app.chordDisplay) {
+            const chords = window.app.metronome.getChords();
+            if (chords && chords.length > 0) {
+              window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+            } else {
+              window.app.chordDisplay.setChords('--', '--');
+            }
+          }
         }
       }
 
