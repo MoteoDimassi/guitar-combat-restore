@@ -1,6 +1,7 @@
 /**
  * ChordDisplay - компонент для отображения текущего и следующего аккорда над стрелочками
- * Показывает основной аккорд зеленым цветом большим шрифтом и следующий аккорд белым
+ * Показывает основной аккорд зеленым цветом большим шрифтом и следующий аккорд серым меньшим
+ * Динамически обновляется при смене аккордов с плавными переходами
  */
 export class ChordDisplay {
   constructor() {
@@ -9,11 +10,12 @@ export class ChordDisplay {
     this.currentBarIndex = 0;
     this.currentArrowIndex = 0;
     this.isVisible = true;
+    this.lastChordUpdate = null; // Для отслеживания изменений аккордов
   }
 
   init() {
     this.createDisplayElement();
-    this.updateDisplay();
+    // Не обновляем дисплей здесь, так как аккорды ещё не установлены
   }
 
   createDisplayElement() {
@@ -36,11 +38,11 @@ export class ChordDisplay {
 
     // Создаем элементы для текущего и следующего аккорда
     this.currentChordElement = document.createElement('div');
-    this.currentChordElement.className = 'text-[#38e07b] font-bold text-2xl tracking-wider transition-all duration-200';
+    this.currentChordElement.className = 'text-[#38e07b] font-bold text-6xl tracking-wider transition-all duration-200';
     this.currentChordElement.textContent = '--';
 
     this.nextChordElement = document.createElement('div');
-    this.nextChordElement.className = 'text-white font-medium text-lg tracking-wide opacity-80 transition-all duration-200';
+    this.nextChordElement.className = 'text-gray-400 font-medium text-3xl tracking-wide opacity-70 transition-all duration-300';
     this.nextChordElement.textContent = '--';
 
     this.container.appendChild(this.currentChordElement);
@@ -48,13 +50,82 @@ export class ChordDisplay {
   }
 
   updateCurrentChord(chord, barIndex, arrowIndex) {
-    this.currentChord = chord;
+    // Всегда обновляем позицию
+    const barChanged = this.currentBarIndex !== barIndex;
     this.currentBarIndex = barIndex;
     this.currentArrowIndex = arrowIndex;
-    this.updateDisplay();
+
+    // Если такт изменился, обновляем аккорды для нового такта
+    if (barChanged) {
+      this.currentChord = chord;
+      // Получаем следующий аккорд для прогрессии
+      const parsedChords = window.app && window.app.metronome ? window.app.metronome.getChords() : [];
+      if (parsedChords.length > 0) {
+        const nextIndex = (barIndex + 1) % parsedChords.length;
+        this.nextChord = parsedChords[nextIndex];
+        if (this.nextChord === this.currentChord) {
+          // Если следующий совпадает с текущим, ищем следующий уникальный
+          for (let i = 2; i <= parsedChords.length; i++) {
+            const candidateIndex = (barIndex + i) % parsedChords.length;
+            const candidate = parsedChords[candidateIndex];
+            if (candidate !== this.currentChord) {
+              this.nextChord = candidate;
+              break;
+            }
+          }
+        }
+      } else {
+        this.nextChord = null;
+      }
+      this.updateChordDisplay();
+    }
+  }
+
+  // Новый метод для обновления дисплея с плавными переходами
+  updateChordDisplay() {
+    if (!this.container) return;
+
+    // Обновляем текущий аккорд
+    if (this.currentChordElement) {
+      this.currentChordElement.textContent = this.currentChord || '--';
+      this.currentChordElement.className = 'text-[#38e07b] font-bold text-6xl tracking-wider transition-all duration-300';
+    }
 
     // Обновляем следующий аккорд
-    this.updateNextChord();
+    if (this.nextChordElement) {
+      if (this.nextChord && this.nextChord !== this.currentChord) {
+        this.nextChordElement.textContent = this.nextChord;
+        this.nextChordElement.style.display = 'block';
+        this.nextChordElement.className = 'text-gray-400 font-medium text-3xl tracking-wide opacity-70 transition-all duration-300';
+      } else {
+        this.nextChordElement.style.display = 'none';
+      }
+    }
+  }
+
+  // Метод для анимированного перехода к следующему аккорду
+  transitionToNextChord() {
+    if (!this.container) return;
+
+    // Получаем новые аккорды после перехода
+    const chords = this.getChordsFromPosition(this.currentBarIndex, this.currentArrowIndex);
+
+    // Анимируем переход: текущий становится следующим
+    if (this.currentChordElement && this.nextChordElement) {
+      // Текущий аккорд переходит в состояние "следующего"
+      this.currentChordElement.className = 'text-gray-400 font-medium text-3xl tracking-wide opacity-70 transition-all duration-500';
+      this.nextChordElement.className = 'text-[#38e07b] font-bold text-6xl tracking-wider transition-all duration-500';
+
+      // Меняем местами контент после небольшой задержки
+      setTimeout(() => {
+        const tempText = this.currentChordElement.textContent;
+        this.currentChordElement.textContent = this.nextChordElement.textContent;
+        this.nextChordElement.textContent = tempText;
+
+        // Восстанавливаем правильные стили
+        this.updateChordDisplay();
+      }, 250);
+    }
   }
 
   updateNextChord() {
@@ -73,18 +144,9 @@ export class ChordDisplay {
     this.updateDisplay();
   }
 
+  // Старый метод updateDisplay - оставлен для совместимости, но использует новый updateChordDisplay
   updateDisplay() {
-    if (!this.container) return;
-
-    // Обновляем текущий аккорд
-    if (this.currentChordElement) {
-      this.currentChordElement.textContent = this.currentChord || '--';
-    }
-
-    // Обновляем следующий аккорд
-    if (this.nextChordElement) {
-      this.nextChordElement.textContent = this.nextChord || '--';
-    }
+    this.updateChordDisplay();
   }
 
   show() {
@@ -117,8 +179,22 @@ export class ChordDisplay {
     }
 
     const currentChord = chordManager.getChordNameForPosition(barIndex, arrowIndex, window.app.metronome.getActualBeatCount());
-    const nextBarIndex = (barIndex + 1) % parsedChords.length;
-    const nextChord = parsedChords[nextBarIndex];
+
+    // Находим следующий уникальный аккорд в прогрессии
+    let nextChord = null;
+    const currentChordIndex = parsedChords.findIndex(chord => chord === currentChord);
+
+    if (currentChordIndex !== -1) {
+      // Ищем следующий аккорд в списке, зацикливаясь
+      for (let i = 1; i <= parsedChords.length; i++) {
+        const nextIndex = (currentChordIndex + i) % parsedChords.length;
+        const candidateChord = parsedChords[nextIndex];
+        if (candidateChord !== currentChord) {
+          nextChord = candidateChord;
+          break;
+        }
+      }
+    }
 
     return { current: currentChord, next: nextChord };
   }

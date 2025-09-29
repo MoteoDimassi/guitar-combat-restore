@@ -340,9 +340,10 @@ export class Metronome {
    */
   updateChordDisplay(arrowIndex, barIndex) {
     if (window.app && window.app.chordDisplay) {
-      const chords = window.app.chordDisplay.getChordsFromPosition(barIndex, arrowIndex);
-      if (chords.current) {
-        window.app.chordDisplay.setChords(chords.current, chords.next || chords.current);
+      // Получаем текущий аккорд для данной позиции
+      const currentChord = this.chordManager.getChordNameForPosition(barIndex, arrowIndex, this.actualBeatCount);
+      if (currentChord) {
+        window.app.chordDisplay.updateCurrentChord(currentChord, barIndex, arrowIndex);
       }
     }
   }
