@@ -51,6 +51,14 @@ export class Controls {
         this.updateBpmLabel();
       });
     }
+
+    // Add song text button
+    const addSongTextBtn = document.getElementById('addSongTextBtn');
+    if (addSongTextBtn) {
+      addSongTextBtn.addEventListener('click', () => {
+        this.showAddSongTextModal();
+      });
+    }
   }
 
   /**
@@ -158,6 +166,15 @@ export class Controls {
     // Update global state
     if (window.app) {
       window.app.state.bpm = Number(bpmValue) || 90;
+    }
+  }
+
+  /**
+   * Shows the add song text modal.
+   */
+  showAddSongTextModal() {
+    if (window.app && window.app.modal) {
+      window.app.modal.showAddSongText();
     }
   }
 

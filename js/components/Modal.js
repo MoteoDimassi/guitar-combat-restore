@@ -156,6 +156,16 @@ export class Modal {
     this.open(title, content);
   }
 
+  // Метод для отображения формы добавления текста песни
+  showAddSongText() {
+    const title = 'Добавить текст песни';
+    const content = this.getAddSongTextContent();
+    this.open(title, content, () => {
+      // Добавляем обработчики после открытия модального окна
+      this.bindAddSongTextEvents();
+    });
+  }
+
   // Содержание политики конфиденциальности
   getPrivacyPolicyContent() {
     return `
@@ -230,6 +240,61 @@ export class Modal {
           <h4 class="text-lg font-semibold text-white mb-3">9. Контактная информация</h4>
           <p>Если у вас есть вопросы по поводу настоящей политики конфиденциальности, вы можете связаться с нами по адресу: dmitriydzhioev@gmail.com</p>
         </section>
+      </div>
+    `;
+  }
+
+  // Метод для привязки событий формы добавления текста песни
+  bindAddSongTextEvents() {
+    const saveBtn = document.getElementById('save-song-text-btn');
+    const cancelBtn = document.getElementById('cancel-song-text-btn');
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        const title = document.getElementById('song-title').value.trim();
+        const text = document.getElementById('song-text').value.trim();
+
+        if (title && text) {
+          // Сохраняем песню в localStorage
+          const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+          songs.push({ title, text, date: new Date().toISOString() });
+          localStorage.setItem('userSongs', JSON.stringify(songs));
+
+          alert('Текст песни успешно сохранен!');
+          this.close();
+        } else {
+          alert('Пожалуйста, заполните название и текст песни.');
+        }
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this.close();
+      });
+    }
+  }
+
+  // Содержание формы добавления текста песни
+  getAddSongTextContent() {
+    return `
+      <div class="space-y-4">
+        <div>
+          <label for="song-title" class="block text-sm font-medium text-gray-300 mb-2">Название песни</label>
+          <input type="text" id="song-title" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#38e07b] focus:border-transparent" placeholder="Введите название песни">
+        </div>
+        <div>
+          <label for="song-text" class="block text-sm font-medium text-gray-300 mb-2">Текст песни</label>
+          <textarea id="song-text" rows="10" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#38e07b] focus:border-transparent resize-vertical" placeholder="Введите текст песни (каждый куплет с новой строки)"></textarea>
+        </div>
+        <div class="flex justify-end space-x-3 pt-4">
+          <button id="cancel-song-text-btn" class="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors">
+            Отмена
+          </button>
+          <button id="save-song-text-btn" class="px-4 py-2 bg-[#38e07b] text-gray-950 rounded-md hover:bg-emerald-400 transition-colors font-medium">
+            Сохранить
+          </button>
+        </div>
       </div>
     `;
   }
