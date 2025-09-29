@@ -1,4 +1,6 @@
 // Компонент модального окна для отображения политики конфиденциальности и других документов
+import { SyllableHighlighter } from '../utils/SyllableHighlighter.js';
+
 export class Modal {
   constructor() {
     this.isOpen = false;
@@ -275,8 +277,24 @@ export class Modal {
     const songContent = document.getElementById('song-content');
 
     if (songTextDisplay && songContent) {
+      // Используем SyllableHighlighter для обработки текста
+      const highlighter = new SyllableHighlighter();
+      const processedText = highlighter.processText(text);
+
       // Форматируем текст с заголовком
-      songContent.innerHTML = `<strong>${title}</strong><br><br>${text.replace(/\n/g, '<br>')}`;
+      songContent.innerHTML = `<strong>${title}</strong><br><br>${processedText}`;
+
+      // Инициализируем обработчики событий для слогов
+      highlighter.initializeEventHandlers(songContent);
+
+      // Добавляем обработчик для кнопки очистки
+      const clearBtn = document.getElementById('clear-song-text-btn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          songTextDisplay.classList.add('hidden');
+          songContent.innerHTML = '';
+        });
+      }
 
       // Показываем блок с текстом
       songTextDisplay.classList.remove('hidden');
