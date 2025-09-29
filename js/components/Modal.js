@@ -160,10 +160,9 @@ export class Modal {
   showAddSongText() {
     const title = 'Добавить текст песни';
     const content = this.getAddSongTextContent();
-    this.open(title, content, () => {
-      // Добавляем обработчики после открытия модального окна
-      this.bindAddSongTextEvents();
-    });
+    this.open(title, content);
+    // Добавляем обработчики после открытия модального окна
+    this.bindAddSongTextEvents();
   }
 
   // Содержание политики конфиденциальности
@@ -247,7 +246,6 @@ export class Modal {
   // Метод для привязки событий формы добавления текста песни
   bindAddSongTextEvents() {
     const saveBtn = document.getElementById('save-song-text-btn');
-    const cancelBtn = document.getElementById('cancel-song-text-btn');
 
     if (saveBtn) {
       saveBtn.addEventListener('click', () => {
@@ -260,18 +258,28 @@ export class Modal {
           songs.push({ title, text, date: new Date().toISOString() });
           localStorage.setItem('userSongs', JSON.stringify(songs));
 
-          alert('Текст песни успешно сохранен!');
+          // Отображаем текст песни
+          this.displaySongText(title, text);
+
           this.close();
         } else {
           alert('Пожалуйста, заполните название и текст песни.');
         }
       });
     }
+  }
 
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
-        this.close();
-      });
+  // Метод для отображения текста песни
+  displaySongText(title, text) {
+    const songTextDisplay = document.getElementById('song-text-display');
+    const songContent = document.getElementById('song-content');
+
+    if (songTextDisplay && songContent) {
+      // Форматируем текст с заголовком
+      songContent.innerHTML = `<strong>${title}</strong><br><br>${text.replace(/\n/g, '<br>')}`;
+
+      // Показываем блок с текстом
+      songTextDisplay.classList.remove('hidden');
     }
   }
 
@@ -288,9 +296,6 @@ export class Modal {
           <textarea id="song-text" rows="10" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#38e07b] focus:border-transparent resize-vertical" placeholder="Введите текст песни (каждый куплет с новой строки)"></textarea>
         </div>
         <div class="flex justify-end space-x-3 pt-4">
-          <button id="cancel-song-text-btn" class="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors">
-            Отмена
-          </button>
           <button id="save-song-text-btn" class="px-4 py-2 bg-[#38e07b] text-gray-950 rounded-md hover:bg-emerald-400 transition-colors font-medium">
             Сохранить
           </button>

@@ -225,4 +225,18 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+
+// Проверяем и отображаем сохраненный текст песни при загрузке
+const loadSavedSongText = () => {
+  const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+  if (songs.length > 0) {
+    const latestSong = songs[songs.length - 1]; // Берем последнюю сохраненную песню
+    if (window.app && window.app.modal) {
+      window.app.modal.displaySongText(latestSong.title, latestSong.text);
+    }
+  }
+};
+
+// Вызываем функцию для загрузки текста песни
+loadSavedSongText();
 });
