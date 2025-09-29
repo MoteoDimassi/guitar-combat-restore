@@ -38,6 +38,12 @@ export class Playback {
       window.app.metronome.setBpm(bpm);
       window.app.metronome.setBeatCount(count);
 
+      // Обновляем аккорды с текущим количеством стрелочек
+      const chordsInput = document.getElementById('chordsInput');
+      if (chordsInput) {
+        window.app.metronome.updateChords(chordsInput.value);
+      }
+
       // Устанавливаем текущую позицию перед запуском
       if (currentIndex >= 0) {
         // Рассчитываем, какой удар метронома соответствует текущей стрелочке
@@ -54,6 +60,11 @@ export class Playback {
         window.app.metronome.onBeatCallback = (arrowIndex) => {
           // Передаем информацию в beatRow для правильной подсветки
           this.beatRow.setCurrentIndex(arrowIndex);
+
+          // Обновляем отображение аккордов при каждом ударе
+          const ratio = window.app.metronome.getBeatRatio();
+          const beatIndex = Math.floor(arrowIndex / ratio);
+          window.app.metronome.updateChordDisplay(arrowIndex, beatIndex);
 
           // Обновление глобального состояния
           if (window.app) {

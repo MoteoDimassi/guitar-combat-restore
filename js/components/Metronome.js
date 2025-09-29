@@ -249,6 +249,9 @@ export class Metronome {
     setTimeout(() => {
       this.playGuitarSound(arrowIndex, barAtSchedule);
       if (this.onBeatCallback) this.onBeatCallback(arrowIndex);
+
+      // Обновляем отображение аккордов при каждом ударе
+      this.updateChordDisplay(arrowIndex, barAtSchedule);
     }, delay);
   }
 
@@ -328,5 +331,19 @@ export class Metronome {
    */
   getChords() {
     return this.chordManager.parsedChords;
+  }
+
+  /**
+   * Updates chord display with current and next chords.
+   * @param {number} arrowIndex - Current arrow index
+   * @param {number} barIndex - Current bar index
+   */
+  updateChordDisplay(arrowIndex, barIndex) {
+    if (window.app && window.app.chordDisplay) {
+      const chords = window.app.chordDisplay.getChordsFromPosition(barIndex, arrowIndex);
+      if (chords.current) {
+        window.app.chordDisplay.setChords(chords.current, chords.next || chords.current);
+      }
+    }
   }
 }

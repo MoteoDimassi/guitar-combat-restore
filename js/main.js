@@ -13,6 +13,7 @@ import { Metronome } from './components/Metronome.js';
 import { Modal } from './components/Modal.js';
 import { MobileMenu } from './components/MobileMenu.js';
 import { TemplateManager } from './components/TemplateManager.js';
+import { ChordDisplay } from './components/ChordDisplay.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const exportUtils = new ExportUtils(beatRow);
   const importUtils = new ImportUtils(beatRow);
   const metronome = new Metronome();
+  const chordDisplay = new ChordDisplay();
   const templateManager = new TemplateManager(beatRow, controls);
 
   // Инициализация компонентов
@@ -60,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   exportUtils.init();
   importUtils.init();
   metronome.init();
+  chordDisplay.init();
   templateManager.init();
 
   // Инициализация мобильного меню
@@ -78,6 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     exportUtils,
     importUtils,
     metronome,
+    chordDisplay,
     modal,
     templateManager,
     state: {
@@ -104,13 +108,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Обновляем аккорды при вводе
     chordsInput.addEventListener('input', () => {
       const chordsString = chordsInput.value;
+
+      // Обновляем аккорды в метрономе и пересчитываем все карты
       if (window.app && window.app.metronome) {
+        const currentBeatCount = window.app.metronome.getActualBeatCount();
         window.app.metronome.updateChords(chordsString);
+
+        // Если воспроизведение активно, нужно пересчитать текущую позицию
+        if (window.app.playback && window.app.playback.isPlaying()) {
+          // Получаем текущую позицию для пересчета
+          const currentIndex = window.app.state.currentIndex;
+          const ratio = window.app.metronome.getBeatRatio();
+          const beatIndex = Math.floor(currentIndex / ratio);
+
+          // Обновляем текущую позицию воспроизведения с новыми аккордами
+          if (window.app.metronome.onBeatCallback) {
+            const arrowIndex = currentIndex;
+            window.app.metronome.updateChordDisplay(arrowIndex, beatIndex);
+          }
+        }
+      }
+
+      // Обновляем отображение аккордов
+      if (window.app && window.app.chordDisplay) {
+        const chords = window.app.metronome.getChords();
+        if (chords && chords.length > 0) {
+          window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+        } else {
+          window.app.chordDisplay.setChords('--', '--');
+        }
       }
     });
-    
+
     // Инициализируем аккорды при загрузке
     window.app.metronome.updateChords(chordsInput.value);
+
+    // Показываем начальные аккорды сразу при загрузке
+    if (window.app && window.app.chordDisplay) {
+      // Показываем ChordDisplay (убираем класс hidden)
+      window.app.chordDisplay.show();
+
+      // Устанавливаем текущий аккорд как первый из списка
+      const chords = window.app.metronome.getChords();
+      if (chords && chords.length > 0) {
+        // Устанавливаем первый аккорд как текущий
+        window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+      }
+    }
   }
   
   // Добавляем обработчик изменения размера окна для адаптивности
