@@ -1433,4 +1433,16 @@ video {
     font-size: 16px; /* Предотвращает зум на iOS */
   }
 }
+/* Стили для подсветки слогов в тексте песни */
+#song-content .syllable-highlight {
+  font-weight: bold !important;
+  background-color: rgba(56, 224, 123, 0.3) !important;
+  color: #38e07b !important;
+  border-radius: 2px;
+  transition: all 0.1s ease;
+}
+
+#song-content .syllable {
+  transition: all 0.1s ease;
+}
 }
