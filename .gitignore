@@ -9,7 +9,7 @@ yarn-error.log*
 /build/
 
 # Generated documentation
-/docs/
+# /docs/  # Uncomment to ignore docs folder
 
 # Misc
 .DS_Store
