@@ -239,4 +239,12 @@ const loadSavedSongText = () => {
 
 // Вызываем функцию для загрузки текста песни
 loadSavedSongText();
+
+// Добавляем обработчик для кнопки добавления текста песни
+document.addEventListener('click', (e) => {
+  const addSongTextBtn = e.target.closest('#addSongTextBtn');
+  if (addSongTextBtn && window.app && window.app.modal) {
+    window.app.modal.showAddSongText();
+  }
+});
 });

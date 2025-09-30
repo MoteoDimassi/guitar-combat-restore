@@ -291,8 +291,12 @@ export class Modal {
       const clearBtn = document.getElementById('clear-song-text-btn');
       if (clearBtn) {
         clearBtn.addEventListener('click', () => {
+          // Скрываем отображение текста песни
           songTextDisplay.classList.add('hidden');
           songContent.innerHTML = '';
+
+          // Очищаем весь буфер песен из localStorage
+          localStorage.removeItem('userSongs');
         });
       }
 

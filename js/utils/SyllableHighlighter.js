@@ -1,126 +1,118 @@
+// Установи: npm install hyphen
+import { hyphenateSync as hyphenateRu } from 'hyphen/ru';
+import { hyphenateSync as hyphenateEn } from 'hyphen/en-us';
+
 /**
- * SyllableHighlighter - класс для разделения текста песни на слоги и подсветки при наведении.
- * Обрабатывает русский и английский текст, создавая интерактивные слоги.
+ * SyllableHighlighter — класс для разделения текста на слоги и подсветки.
  */
 export class SyllableHighlighter {
   constructor() {
-    // Гласные буквы для русского и английского языков
-    this.vowels = ['а', 'е', 'ё', 'и', 'о', 'у', 'ы', 'э', 'ю', 'я', 'a', 'e', 'i', 'o', 'u'];
+    // soft hyphen (реальный символ, не HTML-entity)
+    this.softHyphen = '\u00AD';
+
+    try {
+      // hyphenateSync возвращает строку с \u00AD между слогами (см. README hyphen).
+      this.hyphenRu = hyphenateRu;
+      this.hyphenEn = hyphenateEn;
+    } catch (error) {
+      console.warn('Hyphen initialization failed, falling back to regex:', error);
+      this.hyphenRu = null;
+      this.hyphenEn = null;
+    }
   }
 
-  /**
-   * Основной метод для обработки текста песни.
-   * Разделяет текст на слоги и создает HTML с интерактивными элементами.
-   * @param {string} text - Текст песни
-   * @returns {string} HTML строка с разметкой слогов
-   */
   processText(text) {
     if (!text) return '';
-
-    // Разбиваем текст на строки и обрабатываем каждую строку
     const lines = text.split('\n');
     const processedLines = lines.map(line => this.processLine(line));
-
     return processedLines.join('<br>');
   }
 
-  /**
-   * Обрабатывает одну строку текста.
-   * @param {string} line - Строка текста
-   * @returns {string} Обработанная строка с HTML
-   */
   processLine(line) {
-    // Разбиваем строку на слова и пробелы
+    // разбиваем на слова/пробелы (пробелы сохраняем)
     const words = line.split(/(\s+)/);
-
-    const processedWords = words.map(word => {
-      if (word.trim() === '') {
-        // Сохраняем пробелы как есть
-        return word;
-      } else {
-        // Обрабатываем слово
-        return this.processWord(word);
-      }
-    });
-
-    return processedWords.join('');
+    return words.map(word => word.trim() === '' ? word : this.processWord(word)).join('');
   }
 
-  /**
-   * Обрабатывает отдельное слово, разделяя его на слоги.
-   * @param {string} word - Слово для обработки
-   * @returns {string} HTML с разметкой слогов
-   */
-  processWord(word) {
-    const syllables = this.splitIntoSyllables(word);
+  processWord(rawWord) {
+    // Сохраняем лидирующую и конечную пунктуацию, чтобы hyphenation применялся только к "телу" слова.
+    const m = rawWord.match(/^([^A-Za-zА-Яа-яЁё0-9']*)([A-Za-zА-Яа-яЁё0-9' -]+?)([^A-Za-zА-Яа-яЁё0-9']*)$/u);
+    if (!m) {
+      // нераспознан — просто экранируем и вернём
+      return `<span class="syllable">${this.escapeHtml(rawWord)}</span>`;
+    }
+    const [, prefix = '', wordBody = '', suffix = ''] = m;
 
-    if (syllables.length <= 1) {
-      // Слово имеет только один слог или пустое
-      return `<span class="syllable">${this.escapeHtml(word)}</span>`;
+    const syllables = this.splitIntoSyllables(wordBody);
+
+    if (!syllables || syllables.length <= 1) {
+      return `${this.escapeHtml(prefix)}<span class="syllable">${this.escapeHtml(wordBody)}</span>${this.escapeHtml(suffix)}`;
     }
 
-    // Создаем HTML для каждого слога
-    const syllableSpans = syllables.map((syllable, index) => {
-      return `<span class="syllable" data-syllable-index="${index}">${this.escapeHtml(syllable)}</span>`;
-    });
-
-    return syllableSpans.join('');
+    const spans = syllables.map((s, i) => `<span class="syllable" data-syllable-index="${i}">${this.escapeHtml(s)}</span>`).join('');
+    return `${this.escapeHtml(prefix)}${spans}${this.escapeHtml(suffix)}`;
   }
 
-  /**
-   * Разделяет слово на слоги с помощью регулярных выражений.
-   * @param {string} word - Слово для разделения
-   * @returns {string[]} Массив слогов
-   */
   splitIntoSyllables(word) {
-    if (!word || word.length === 0) return [word];
+  if (!word) return [word];
 
-    // Регулярное выражение для поиска слогов (гласные + согласные)
-    // Для английского и русского: согласные (необязательные) + гласная + согласные (необязательные)
-    const syllableRegex = /[^aeiouаеёиоуыэюя]*[aeiouаеёиоуыэюя]+[^aeiouаеёиоуыэюя]*/gi;
+  const isRussian = /[а-яё]/i.test(word);
 
-    const syllables = word.match(syllableRegex);
-
-    // Фильтруем пустые слоги и возвращаем
-    return syllables && syllables.length > 0 ? syllables.filter(s => s.length > 0) : [word];
+  // 1. hyphenation (если словарь дал результат — используем его)
+  if ((isRussian && this.hyphenRu) || (!isRussian && this.hyphenEn)) {
+    try {
+      const hyphenator = isRussian ? this.hyphenRu : this.hyphenEn;
+      const hyphenated = hyphenator(word);
+      if (typeof hyphenated === 'string' && hyphenated.includes(this.softHyphen)) {
+        const sylls = hyphenated.split(this.softHyphen).filter(Boolean);
+        if (sylls.length > 1) return sylls;
+      }
+    } catch (err) {
+      console.warn('Hyphenation failed, fallback:', err);
+    }
   }
 
-  /**
-   * Экранирует HTML символы в тексте.
-   * @param {string} text - Текст для экранирования
-   * @returns {string} Экранированный текст
-   */
+  // 2. fallback: делим по одной гласной
+  const vowels = isRussian ? 'аеёиоуыэюя' : 'aeiouy';
+  const regex = new RegExp(`[^${vowels}]*[${vowels}]{1}[^${vowels}]*`, 'gi');
+  let sylls = word.match(regex);
+
+  if (!sylls || sylls.length <= 1) return [word];
+
+  // 3. дополнительная обработка окончания:
+  // если слово заканчивается гласной, а последний слог длиннее 1 символа,
+  // то отщепляем последнюю гласную отдельно
+  const last = sylls[sylls.length - 1];
+  if (last.length > 1) {
+    const lastChar = last[last.length - 1];
+    if (new RegExp(`[${vowels}]`, 'i').test(lastChar)) {
+      // переносим последнюю букву в отдельный слог
+      const trimmed = last.slice(0, -1);
+      sylls = [...sylls.slice(0, -1), trimmed, lastChar];
+    }
+  }
+
+  return sylls.filter(Boolean);
+}
+
   escapeHtml(text) {
+    if (text == null) return '';
     const map = {
-      '&': '&',
-      '<': '<',
-      '>': '>',
-      '"': '"',
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
       "'": '&#039;'
     };
-
-    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    return String(text).replace(/[&<>"']/g, (m) => map[m]);
   }
 
-  /**
-   * Инициализирует обработчики событий для уже существующего текста.
-   * Добавляет индивидуальные обработчики mouseenter и mouseleave для каждого слога.
-   * @param {HTMLElement} container - Контейнер с текстом песни
-   */
   initializeEventHandlers(container) {
     if (!container) return;
-
-    // Находим все элементы слогов в контейнере
     const syllables = container.querySelectorAll('.syllable');
-
     syllables.forEach(syllable => {
-      syllable.addEventListener('mouseenter', () => {
-        syllable.classList.add('syllable-highlight');
-      });
-
-      syllable.addEventListener('mouseleave', () => {
-        syllable.classList.remove('syllable-highlight');
-      });
+      syllable.addEventListener('mouseenter', () => syllable.classList.add('syllable-highlight'));
+      syllable.addEventListener('mouseleave', () => syllable.classList.remove('syllable-highlight'));
     });
   }
 }
