@@ -313,6 +313,11 @@ export class Modal {
           // Отображаем текст песни
           this.displaySongText(title, text);
 
+          // Показываем drop-зоны после добавления текста
+          if (window.app && window.app.syllableDragDrop) {
+            window.app.syllableDragDrop.showDropZones();
+          }
+
           this.close();
         } else {
           alert('Пожалуйста, заполните название и текст песни.');
@@ -387,6 +392,11 @@ export class Modal {
           localStorage.removeItem('userSongs');
           // --- очищаем пользовательские слоги для этой песни ---
           localStorage.removeItem('userSyllables_' + title);
+          
+          // Скрываем drop-зоны после удаления текста
+          if (window.app && window.app.syllableDragDrop) {
+            window.app.syllableDragDrop.hideDropZones();
+          }
         });
       }
 

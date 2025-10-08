@@ -15,6 +15,7 @@ export class SyllableDragDrop {
   init() {
     this.initializeSyllables();
     this.updateDropZones();
+    this.updateDropZonesVisibility();
   }
 
   /**
@@ -106,6 +107,9 @@ export class SyllableDragDrop {
     });
 
     this.dropZones = Array.from(this.beatRow.element.querySelectorAll('.syllable-drop-zone'));
+    
+    // Обновляем видимость drop-зон после их создания/обновления
+    this.updateDropZonesVisibility();
   }
 
   /**
@@ -268,6 +272,59 @@ export class SyllableDragDrop {
    */
   onBeatCountChanged() {
     this.updateDropZones();
+  }
+
+  /**
+   * Проверяет наличие текста песни в localStorage
+   * @returns {boolean} true если текст песни существует
+   */
+  hasSongText() {
+    try {
+      const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+      return songs.length > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Обновляет видимость drop-зон в зависимости от наличия текста песни
+   */
+  updateDropZonesVisibility() {
+    const hasSong = this.hasSongText();
+    const dropZones = document.querySelectorAll('.syllable-drop-zone');
+    
+    dropZones.forEach(zone => {
+      if (hasSong) {
+        zone.style.display = '';
+        zone.classList.remove('hidden');
+      } else {
+        zone.style.display = 'none';
+        zone.classList.add('hidden');
+      }
+    });
+  }
+
+  /**
+   * Показывает drop-зоны (вызывается после добавления текста песни)
+   */
+  showDropZones() {
+    const dropZones = document.querySelectorAll('.syllable-drop-zone');
+    dropZones.forEach(zone => {
+      zone.style.display = '';
+      zone.classList.remove('hidden');
+    });
+  }
+
+  /**
+   * Скрывает drop-зоны (вызывается после удаления текста песни)
+   */
+  hideDropZones() {
+    const dropZones = document.querySelectorAll('.syllable-drop-zone');
+    dropZones.forEach(zone => {
+      zone.style.display = 'none';
+      zone.classList.add('hidden');
+    });
   }
 }
 

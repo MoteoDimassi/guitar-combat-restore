@@ -250,6 +250,10 @@ const loadSavedSongText = () => {
     if (window.app && window.app.modal) {
       window.app.modal.displaySongText(latestSong.title, latestSong.text);
     }
+    // Показываем drop-зоны, так как есть текст песни
+    if (window.app && window.app.syllableDragDrop) {
+      window.app.syllableDragDrop.showDropZones();
+    }
   }
 };
 
