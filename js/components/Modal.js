@@ -365,6 +365,10 @@ export class Modal {
               songContent.innerHTML = `<strong>${title}</strong><br><br>${updatedText}`;
               highlighter.initializeEventHandlers(songContent);
               bindSyllableClick();
+              // Инициализируем drag-and-drop для обновленных слогов
+              if (window.app && window.app.syllableDragDrop) {
+                window.app.syllableDragDrop.initializeSyllables();
+              }
             });
           });
         });
@@ -388,6 +392,11 @@ export class Modal {
 
       // Показываем блок с текстом
       songTextDisplay.classList.remove('hidden');
+      
+      // Инициализируем drag-and-drop для слогов
+      if (window.app && window.app.syllableDragDrop) {
+        window.app.syllableDragDrop.initializeSyllables();
+      }
     }
   }
 

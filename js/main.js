@@ -14,6 +14,7 @@ import { Modal } from './components/Modal.js';
 import { MobileMenu } from './components/MobileMenu.js';
 import { TemplateManager } from './components/TemplateManager.js';
 import { ChordDisplay } from './components/ChordDisplay.js';
+import { SyllableDragDrop } from './components/SyllableDragDrop.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -54,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const metronome = new Metronome();
   const chordDisplay = new ChordDisplay();
   const templateManager = new TemplateManager(beatRow, controls);
+  const syllableDragDrop = new SyllableDragDrop(beatRow);
 
   // Инициализация компонентов
   beatRow.init();
@@ -64,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   metronome.init();
   chordDisplay.init();
   templateManager.init();
+  syllableDragDrop.init();
 
   // Инициализация мобильного меню
   const mobileMenu = new MobileMenu();
@@ -72,6 +75,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Инициализация модального окна
   const modal = new Modal();
   modal.init();
+  
+  // Связываем обновление drop-зон с рендерингом beatRow
+  beatRow.setOnRenderComplete(() => {
+    syllableDragDrop.updateDropZones();
+  });
 
   // Глобальное состояние приложения
   window.app = {
@@ -84,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chordDisplay,
     modal,
     templateManager,
+    syllableDragDrop,
     state: {
       count: 8,
       beats: [],
@@ -101,6 +110,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Инициализация метронома с правильным количеством стрелочек
   metronome.setBeatCount(8);
+  
+  // Загружаем сохраненные позиции слогов
+  syllableDragDrop.loadSyllablePositions();
   
   // Добаваем обработчик поля ввода аккордов
   const chordsInput = document.getElementById('chordsInput');

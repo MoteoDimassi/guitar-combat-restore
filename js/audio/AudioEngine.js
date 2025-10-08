@@ -112,4 +112,73 @@ export class AudioEngine {
     overtone.stop(time + duration * 0.8);
     secondOvertone.stop(time + duration * 0.6);
   }
+
+  /**
+   * Создает звук приглушенных струн (щелчок)
+   * @param {number} volume - Громкость (0-1)
+   */
+  createMutedStrumSound(volume = 0.7) {
+    const audioCtx = this.audioManager.getAudioContext();
+
+    // Проверка доступности AudioContext с fallback
+    if (!audioCtx || audioCtx.state !== 'running') {
+      console.warn('AudioEngine: AudioContext not available for muted strum');
+      AudioPolyfill.fallbackPlaySound(200, 50);
+      return;
+    }
+
+    const time = audioCtx.currentTime;
+
+    // Создаем шумовой генератор для эффекта щелчка
+    const bufferSize = audioCtx.sampleRate * 0.1; // 100ms
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Генерируем белый шум с быстрым затуханием
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.05));
+    }
+
+    const noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
+
+    // Создаем высокочастотный осциллятор для щелкающего звука
+    const clickOsc = audioCtx.createOscillator();
+    clickOsc.type = 'square';
+    clickOsc.frequency.setValueAtTime(800, time);
+    clickOsc.frequency.exponentialRampToValueAtTime(200, time + 0.05);
+
+    // Огибающая для шума
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(volume * 0.3, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+
+    // Огибающая для щелчка
+    const clickGain = audioCtx.createGain();
+    clickGain.gain.setValueAtTime(volume * 0.5, time);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+
+    // Фильтр для формирования тембра
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, time);
+    filter.Q.setValueAtTime(2, time);
+
+    // Соединяем узлы
+    noiseSource.connect(noiseGain);
+    clickOsc.connect(clickGain);
+    
+    noiseGain.connect(filter);
+    clickGain.connect(filter);
+    
+    filter.connect(audioCtx.destination);
+
+    // Запускаем источники
+    noiseSource.start(time);
+    clickOsc.start(time);
+
+    // Останавливаем источники
+    noiseSource.stop(time + 0.1);
+    clickOsc.stop(time + 0.05);
+  }
 }

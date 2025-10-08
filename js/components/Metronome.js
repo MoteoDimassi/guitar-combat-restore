@@ -267,9 +267,11 @@ export class Metronome {
     // Проверяем состояние кружочка вместо beat.play
     if (window.app && window.app.beatRow) {
       const circleStates = window.app.beatRow.getCircleStates();
-      const shouldPlay = arrowIndex < circleStates.length ? circleStates[arrowIndex] : false;
+      const circleState = arrowIndex < circleStates.length ? circleStates[arrowIndex] : 0;
       
-      if (shouldPlay) {
+      // 0 = не играть, 1 = обычный звук, 2 = приглушённые струны
+      if (circleState === 1) {
+        // Обычный звук гитары
         // Получаем аккордные ноты (можно использовать любую логику, не привязанную к beat.play)
         const arrowInBar = arrowIndex;
         const chordNotes = this.chordManager.getNotesForPosition(
@@ -312,7 +314,11 @@ export class Metronome {
           const f = frequencies[arrowIndex % frequencies.length] || 220;
           this.audioEngine.createGuitarSound(f, 0.3, 0.9);
         }
+      } else if (circleState === 2) {
+        // Звук приглушённых струн (щелчок)
+        this.audioEngine.createMutedStrumSound(0.7);
       }
+      // Если circleState === 0, ничего не воспроизводим
     }
   }
 
