@@ -52,6 +52,22 @@ export class Controls {
       });
     }
 
+    // BPM increment/decrement buttons
+    const bpmIncrement = document.getElementById('bpmIncrement');
+    const bpmDecrement = document.getElementById('bpmDecrement');
+    
+    if (bpmIncrement) {
+      bpmIncrement.addEventListener('click', () => {
+        this.adjustBpm(1);
+      });
+    }
+    
+    if (bpmDecrement) {
+      bpmDecrement.addEventListener('click', () => {
+        this.adjustBpm(-1);
+      });
+    }
+
     // Add song text button
     const addSongTextBtn = document.getElementById('addSongTextBtn');
     if (addSongTextBtn) {
@@ -167,6 +183,31 @@ export class Controls {
     if (window.app) {
       window.app.state.bpm = Number(bpmValue) || 90;
     }
+  }
+
+  /**
+   * Adjusts the BPM value by a specified delta.
+   * Respects the min (40) and max (200) limits.
+   * @param {number} delta - Amount to adjust BPM by (positive or negative)
+   */
+  adjustBpm(delta) {
+    const bpmSlider = document.getElementById('bpm');
+    if (!bpmSlider) return;
+
+    const currentBpm = Number(bpmSlider.value);
+    const minBpm = Number(bpmSlider.min);
+    const maxBpm = Number(bpmSlider.max);
+    
+    let newBpm = currentBpm + delta;
+    
+    // Clamp value within min/max range
+    newBpm = Math.max(minBpm, Math.min(maxBpm, newBpm));
+    
+    // Update slider value
+    bpmSlider.value = newBpm;
+    
+    // Update label and global state
+    this.updateBpmLabel();
   }
 
   /**

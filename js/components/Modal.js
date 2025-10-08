@@ -167,6 +167,56 @@ export class Modal {
     this.bindAddSongTextEvents();
   }
 
+  /**
+   * Модалка для ручного редактирования слогов в слове
+   * @param {string} word — исходное слово (без пунктуации)
+   * @param {string[]} currentSyllables — текущие слоги (массив)
+   * @param {function} onSave — колбэк (syllablesArray)
+   */
+  showSyllableEdit(word, currentSyllables, onSave) {
+    const title = 'Редактирование слогов';
+    const value = (currentSyllables && currentSyllables.length > 0) ? currentSyllables.join(' ') : word;
+    const content = `
+      <div class="space-y-4">
+        <div class="text-gray-300 text-base">Слово: <span class="font-bold text-white">${word}</span></div>
+        <div>
+          <label for="syllable-edit-input" class="block text-sm font-medium text-gray-300 mb-2">Разделите слоги пробелами</label>
+          <input type="text" id="syllable-edit-input" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#38e07b] focus:border-transparent" value="${value}" autocomplete="off" spellcheck="false">
+          <p class="text-xs text-gray-500 mt-2">Пример: <span class="italic">мо ло ко</span></p>
+        </div>
+        <div class="flex justify-end space-x-3 pt-4">
+          <button id="syllable-edit-cancel" class="px-4 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-gray-600 transition-colors font-medium">Отмена</button>
+          <button id="syllable-edit-save" class="px-4 py-2 bg-[#38e07b] text-gray-950 rounded-md hover:bg-emerald-400 transition-colors font-medium">Сохранить</button>
+        </div>
+      </div>
+    `;
+    this.open(title, content, () => {
+      // onClose: ничего не делаем
+    });
+    // Фокус на input
+    setTimeout(() => {
+      const input = document.getElementById('syllable-edit-input');
+      if (input) input.focus();
+    }, 50);
+    // Кнопки
+    const saveBtn = document.getElementById('syllable-edit-save');
+    const cancelBtn = document.getElementById('syllable-edit-cancel');
+    saveBtn && saveBtn.addEventListener('click', () => {
+      const input = document.getElementById('syllable-edit-input');
+      const val = input.value.trim();
+      if (!val) {
+        input.classList.add('border-red-500');
+        return;
+      }
+      const sylls = val.split(/\s+/).filter(Boolean);
+      this.close();
+      if (typeof onSave === 'function') onSave(sylls);
+    });
+    cancelBtn && cancelBtn.addEventListener('click', () => {
+      this.close();
+    });
+  }
+
   // Содержание политики конфиденциальности
   getPrivacyPolicyContent() {
     return `
@@ -276,9 +326,18 @@ export class Modal {
     const songTextDisplay = document.getElementById('song-text-display');
     const songContent = document.getElementById('song-content');
 
+    // --- ДОБАВЛЕНО: загрузка пользовательских слогов из localStorage ---
+    let userSyllableMap = {};
+    try {
+      const stored = localStorage.getItem('userSyllables_' + title);
+      if (stored) userSyllableMap = JSON.parse(stored);
+    } catch (e) { userSyllableMap = {}; }
+    // ---
+
     if (songTextDisplay && songContent) {
       // Используем SyllableHighlighter для обработки текста
       const highlighter = new SyllableHighlighter();
+      highlighter.userSyllableMap = userSyllableMap;
       const processedText = highlighter.processText(text);
 
       // Форматируем текст с заголовком
@@ -287,6 +346,32 @@ export class Modal {
       // Инициализируем обработчики событий для слогов
       highlighter.initializeEventHandlers(songContent);
 
+      // --- обработчик клика по .syllable ---
+      const saveUserSyllables = () => {
+        try {
+          localStorage.setItem('userSyllables_' + title, JSON.stringify(highlighter.userSyllableMap));
+        } catch (e) {}
+      };
+      const bindSyllableClick = () => {
+        songContent.querySelectorAll('[data-word]').forEach(span => {
+          span.addEventListener('click', (e) => {
+            const word = span.getAttribute('data-word');
+            if (!word) return;
+            let currentSylls = highlighter.userSyllableMap[word] || highlighter.splitIntoSyllables(word);
+            this.showSyllableEdit(word, currentSylls, (newSylls) => {
+              highlighter.setUserSyllables(word, newSylls);
+              saveUserSyllables();
+              const updatedText = highlighter.processText(text);
+              songContent.innerHTML = `<strong>${title}</strong><br><br>${updatedText}`;
+              highlighter.initializeEventHandlers(songContent);
+              bindSyllableClick();
+            });
+          });
+        });
+      };
+      bindSyllableClick();
+      // ---
+
       // Добавляем обработчик для кнопки очистки
       const clearBtn = document.getElementById('clear-song-text-btn');
       if (clearBtn) {
@@ -294,9 +379,10 @@ export class Modal {
           // Скрываем отображение текста песни
           songTextDisplay.classList.add('hidden');
           songContent.innerHTML = '';
-
           // Очищаем весь буфер песен из localStorage
           localStorage.removeItem('userSongs');
+          // --- очищаем пользовательские слоги для этой песни ---
+          localStorage.removeItem('userSyllables_' + title);
         });
       }
 

@@ -9,7 +9,8 @@ export class SyllableHighlighter {
   constructor() {
     // soft hyphen (реальный символ, не HTML-entity)
     this.softHyphen = '\u00AD';
-
+    // userSyllableMap: { [word]: [array of syllables] }
+    this.userSyllableMap = {};
     try {
       // hyphenateSync возвращает строку с \u00AD между слогами (см. README hyphen).
       this.hyphenRu = hyphenateRu;
@@ -43,13 +44,18 @@ export class SyllableHighlighter {
     }
     const [, prefix = '', wordBody = '', suffix = ''] = m;
 
-    const syllables = this.splitIntoSyllables(wordBody);
+    // 1. Если есть пользовательская разметка — используем её
+    let syllables = this.userSyllableMap[wordBody];
+    if (!syllables) {
+      // 2. Иначе обычный алгоритм
+      syllables = this.splitIntoSyllables(wordBody);
+    }
 
     if (!syllables || syllables.length <= 1) {
       return `${this.escapeHtml(prefix)}<span class="syllable">${this.escapeHtml(wordBody)}</span>${this.escapeHtml(suffix)}`;
     }
 
-    const spans = syllables.map((s, i) => `<span class="syllable" data-syllable-index="${i}">${this.escapeHtml(s)}</span>`).join('');
+    const spans = syllables.map((s, i) => `<span class="syllable" data-syllable-index="${i}" data-word="${this.escapeHtml(wordBody)}">${this.escapeHtml(s)}</span>`).join('');
     return `${this.escapeHtml(prefix)}${spans}${this.escapeHtml(suffix)}`;
   }
 
@@ -114,5 +120,29 @@ export class SyllableHighlighter {
       syllable.addEventListener('mouseenter', () => syllable.classList.add('syllable-highlight'));
       syllable.addEventListener('mouseleave', () => syllable.classList.remove('syllable-highlight'));
     });
+  }
+
+  /**
+   * Установить пользовательскую разметку слогов для слова
+   * @param {string} word — исходное слово (без пунктуации)
+   * @param {string[]} syllables — массив слогов
+   */
+  setUserSyllables(word, syllables) {
+    if (Array.isArray(syllables) && syllables.length > 0) {
+      this.userSyllableMap[word] = syllables;
+    } else {
+      delete this.userSyllableMap[word];
+    }
+  }
+
+  /**
+   * Разбить слово по пользовательскому вводу (строка с пробелами)
+   * @param {string} userInput — строка, где слоги разделены пробелами
+   * @returns {string[]} массив слогов
+   */
+  splitByUserInput(userInput) {
+    if (!userInput) return [];
+    // Удаляем лишние пробелы, разбиваем по пробелу
+    return userInput.trim().split(/\s+/).filter(Boolean);
   }
 }

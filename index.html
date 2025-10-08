@@ -135,6 +135,18 @@
               <div class="w-full">
                 <div class="flex w-full items-center justify-between pb-2">
                   <label class="text-white text-lg font-medium leading-normal" for="bpm">Темп (BPM)</label>
+                  <div class="flex items-center gap-2">
+                    <button id="bpmDecrement" class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-800 border border-gray-700 text-white hover:bg-gray-700 hover:border-[#38e07b] transition-colors text-xl font-bold" title="Уменьшить темп на 1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M20 12H4"/>
+                      </svg>
+                    </button>
+                    <button id="bpmIncrement" class="w-8 h-8 flex items-center justify-center rounded-md bg-gray-800 border border-gray-700 text-white hover:bg-gray-700 hover:border-[#38e07b] transition-colors text-xl font-bold" title="Увеличить темп на 1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="flex items-center gap-4">
                   <input class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#38e07b]" id="bpm" max="200" min="40" type="range" value="90"/>
