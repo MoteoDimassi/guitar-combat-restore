@@ -15,6 +15,7 @@ import { MobileMenu } from './components/MobileMenu.js';
 import { TemplateManager } from './components/TemplateManager.js';
 import { ChordDisplay } from './components/ChordDisplay.js';
 import { SyllableDragDrop } from './components/SyllableDragDrop.js';
+import { Settings } from './components/Settings.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chordDisplay = new ChordDisplay();
   const templateManager = new TemplateManager(beatRow, controls);
   const syllableDragDrop = new SyllableDragDrop(beatRow);
+  const settings = new Settings();
 
   // Инициализация компонентов
   beatRow.init();
@@ -67,6 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   chordDisplay.init();
   templateManager.init();
   syllableDragDrop.init();
+  settings.init();
 
   // Инициализация мобильного меню
   const mobileMenu = new MobileMenu();
@@ -93,6 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     modal,
     templateManager,
     syllableDragDrop,
+    settings,
     state: {
       count: 8,
       beats: [],

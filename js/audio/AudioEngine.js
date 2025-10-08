@@ -13,8 +13,9 @@ export class AudioEngine {
    * Создает звук метронома (клик)
    * @param {number} time - Время воспроизведения
    * @param {boolean} isAccent - Является ли акцентом
+   * @param {number} volumeMultiplier - Множитель громкости (0-1)
    */
-  scheduleClick(time, isAccent) {
+  scheduleClick(time, isAccent, volumeMultiplier = 1.0) {
     const audioCtx = this.audioManager.getAudioContext();
     if (!audioCtx) return;
 
@@ -23,7 +24,7 @@ export class AudioEngine {
 
     osc.type = 'square';
     osc.frequency.setValueAtTime(isAccent ? 1500 : 1000, time);
-    gainNode.gain.setValueAtTime(1, time);
+    gainNode.gain.setValueAtTime(volumeMultiplier, time);
     gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
 
     osc.connect(gainNode);

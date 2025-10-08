@@ -220,7 +220,13 @@ export class Metronome {
    */
   scheduleBeat(secondsPerBeat, totalArrows, ratio) {
     const isAccent = (this.currentBeat === 0);
-    this.audioEngine.scheduleClick(this.nextNoteTime, isAccent);
+    
+    // Получаем громкость метронома из настроек
+    const metronomeVolume = window.app && window.app.settings 
+      ? window.app.settings.getMetronomeVolume() 
+      : 1.0;
+    
+    this.audioEngine.scheduleClick(this.nextNoteTime, isAccent, metronomeVolume);
 
     // фиксируем номер такта для всех стрелочек ЭТОГО удара
     const barAtSchedule = this.barIndex;
@@ -272,6 +278,11 @@ export class Metronome {
       // 0 = не играть, 1 = обычный звук, 2 = приглушённые струны
       if (circleState === 1) {
         // Обычный звук гитары
+        // Получаем громкость боя из настроек
+        const strumVolume = window.app && window.app.settings 
+          ? window.app.settings.getStrumVolume() 
+          : 0.8;
+        
         // Получаем аккордные ноты (можно использовать любую логику, не привязанную к beat.play)
         const arrowInBar = arrowIndex;
         const chordNotes = this.chordManager.getNotesForPosition(
@@ -294,7 +305,7 @@ export class Metronome {
               setTimeout(() => {
                 // Разная громкость для разных нот аккорда
                 const volumes = [0.8, 0.6, 0.7]; // Тоника, терция, квинта
-                const volume = volumes[index] || 0.6;
+                const volume = (volumes[index] || 0.6) * strumVolume;
                 this.audioEngine.createGuitarSound(freq, 0.25, volume);
               }, index * 8); // Небольшая арпеджио-задержка
             });
@@ -303,7 +314,7 @@ export class Metronome {
             chordNotes.forEach((freq, index) => {
               setTimeout(() => {
                 const volumes = [0.8, 0.6, 0.7];
-                const volume = volumes[index] || 0.6;
+                const volume = (volumes[index] || 0.6) * strumVolume;
                 this.audioEngine.createGuitarSound(freq, 0.25, volume);
               }, index * 8);
             });
@@ -312,11 +323,16 @@ export class Metronome {
           // Если нет аккорда, воспроизводим одиночную ноту
           const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63];
           const f = frequencies[arrowIndex % frequencies.length] || 220;
-          this.audioEngine.createGuitarSound(f, 0.3, 0.9);
+          this.audioEngine.createGuitarSound(f, 0.3, 0.9 * strumVolume);
         }
       } else if (circleState === 2) {
         // Звук приглушённых струн (щелчок)
-        this.audioEngine.createMutedStrumSound(0.7);
+        // Получаем громкость боя из настроек
+        const strumVolume = window.app && window.app.settings 
+          ? window.app.settings.getStrumVolume() 
+          : 0.8;
+        
+        this.audioEngine.createMutedStrumSound(0.7 * strumVolume);
       }
       // Если circleState === 0, ничего не воспроизводим
     }
