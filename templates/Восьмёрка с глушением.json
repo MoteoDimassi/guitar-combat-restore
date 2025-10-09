@@ -10,7 +10,23 @@
     },
     {
       "direction": "down",
+      "play": 0
+    },
+    {
+      "direction": "up",
+      "play": 0
+    },
+    {
+      "direction": "down",
       "play": 2
+    },
+    {
+      "direction": "up",
+      "play": 0
+    },
+    {
+      "direction": "down",
+      "play": 0
     },
     {
       "direction": "up",
@@ -26,17 +42,33 @@
     },
     {
       "direction": "down",
+      "play": 1
+    },
+    {
+      "direction": "up",
+      "play": 0
+    },
+    {
+      "direction": "down",
       "play": 2
     },
     {
       "direction": "up",
       "play": 0
+    },
+    {
+      "direction": "down",
+      "play": 1
+    },
+    {
+      "direction": "up",
+      "play": 1
     }
   ],
-  "bpm": 90,
+  "bpm": 99,
   "speed": 100,
   "chords": [
     "Am F Dm E"
   ],
-  "timestamp": "2025-10-08T15:03:04.558Z"
+  "timestamp": "2025-10-09T07:49:01.074Z"
 }

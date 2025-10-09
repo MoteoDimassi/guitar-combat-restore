@@ -30,13 +30,13 @@
     },
     {
       "direction": "up",
-      "play": 1
+      "play": 0
     }
   ],
-  "bpm": 105,
+  "bpm": 100,
   "speed": 100,
   "chords": [
     "Am F Dm E"
   ],
-  "timestamp": "2025-10-08T15:03:56.316Z"
+  "timestamp": "2025-10-09T07:46:37.463Z"
 }

@@ -22,6 +22,7 @@ import { ChordBarManager } from './components/ChordBarManager.js';
 import { ChordManager } from './components/ChordManager.js';
 import { LineNavigation } from './components/LineNavigation.js';
 import { PlaybackSync } from './components/PlaybackSync.js';
+import { OptionsMenu } from './components/OptionsMenu.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -70,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chordBarManager = new ChordBarManager(barManager, chordManager, chordDisplay, beatRow);
   const lineNavigation = new LineNavigation(barManager, barSyllableDisplay);
   const playbackSync = new PlaybackSync(beatRow, barManager, barSyllableDisplay, chordDisplay, chordBarManager);
+  const optionsMenu = new OptionsMenu();
 
   // Инициализация компонентов
   beatRow.init();
@@ -84,6 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   settings.init();
   barSyllableDisplay.init();
   playbackSync.init();
+  optionsMenu.init();
 
   // Инициализация мобильного меню
   const mobileMenu = new MobileMenu();
@@ -117,6 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chordBarManager,
     lineNavigation,
     playbackSync,
+    optionsMenu,
     state: {
       count: 8,
       beats: [],
@@ -276,10 +280,20 @@ const loadSavedSongText = () => {
     if (window.app && window.app.syllableDragDrop) {
       window.app.syllableDragDrop.showDropZones();
     }
+    // Скрываем панель управления и показываем кнопку опций
+    if (window.app && window.app.optionsMenu) {
+      window.app.optionsMenu.hideControlPanel();
+      window.app.optionsMenu.showOptionsButton();
+    }
   } else {
     // Если нет текста песни, убеждаемся, что секция управления тактами скрыта
     if (window.app && window.app.settings) {
       window.app.settings.hideBarManagement();
+    }
+    // Показываем панель управления и скрываем кнопку опций
+    if (window.app && window.app.optionsMenu) {
+      window.app.optionsMenu.showControlPanel();
+      window.app.optionsMenu.hideOptionsButton();
     }
   }
 };

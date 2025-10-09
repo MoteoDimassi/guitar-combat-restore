@@ -77,10 +77,25 @@ export class ImportUtils {
 
     try {
       // 1. Нормализуем биты
-      const normalizedBeats = data.beats.map(beat => ({
-        direction: beat.direction || 'down',
-        play: !!beat.play  // строго булевое значение
-      }));
+      const normalizedBeats = data.beats.map(beat => {
+        // Преобразуем старые boolean значения в новые числовые состояния
+        let playState;
+        if (typeof beat.play === 'number') {
+          // Уже числовое значение (0, 1, 2)
+          playState = beat.play;
+        } else if (beat.play === true) {
+          // Старый формат: true → 1 (заполненный)
+          playState = 1;
+        } else {
+          // Старый формат: false → 0 (пустой)
+          playState = 0;
+        }
+        
+        return {
+          direction: beat.direction || 'down',
+          play: playState
+        };
+      });
 
       if (!this.beatRow) return;
 

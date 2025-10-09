@@ -344,6 +344,12 @@ export class Modal {
             window.app.syllableDragDrop.showDropZones();
           }
 
+          // Скрываем панель управления и показываем кнопку опций
+          if (window.app && window.app.optionsMenu) {
+            window.app.optionsMenu.hideControlPanel();
+            window.app.optionsMenu.showOptionsButton();
+          }
+
           this.close();
         } else {
           alert('Пожалуйста, заполните название и текст песни.');
@@ -451,6 +457,12 @@ export class Modal {
           if (window.app && window.app.settings) {
             window.app.settings.hideBarManagement();
           }
+
+          // Показываем панель управления и скрываем кнопку опций
+          if (window.app && window.app.optionsMenu) {
+            window.app.optionsMenu.showControlPanel();
+            window.app.optionsMenu.hideOptionsButton();
+          }
         });
       }
 
@@ -477,6 +489,12 @@ export class Modal {
       // Показываем секцию управления тактами
       if (window.app && window.app.settings) {
         window.app.settings.showBarManagement();
+      }
+
+      // Скрываем панель управления и показываем кнопку опций
+      if (window.app && window.app.optionsMenu) {
+        window.app.optionsMenu.hideControlPanel();
+        window.app.optionsMenu.showOptionsButton();
       }
     }
   }
