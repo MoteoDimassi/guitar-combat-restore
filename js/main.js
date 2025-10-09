@@ -140,10 +140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Инициализация метронома с правильным количеством стрелочек
   metronome.setBeatCount(8);
   
-  // Загружаем сохраненные позиции слогов
-  syllableDragDrop.loadSyllablePositions();
-  syllableDragDrop.loadBarSyllablePositions();
-  
   // Добаваем обработчик поля ввода аккордов
   const chordsInput = document.getElementById('chordsInput');
   if (chordsInput) {

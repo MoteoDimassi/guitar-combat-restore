@@ -8,15 +8,94 @@ export class SyllableDragDrop {
     this.beatRow = beatRow;
     this.draggedElement = null;
     this.draggedSyllableData = null;
+    this.draggedSyllableId = null; // ID перетаскиваемого слога
     this.dropZones = [];
-    this.syllablePositions = {}; // { arrowIndex: { text: string, element: HTMLElement } }
-    this.barSyllablePositions = {}; // { barIndex: { arrowIndex: syllableData } } - позиции для каждого такта
+    
+    // Новая структура: массив всех слогов с их позициями
+    // { id, text, barIndex, arrowIndex, word, syllableIndex }
+    this.allSyllables = [];
   }
 
   init() {
+    this.loadAllSyllables(); // Загружаем сохранённые данные или создаём новые
     this.initializeSyllables();
     this.updateDropZones();
     this.updateDropZonesVisibility();
+  }
+
+  /**
+   * Создаёт или загружает полный список всех слогов из текста песни
+   */
+  loadAllSyllables() {
+    // Пытаемся загрузить сохранённые данные
+    const saved = this.loadSyllablesFromStorage();
+    if (saved && saved.length > 0) {
+      this.allSyllables = saved;
+      return;
+    }
+
+    // Если нет сохранённых данных, создаём с нуля
+    this.createAllSyllablesFromText();
+  }
+
+  /**
+   * Создаёт массив всех слогов из текста песни
+   */
+  createAllSyllablesFromText() {
+    this.allSyllables = [];
+    
+    const songContent = document.getElementById('song-content');
+    if (!songContent) return;
+
+    // Получаем все строки текста (разделённые <br>)
+    const innerHTML = songContent.innerHTML;
+    if (!innerHTML || innerHTML.trim() === '') return;
+    
+    const lines = innerHTML.split('<br>');
+    if (!lines || lines.length < 3) return; // Минимум: заголовок + пустая строка + текст
+    
+    // Убираем заголовок песни (первые две строки)
+    const textLines = lines.slice(2);
+
+    let globalSyllableId = 0;
+    let barIndex = 0;
+
+    // Проходим по каждой непустой строке (такту)
+    textLines.forEach((lineHtml) => {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = lineHtml;
+      
+      if (!tempDiv.textContent.trim()) return; // Пропускаем пустые строки
+
+      // Получаем все слоги в этой строке
+      const syllableElements = tempDiv.querySelectorAll('.syllable');
+      
+      if (!syllableElements || syllableElements.length === 0) {
+        // Если в строке нет слогов, всё равно увеличиваем barIndex
+        barIndex++;
+        return;
+      }
+      
+      syllableElements.forEach((syllableEl, arrowIndex) => {
+        const syllable = {
+          id: `syllable-${globalSyllableId++}`,
+          text: syllableEl.textContent || '',
+          barIndex: barIndex,
+          arrowIndex: arrowIndex,
+          word: syllableEl.getAttribute('data-word') || '',
+          syllableIndex: syllableEl.getAttribute('data-syllable-index') || '0'
+        };
+        
+        this.allSyllables.push(syllable);
+      });
+
+      barIndex++;
+    });
+
+    // Сохраняем созданные данные только если есть слоги
+    if (this.allSyllables.length > 0) {
+      this.saveSyllablesToStorage();
+    }
   }
 
   /**
@@ -33,47 +112,55 @@ export class SyllableDragDrop {
   }
 
   /**
-   * Делает слог перетаскиваемым
+   * Делает слог перетаскиваемым (НЕ используется больше, т.к. перетаскиваются размещённые слоги)
    * @param {HTMLElement} syllable - элемент слога
    */
   makeSyllableDraggable(syllable) {
-    syllable.draggable = true;
-    syllable.style.cursor = 'pointer';
+    // Слоги из текста больше не перетаскиваются напрямую
+    // Вся логика работает через размещённые слоги
+  }
 
-    syllable.addEventListener('dragstart', (e) => {
-      this.draggedElement = syllable;
-      this.draggedSyllableData = {
-        text: syllable.textContent,
-        word: syllable.getAttribute('data-word') || '',
-        index: syllable.getAttribute('data-syllable-index') || '0'
-      };
+  /**
+   * Делает размещённый слог перетаскиваемым
+   * @param {HTMLElement} placedSyllable - элемент размещённого слога
+   * @param {string} syllableId - ID слога в массиве allSyllables
+   */
+  makePlacedSyllableDraggable(placedSyllable, syllableId) {
+    placedSyllable.style.cursor = 'move';
+    placedSyllable.setAttribute('data-syllable-id', syllableId);
 
-      // Добавляем визуальный эффект при начале перетаскивания
-      syllable.classList.add('dragging');
-      syllable.style.opacity = '0.5';
+    placedSyllable.addEventListener('dragstart', (e) => {
+      this.draggedElement = placedSyllable;
+      this.draggedSyllableId = syllableId;
+
+      // Добавляем визуальный эффект
+      placedSyllable.classList.add('dragging');
+      placedSyllable.style.opacity = '0.5';
 
       // Устанавливаем данные для передачи
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('text/plain', syllable.textContent);
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', placedSyllable.textContent);
     });
 
-    syllable.addEventListener('dragend', (e) => {
+    placedSyllable.addEventListener('dragend', (e) => {
       // Убираем визуальный эффект
-      syllable.classList.remove('dragging');
-      syllable.style.opacity = '1';
+      placedSyllable.classList.remove('dragging');
+      placedSyllable.style.opacity = '1';
       this.draggedElement = null;
-      this.draggedSyllableData = null;
+      this.draggedSyllableId = null;
     });
 
     // Добавляем эффект наведения
-    syllable.addEventListener('mouseenter', () => {
-      if (!syllable.classList.contains('dragging')) {
-        syllable.classList.add('syllable-hover');
+    placedSyllable.addEventListener('mouseenter', () => {
+      if (!placedSyllable.classList.contains('dragging')) {
+        placedSyllable.style.opacity = '0.8';
       }
     });
 
-    syllable.addEventListener('mouseleave', () => {
-      syllable.classList.remove('syllable-hover');
+    placedSyllable.addEventListener('mouseleave', () => {
+      if (!placedSyllable.classList.contains('dragging')) {
+        placedSyllable.style.opacity = '1';
+      }
     });
   }
 
@@ -98,11 +185,6 @@ export class SyllableDragDrop {
         wrapper.appendChild(dropZone);
       }
 
-      // Если уже есть размещенный слог, восстанавливаем его
-      if (this.syllablePositions[index]) {
-        this.renderPlacedSyllable(dropZone, index);
-      }
-
       // Настраиваем обработчики drop-зоны
       this.setupDropZone(dropZone, index);
     });
@@ -121,7 +203,7 @@ export class SyllableDragDrop {
   setupDropZone(dropZone, arrowIndex) {
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
+      e.dataTransfer.dropEffect = 'move';
       
       // Подсвечиваем зону при наведении
       dropZone.classList.add('drop-zone-active');
@@ -136,70 +218,70 @@ export class SyllableDragDrop {
       e.preventDefault();
       dropZone.classList.remove('drop-zone-active');
 
-      if (this.draggedSyllableData) {
-        // Получаем текущий индекс такта
-        const currentBarIndex = window.app && window.app.state ? window.app.state.currentBarIndex : 0;
-        // Размещаем слог как вручную перетащенный (isAuto = false)
-        this.placeSyllable(arrowIndex, this.draggedSyllableData, false, currentBarIndex);
+      if (this.draggedSyllableId && this.allSyllables && this.allSyllables.length > 0) {
+        // Находим слог в массиве и меняем его arrowIndex
+        const syllable = this.allSyllables.find(s => s && s.id === this.draggedSyllableId);
+        if (syllable) {
+          syllable.arrowIndex = arrowIndex;
+          this.saveSyllablesToStorage();
+          
+          // Перерисовываем текущий такт
+          if (typeof syllable.barIndex !== 'undefined') {
+            this.renderBarSyllables(syllable.barIndex);
+          }
+        }
       }
     });
   }
 
   /**
-   * Размещает слог в указанной позиции
-   * @param {number} arrowIndex - индекс стрелки
-   * @param {Object} syllableData - данные слога
-   * @param {boolean} isAuto - флаг автоматического размещения
-   * @param {number} barIndex - индекс такта (опционально)
+   * Отображает слоги для указанного такта
+   * @param {number} barIndex - индекс такта
    */
-  placeSyllable(arrowIndex, syllableData, isAuto = false, barIndex = null) {
-    // Сохраняем позицию слога с флагом автоматического размещения
-    this.syllablePositions[arrowIndex] = {
-      text: syllableData.text,
-      word: syllableData.word,
-      index: syllableData.index,
-      isAuto: isAuto
-    };
+  renderBarSyllables(barIndex) {
+    if (!this.beatRow || !this.beatRow.element) return;
+    if (!this.allSyllables || this.allSyllables.length === 0) return;
 
-    // Если это вручную перемещённый слог и указан такт, сохраняем в историю такта
-    if (!isAuto && barIndex !== null) {
-      if (!this.barSyllablePositions[barIndex]) {
-        this.barSyllablePositions[barIndex] = {};
+    // Очищаем все drop-зоны
+    const dropZones = this.beatRow.element.querySelectorAll('.syllable-drop-zone');
+    if (!dropZones) return;
+    
+    dropZones.forEach(zone => {
+      if (zone) zone.innerHTML = '';
+    });
+
+    // Получаем все слоги для этого такта
+    const barSyllables = this.allSyllables.filter(s => s && s.barIndex === barIndex);
+    if (!barSyllables || barSyllables.length === 0) return;
+
+    // Размещаем каждый слог в соответствующей drop-зоне
+    barSyllables.forEach(syllable => {
+      if (!syllable) return;
+      
+      const dropZone = this.beatRow.element.querySelector(
+        `.syllable-drop-zone[data-arrow-index="${syllable.arrowIndex}"]`
+      );
+      if (dropZone) {
+        this.renderSyllableInZone(dropZone, syllable);
       }
-      this.barSyllablePositions[barIndex][arrowIndex] = {
-        text: syllableData.text,
-        word: syllableData.word,
-        index: syllableData.index
-      };
-      this.saveBarSyllablePositions();
-    }
-
-    // Находим drop-зону и отображаем слог
-    const dropZone = this.beatRow.element.querySelector(`.syllable-drop-zone[data-arrow-index="${arrowIndex}"]`);
-    if (dropZone) {
-      this.renderPlacedSyllable(dropZone, arrowIndex);
-    }
-
-    // Сохраняем в localStorage
-    this.saveSyllablePositions();
+    });
   }
 
   /**
-   * Отображает размещенный слог в drop-зоне
+   * Отображает слог в drop-зоне
    * @param {HTMLElement} dropZone - элемент drop-зоны
-   * @param {number} arrowIndex - индекс стрелки
+   * @param {Object} syllable - данные слога
    */
-  renderPlacedSyllable(dropZone, arrowIndex) {
-    const syllableData = this.syllablePositions[arrowIndex];
-    if (!syllableData) {
-      dropZone.innerHTML = '';
-      return;
-    }
-
+  renderSyllableInZone(dropZone, syllable) {
+    if (!dropZone || !syllable) return;
+    
+    const text = syllable.text || '';
+    const id = syllable.id || '';
+    
     dropZone.innerHTML = `
-      <div class="placed-syllable">
-        <span class="syllable-text">${syllableData.text}</span>
-        <button class="remove-syllable" data-arrow-index="${arrowIndex}" title="Удалить слог">
+      <div class="placed-syllable" draggable="true">
+        <span class="syllable-text">${text}</span>
+        <button class="remove-syllable" data-syllable-id="${id}" title="Удалить слог">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -207,137 +289,97 @@ export class SyllableDragDrop {
       </div>
     `;
 
+    // Делаем слог перетаскиваемым
+    const placedSyllable = dropZone.querySelector('.placed-syllable');
+    if (placedSyllable && id) {
+      this.makePlacedSyllableDraggable(placedSyllable, id);
+    }
+
     // Добавляем обработчик удаления
     const removeBtn = dropZone.querySelector('.remove-syllable');
-    if (removeBtn) {
+    if (removeBtn && id) {
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.removeSyllable(arrowIndex);
+        this.removeSyllable(id);
       });
     }
   }
 
   /**
-   * Удаляет слог из указанной позиции
-   * @param {number} arrowIndex - индекс стрелки
+   * Удаляет слог по ID
+   * @param {string} syllableId - ID слога
    */
-  removeSyllable(arrowIndex) {
-    // Удаляем из текущих позиций
-    delete this.syllablePositions[arrowIndex];
+  removeSyllable(syllableId) {
+    if (!syllableId || !this.allSyllables || this.allSyllables.length === 0) return;
     
-    // Удаляем из истории всех тактов
-    Object.keys(this.barSyllablePositions).forEach(barIndex => {
-      if (this.barSyllablePositions[barIndex][arrowIndex]) {
-        delete this.barSyllablePositions[barIndex][arrowIndex];
+    const index = this.allSyllables.findIndex(s => s && s.id === syllableId);
+    if (index !== -1) {
+      const syllable = this.allSyllables[index];
+      this.allSyllables.splice(index, 1);
+      this.saveSyllablesToStorage();
+      
+      // Перерисовываем такт
+      if (syllable && typeof syllable.barIndex !== 'undefined') {
+        this.renderBarSyllables(syllable.barIndex);
       }
-    });
-    
-    const dropZone = this.beatRow.element.querySelector(`.syllable-drop-zone[data-arrow-index="${arrowIndex}"]`);
-    if (dropZone) {
-      dropZone.innerHTML = '';
     }
-
-    this.saveSyllablePositions();
-    this.saveBarSyllablePositions();
   }
 
   /**
-   * Сохраняет позиции слогов в localStorage
+   * Сохраняет все слоги в localStorage
    */
-  saveSyllablePositions() {
+  saveSyllablesToStorage() {
     try {
-      localStorage.setItem('syllablePositions', JSON.stringify(this.syllablePositions));
+      localStorage.setItem('allSyllables', JSON.stringify(this.allSyllables));
     } catch (e) {
-      console.error('Ошибка сохранения позиций слогов:', e);
+      console.error('Ошибка сохранения слогов:', e);
     }
   }
 
   /**
-   * Загружает позиции слогов из localStorage
+   * Загружает все слоги из localStorage
+   * @returns {Array} массив слогов или null
    */
-  loadSyllablePositions() {
+  loadSyllablesFromStorage() {
     try {
-      const saved = localStorage.getItem('syllablePositions');
+      const saved = localStorage.getItem('allSyllables');
       if (saved) {
-        this.syllablePositions = JSON.parse(saved);
-        this.updateDropZones();
+        return JSON.parse(saved);
       }
     } catch (e) {
-      console.error('Ошибка загрузки позиций слогов:', e);
-      this.syllablePositions = {};
+      console.error('Ошибка загрузки слогов:', e);
     }
+    return null;
   }
 
   /**
-   * Сохраняет позиции слогов для каждого такта в localStorage
-   */
-  saveBarSyllablePositions() {
-    try {
-      localStorage.setItem('barSyllablePositions', JSON.stringify(this.barSyllablePositions));
-    } catch (e) {
-      console.error('Ошибка сохранения позиций слогов тактов:', e);
-    }
-  }
-
-  /**
-   * Загружает позиции слогов для каждого такта из localStorage
-   */
-  loadBarSyllablePositions() {
-    try {
-      const saved = localStorage.getItem('barSyllablePositions');
-      if (saved) {
-        this.barSyllablePositions = JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Ошибка загрузки позиций слогов тактов:', e);
-      this.barSyllablePositions = {};
-    }
-  }
-
-  /**
-   * Получает сохранённые позиции слогов для конкретного такта
+   * Получает слоги для конкретного такта
    * @param {number} barIndex - индекс такта
-   * @returns {Object} объект с позициями слогов для такта
+   * @returns {Array} массив слогов такта
    */
-  getBarSyllablePositions(barIndex) {
-    return this.barSyllablePositions[barIndex] || {};
+  getBarSyllables(barIndex) {
+    if (!this.allSyllables || this.allSyllables.length === 0) return [];
+    return this.allSyllables.filter(s => s && s.barIndex === barIndex);
   }
 
   /**
-   * Очищает все размещенные слоги
+   * Очищает все слоги
    */
   clearAllSyllables() {
-    // Очищаем все текущие позиции
-    this.syllablePositions = {};
-    this.dropZones.forEach(dropZone => {
-      dropZone.innerHTML = '';
-    });
-    this.saveSyllablePositions();
+    this.allSyllables = [];
+    if (this.dropZones && this.dropZones.length > 0) {
+      this.dropZones.forEach(dropZone => {
+        if (dropZone) dropZone.innerHTML = '';
+      });
+    }
+    this.saveSyllablesToStorage();
   }
 
   /**
-   * Очищает историю позиций для всех тактов
+   * Пересоздаёт слоги из текста (например, при обновлении текста песни)
    */
-  clearBarSyllablePositions() {
-    this.barSyllablePositions = {};
-    this.saveBarSyllablePositions();
-  }
-
-  /**
-   * Получает позиции слогов
-   * @returns {Object} объект с позициями слогов
-   */
-  getSyllablePositions() {
-    return { ...this.syllablePositions };
-  }
-
-  /**
-   * Устанавливает позиции слогов
-   * @param {Object} positions - объект с позициями слогов
-   */
-  setSyllablePositions(positions) {
-    this.syllablePositions = positions || {};
-    this.updateDropZones();
+  recreateSyllables() {
+    this.createAllSyllablesFromText();
   }
 
   /**

@@ -207,102 +207,12 @@ export class BarSyllableDisplay {
     const bar = this.barManager.getBar(barIndex);
     if (!bar) return;
 
-    const textLine = bar.getTextLine();
-    if (!textLine) return;
-
-    // Очищаем ВСЕ слоги (и автоматические, и вручную перемещённые)
+    // Просто отображаем слоги для этого такта используя новую систему
     if (window.app && window.app.syllableDragDrop) {
-      window.app.syllableDragDrop.clearAllSyllables();
+      window.app.syllableDragDrop.renderBarSyllables(barIndex);
     }
-
-    // Разбиваем строку на слова
-    const words = textLine.trim().split(/\s+/);
-    const syllables = [];
-    
-    // Разбиваем каждое слово на слоги
-    words.forEach(word => {
-      if (!word) return;
-      
-      // Используем SyllableHighlighter для правильного разбиения на слоги
-      const wordSyllables = this.syllableHighlighter.splitIntoSyllables(word);
-      
-      // Добавляем все слоги слова в общий массив
-      // Фильтруем пустые массивы (исключённые слова возвращают [])
-      if (wordSyllables && wordSyllables.length > 0) {
-        syllables.push(...wordSyllables);
-      }
-    });
-
-    // Отображаем автоматические слоги под стрелочками
-    this.renderSyllablesUnderArrows(syllables, barIndex);
-    
-    // Восстанавливаем вручную перемещённые слоги для этого такта
-    this.restoreManualSyllables(barIndex);
   }
 
-  /**
-   * Рендерит слоги под стрелочками
-   */
-  renderSyllablesUnderArrows(syllables, barIndex) {
-    if (!this.beatRow || !this.beatRow.element) return;
-
-    const dropZones = this.beatRow.element.querySelectorAll('.syllable-drop-zone');
-    
-    dropZones.forEach((zone, index) => {
-      // Проверяем, есть ли уже размещённый слог
-      const hasPlacedSyllable = zone.querySelector('.placed-syllable');
-      
-      // Если есть размещённый слог, не трогаем эту зону
-      if (hasPlacedSyllable) {
-        return;
-      }
-      
-      // Если есть слог для этой позиции, размещаем его автоматически
-      if (index < syllables.length && syllables[index]) {
-        this.placeAutoSyllable(index, syllables[index], barIndex);
-      }
-    });
-  }
-  
-  /**
-   * Автоматически размещает слог используя систему SyllableDragDrop
-   */
-  placeAutoSyllable(arrowIndex, syllableText, barIndex) {
-    if (!window.app || !window.app.syllableDragDrop) return;
-    
-    const syllableData = {
-      text: syllableText,
-      word: '',
-      index: arrowIndex.toString()
-    };
-    
-    // Используем метод placeSyllable из SyllableDragDrop
-    // с флагом isAuto = true, чтобы слоги выглядели одинаково
-    window.app.syllableDragDrop.placeSyllable(arrowIndex, syllableData, true, barIndex);
-  }
-
-  /**
-   * Восстанавливает вручную перемещённые слоги для конкретного такта
-   */
-  restoreManualSyllables(barIndex) {
-    if (!window.app || !window.app.syllableDragDrop) return;
-    
-    // Получаем сохранённые позиции для этого такта
-    const savedPositions = window.app.syllableDragDrop.getBarSyllablePositions(barIndex);
-    
-    // Восстанавливаем каждый вручную размещённый слог
-    Object.keys(savedPositions).forEach(arrowIndex => {
-      const syllableData = savedPositions[arrowIndex];
-      
-      // Размещаем слог как вручную перемещённый (isAuto = false)
-      window.app.syllableDragDrop.placeSyllable(
-        parseInt(arrowIndex),
-        syllableData,
-        false,
-        barIndex
-      );
-    });
-  }
 
   /**
    * Переходит к следующей строке (такту)
@@ -433,11 +343,9 @@ export class BarSyllableDisplay {
   clear() {
     if (!this.beatRow || !this.beatRow.element) return;
 
-    // Очищаем все размещённые слоги
+    // Очищаем все слоги
     if (window.app && window.app.syllableDragDrop) {
       window.app.syllableDragDrop.clearAllSyllables();
-      // Очищаем также историю позиций для тактов
-      window.app.syllableDragDrop.clearBarSyllablePositions();
     }
 
     // Убираем выделение со всех слогов в тексте песни

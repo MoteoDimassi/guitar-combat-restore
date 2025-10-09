@@ -417,6 +417,8 @@ export class Modal {
               // Инициализируем drag-and-drop для обновленных слогов
               if (window.app && window.app.syllableDragDrop) {
                 window.app.syllableDragDrop.initializeSyllables();
+                // Пересоздаём структуру слогов
+                window.app.syllableDragDrop.recreateSyllables();
               }
               // Обновляем отображение слогов под стрелочками
               if (window.app && window.app.barSyllableDisplay) {
@@ -444,8 +446,8 @@ export class Modal {
           // Скрываем drop-зоны после удаления текста
           if (window.app && window.app.syllableDragDrop) {
             window.app.syllableDragDrop.hideDropZones();
-            // Очищаем историю позиций слогов для тактов
-            window.app.syllableDragDrop.clearBarSyllablePositions();
+            // Очищаем все слоги
+            window.app.syllableDragDrop.clearAllSyllables();
           }
 
           // Скрываем кнопки навигации
@@ -472,6 +474,8 @@ export class Modal {
       // Инициализируем drag-and-drop для слогов
       if (window.app && window.app.syllableDragDrop) {
         window.app.syllableDragDrop.initializeSyllables();
+        // Создаём структуру данных слогов из текста
+        window.app.syllableDragDrop.recreateSyllables();
       }
 
       // Инициализируем отображение слогов под стрелочками
