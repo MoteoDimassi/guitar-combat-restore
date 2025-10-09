@@ -59,10 +59,11 @@ export class Metronome {
    * Starts the metronome playback.
    * Initializes audio context, resets beat counters, and begins scheduling.
    * @async
+   * @param {number} startBarIndex - Индекс такта, с которого начинать воспроизведение (по умолчанию 0)
    * @returns {Promise<void>}
    * @throws {Error} If audio initialization fails
    */
-  async start() {
+  async start(startBarIndex = 0) {
     if (this.isPlaying) return;
     this.isPlaying = true;
 
@@ -75,7 +76,7 @@ export class Metronome {
     }
 
     this.currentBeat = 0;
-    this.barIndex = 0;                   // Reset bar number
+    this.barIndex = startBarIndex;       // Начинаем с указанного такта
     this.nextNoteTime = this.audioManager.getCurrentTime() + 0.05;
     this.scheduler();
   }
@@ -254,7 +255,7 @@ export class Metronome {
 
     setTimeout(() => {
       this.playGuitarSound(arrowIndex, barAtSchedule);
-      if (this.onBeatCallback) this.onBeatCallback(arrowIndex);
+      if (this.onBeatCallback) this.onBeatCallback(arrowIndex, barAtSchedule);
 
       // Обновляем отображение аккордов при каждом ударе
       this.updateChordDisplay(arrowIndex, barAtSchedule);

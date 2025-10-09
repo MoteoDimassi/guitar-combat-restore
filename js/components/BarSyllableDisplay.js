@@ -136,6 +136,8 @@ export class BarSyllableDisplay {
     // Обновляем глобальное состояние
     if (window.app) {
       window.app.state.currentBarIndex = barIndex;
+      // Сбрасываем индекс стрелочки на начало такта
+      window.app.state.currentIndex = 0;
     }
 
     // Обновляем отображение аккордов для нового такта
@@ -351,6 +353,8 @@ export class BarSyllableDisplay {
     // Обновляем глобальное состояние
     if (window.app) {
       window.app.state.currentBarIndex = barIndex;
+      // Сбрасываем индекс стрелочки на начало такта
+      window.app.state.currentIndex = 0;
     }
 
     // Обновляем отображение аккордов для нового такта
