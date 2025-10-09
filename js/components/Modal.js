@@ -167,6 +167,22 @@ export class Modal {
     this.bindAddSongTextEvents();
   }
 
+  // Метод для отображения формы редактирования текста песни
+  showEditSongText() {
+    const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+    if (songs.length === 0) {
+      alert('Нет сохраненного текста песни для редактирования.');
+      return;
+    }
+    
+    const latestSong = songs[songs.length - 1];
+    const title = 'Редактировать текст песни';
+    const content = this.getEditSongTextContent(latestSong.title, latestSong.text);
+    this.open(title, content);
+    // Добавляем обработчики после открытия модального окна
+    this.bindEditSongTextEvents();
+  }
+
   /**
    * Модалка для ручного редактирования слогов в слове
    * @param {string} word — исходное слово (без пунктуации)
@@ -310,6 +326,16 @@ export class Modal {
           songs.push({ title, text, date: new Date().toISOString() });
           localStorage.setItem('userSongs', JSON.stringify(songs));
 
+          // Инициализируем такты из текста песни
+          if (window.app && window.app.barManager) {
+            const chordsInput = document.getElementById('chordsInput');
+            const chordsString = chordsInput ? chordsInput.value : '';
+            const chords = chordsString.split(' ').map(ch => ch.trim()).filter(ch => ch.length > 0);
+            
+            window.app.barManager.initializeBarsFromText(text, chords);
+            window.app.barManager.saveToLocalStorage('bars_' + title);
+          }
+
           // Отображаем текст песни
           this.displaySongText(title, text);
 
@@ -330,6 +356,18 @@ export class Modal {
   displaySongText(title, text) {
     const songTextDisplay = document.getElementById('song-text-display');
     const songContent = document.getElementById('song-content');
+
+    // --- Загрузка тактов из localStorage ---
+    if (window.app && window.app.barManager) {
+      const loaded = window.app.barManager.loadFromLocalStorage('bars_' + title);
+      if (!loaded) {
+        // Если такты не были сохранены, инициализируем их заново
+        const chordsInput = document.getElementById('chordsInput');
+        const chordsString = chordsInput ? chordsInput.value : '';
+        const chords = chordsString.split(' ').map(ch => ch.trim()).filter(ch => ch.length > 0);
+        window.app.barManager.initializeBarsFromText(text, chords);
+      }
+    }
 
     // --- ДОБАВЛЕНО: загрузка пользовательских слогов из localStorage ---
     let userSyllableMap = {};
@@ -374,6 +412,10 @@ export class Modal {
               if (window.app && window.app.syllableDragDrop) {
                 window.app.syllableDragDrop.initializeSyllables();
               }
+              // Обновляем отображение слогов под стрелочками
+              if (window.app && window.app.barSyllableDisplay) {
+                window.app.barSyllableDisplay.refresh();
+              }
             });
           });
         });
@@ -396,6 +438,18 @@ export class Modal {
           // Скрываем drop-зоны после удаления текста
           if (window.app && window.app.syllableDragDrop) {
             window.app.syllableDragDrop.hideDropZones();
+            // Очищаем историю позиций слогов для тактов
+            window.app.syllableDragDrop.clearBarSyllablePositions();
+          }
+
+          // Скрываем кнопки навигации
+          if (window.app && window.app.lineNavigation) {
+            window.app.lineNavigation.hide();
+          }
+
+          // Скрываем секцию управления тактами
+          if (window.app && window.app.settings) {
+            window.app.settings.hideBarManagement();
           }
         });
       }
@@ -406,6 +460,23 @@ export class Modal {
       // Инициализируем drag-and-drop для слогов
       if (window.app && window.app.syllableDragDrop) {
         window.app.syllableDragDrop.initializeSyllables();
+      }
+
+      // Инициализируем отображение слогов под стрелочками
+      if (window.app && window.app.barSyllableDisplay) {
+        window.app.barSyllableDisplay.init();
+        // Автоматически отображаем первую строку текста под стрелками
+        window.app.barSyllableDisplay.goToBar(0);
+      }
+
+      // Показываем кнопки навигации
+      if (window.app && window.app.lineNavigation) {
+        window.app.lineNavigation.show();
+      }
+
+      // Показываем секцию управления тактами
+      if (window.app && window.app.settings) {
+        window.app.settings.showBarManagement();
       }
     }
   }
@@ -429,6 +500,76 @@ export class Modal {
         </div>
       </div>
     `;
+  }
+
+  // Содержание формы редактирования текста песни
+  getEditSongTextContent(currentTitle, currentText) {
+    // Экранирование HTML-символов для безопасности
+    const escapeHtml = (text) => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
+    const escapedTitle = escapeHtml(currentTitle);
+    const escapedText = escapeHtml(currentText);
+    
+    return `
+      <div class="space-y-4">
+        <div>
+          <label for="edit-song-title" class="block text-sm font-medium text-gray-300 mb-2">Название песни</label>
+          <input type="text" id="edit-song-title" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#38e07b] focus:border-transparent" placeholder="Введите название песни" value="${escapedTitle}">
+        </div>
+        <div>
+          <label for="edit-song-text" class="block text-sm font-medium text-gray-300 mb-2">Текст песни</label>
+          <textarea id="edit-song-text" rows="10" class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#38e07b] focus:border-transparent resize-vertical" placeholder="Введите текст песни (каждый куплет с новой строки)">${escapedText}</textarea>
+        </div>
+        <div class="flex justify-end space-x-3 pt-4">
+          <button id="update-song-text-btn" class="px-4 py-2 bg-[#38e07b] text-gray-950 rounded-md hover:bg-emerald-400 transition-colors font-medium">
+            Сохранить изменения
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Метод для привязки событий формы редактирования текста песни
+  bindEditSongTextEvents() {
+    const updateBtn = document.getElementById('update-song-text-btn');
+
+    if (updateBtn) {
+      updateBtn.addEventListener('click', () => {
+        const title = document.getElementById('edit-song-title').value.trim();
+        const text = document.getElementById('edit-song-text').value.trim();
+
+        if (title && text) {
+          // Обновляем песню в localStorage
+          const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+          if (songs.length > 0) {
+            // Обновляем последнюю песню
+            songs[songs.length - 1] = { title, text, date: new Date().toISOString() };
+            localStorage.setItem('userSongs', JSON.stringify(songs));
+
+            // Инициализируем такты из обновленного текста песни
+            if (window.app && window.app.barManager) {
+              const chordsInput = document.getElementById('chordsInput');
+              const chordsString = chordsInput ? chordsInput.value : '';
+              const chords = chordsString.split(' ').map(ch => ch.trim()).filter(ch => ch.length > 0);
+              
+              window.app.barManager.initializeBarsFromText(text, chords);
+              window.app.barManager.saveToLocalStorage('bars_' + title);
+            }
+
+            // Обновляем отображение текста песни
+            this.displaySongText(title, text);
+
+            this.close();
+          }
+        } else {
+          alert('Пожалуйста, заполните название и текст песни.');
+        }
+      });
+    }
   }
 
   // Содержание условий использования

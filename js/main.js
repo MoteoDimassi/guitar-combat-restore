@@ -16,6 +16,12 @@ import { TemplateManager } from './components/TemplateManager.js';
 import { ChordDisplay } from './components/ChordDisplay.js';
 import { SyllableDragDrop } from './components/SyllableDragDrop.js';
 import { Settings } from './components/Settings.js';
+import { BarManager } from './managers/BarManager.js';
+import { BarSyllableDisplay } from './components/BarSyllableDisplay.js';
+import { ChordBarManager } from './components/ChordBarManager.js';
+import { ChordManager } from './components/ChordManager.js';
+import { LineNavigation } from './components/LineNavigation.js';
+import { PlaybackSync } from './components/PlaybackSync.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -58,6 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const templateManager = new TemplateManager(beatRow, controls);
   const syllableDragDrop = new SyllableDragDrop(beatRow);
   const settings = new Settings();
+  const barManager = new BarManager();
+  const barSyllableDisplay = new BarSyllableDisplay(beatRow, barManager);
+  const chordManager = new ChordManager();
+  const chordBarManager = new ChordBarManager(barManager, chordManager, chordDisplay, beatRow);
+  const lineNavigation = new LineNavigation(barManager, barSyllableDisplay);
+  const playbackSync = new PlaybackSync(beatRow, barManager, barSyllableDisplay, chordDisplay, chordBarManager);
 
   // Инициализация компонентов
   beatRow.init();
@@ -70,6 +82,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   templateManager.init();
   syllableDragDrop.init();
   settings.init();
+  barSyllableDisplay.init();
+  playbackSync.init();
 
   // Инициализация мобильного меню
   const mobileMenu = new MobileMenu();
@@ -97,6 +111,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     templateManager,
     syllableDragDrop,
     settings,
+    barManager,
+    barSyllableDisplay,
+    chordManager,
+    chordBarManager,
+    lineNavigation,
+    playbackSync,
     state: {
       count: 8,
       beats: [],
@@ -104,7 +124,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentIndex: 0,
       bpm: 90,
       speed: 100,
-      chords: []
+      chords: [],
+      currentBarIndex: 0 // Индекс текущего активного такта
     }
   };
 
@@ -117,6 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Загружаем сохраненные позиции слогов
   syllableDragDrop.loadSyllablePositions();
+  syllableDragDrop.loadBarSyllablePositions();
   
   // Добаваем обработчик поля ввода аккордов
   const chordsInput = document.getElementById('chordsInput');
@@ -254,6 +276,11 @@ const loadSavedSongText = () => {
     if (window.app && window.app.syllableDragDrop) {
       window.app.syllableDragDrop.showDropZones();
     }
+  } else {
+    // Если нет текста песни, убеждаемся, что секция управления тактами скрыта
+    if (window.app && window.app.settings) {
+      window.app.settings.hideBarManagement();
+    }
   }
 };
 
@@ -265,6 +292,12 @@ document.addEventListener('click', (e) => {
   const addSongTextBtn = e.target.closest('#addSongTextBtn');
   if (addSongTextBtn && window.app && window.app.modal) {
     window.app.modal.showAddSongText();
+  }
+  
+  // Добавляем обработчик для кнопки редактирования текста песни
+  const editSongTextBtn = e.target.closest('#edit-song-text-btn');
+  if (editSongTextBtn && window.app && window.app.modal) {
+    window.app.modal.showEditSongText();
   }
 });
 });

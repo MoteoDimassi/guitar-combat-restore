@@ -28,6 +28,9 @@ export class Settings {
     this.metronomeVolumeSlider = document.getElementById('metronomeVolume');
     this.strumVolumeLabel = document.getElementById('strumVolumeLabel');
     this.metronomeVolumeLabel = document.getElementById('metronomeVolumeLabel');
+    this.resetBarsBtn = document.getElementById('resetBarsBtn');
+    this.barManagementSection = document.getElementById('barManagementSection');
+    this.barManagementDivider = document.getElementById('barManagementDivider');
 
     if (!this.settingsBtn || !this.settingsMenu) {
       console.warn('Settings: Required elements not found');
@@ -81,6 +84,63 @@ export class Settings {
         this.saveSettings();
       });
     }
+
+    // Обработчик кнопки сброса тактов
+    if (this.resetBarsBtn) {
+      this.resetBarsBtn.addEventListener('click', () => {
+        this.resetBarsToDefault();
+      });
+    }
+  }
+
+  /**
+   * Сбрасывает такты к базовому состоянию (1 строка = 1 такт)
+   */
+  resetBarsToDefault() {
+    if (!window.app || !window.app.barManager) {
+      alert('Система тактов не инициализирована');
+      return;
+    }
+
+    // Проверяем наличие текста песни
+    const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+    if (songs.length === 0) {
+      alert('Нет загруженного текста песни для сброса тактов');
+      return;
+    }
+
+    const latestSong = songs[songs.length - 1];
+    
+    const confirmed = confirm(
+      'Вы уверены, что хотите сбросить такты к базовому состоянию?\n\n' +
+      'Это вернёт структуру "1 строка = 1 такт" и удалит все пользовательские изменения.'
+    );
+
+    if (!confirmed) return;
+
+    // Получаем аккорды
+    const chordsInput = document.getElementById('chordsInput');
+    const chordsString = chordsInput ? chordsInput.value : '';
+    const chords = chordsString.split(' ').map(ch => ch.trim()).filter(ch => ch.length > 0);
+
+    // Сбрасываем такты
+    window.app.barManager.resetToDefault(latestSong.text, chords);
+    window.app.barManager.saveToLocalStorage('bars_' + latestSong.title);
+
+    // Очищаем изменения аккордов
+    if (window.app.chordBarManager) {
+      window.app.chordBarManager.clearAllChordChanges();
+    }
+
+    // Обновляем отображение
+    if (window.app.barSyllableDisplay) {
+      window.app.barSyllableDisplay.refresh();
+    }
+
+    // Закрываем меню настроек
+    this.closeMenu();
+
+    alert('Такты сброшены к базовому состоянию');
   }
 
   /**
@@ -182,6 +242,30 @@ export class Settings {
       }
     } catch (error) {
       console.error('Settings: Failed to load settings', error);
+    }
+  }
+
+  /**
+   * Показывает секцию управления тактами
+   */
+  showBarManagement() {
+    if (this.barManagementSection) {
+      this.barManagementSection.classList.remove('hidden');
+    }
+    if (this.barManagementDivider) {
+      this.barManagementDivider.classList.remove('hidden');
+    }
+  }
+
+  /**
+   * Скрывает секцию управления тактами
+   */
+  hideBarManagement() {
+    if (this.barManagementSection) {
+      this.barManagementSection.classList.add('hidden');
+    }
+    if (this.barManagementDivider) {
+      this.barManagementDivider.classList.add('hidden');
     }
   }
 }

@@ -100,12 +100,24 @@
                     </div>
                     
                     <!-- Громкость метронома -->
-                    <div>
+                    <div class="mb-5">
                       <div class="flex justify-between items-center mb-2">
                         <label class="text-gray-300 text-sm font-medium">Громкость метронома</label>
                         <span id="metronomeVolumeLabel" class="text-[#38e07b] text-sm font-bold">100%</span>
                       </div>
                       <input id="metronomeVolume" type="range" min="0" max="100" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#38e07b]">
+                    </div>
+
+                    <!-- Разделитель -->
+                    <div id="barManagementDivider" class="border-t border-gray-700 my-4 hidden"></div>
+
+                    <!-- Кнопка сброса тактов -->
+                    <div id="barManagementSection" class="hidden">
+                      <h3 class="text-white text-base font-medium mb-3">Управление тактами</h3>
+                      <button id="resetBarsBtn" class="w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-gray-600 transition-colors font-medium text-sm">
+                        Сбросить к базовому состоянию
+                      </button>
+                      <p class="text-xs text-gray-500 mt-2">Вернуть такты к состоянию "1 строка = 1 такт"</p>
                     </div>
                   </div>
                 </div>
@@ -131,11 +143,18 @@
                 <div class="w-full">
                   <div class="flex items-center justify-between pb-4">
                     <h3 class="text-white text-lg font-medium leading-normal">Текст песни</h3>
-                    <button id="clear-song-text-btn" class="text-gray-400 hover:text-red-400 transition-colors p-1" title="Очистить текст песни">
-                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    <div class="flex items-center gap-2">
+                      <button id="edit-song-text-btn" class="text-gray-400 hover:text-[#38e07b] transition-colors p-1" title="Редактировать текст песни">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button id="clear-song-text-btn" class="text-gray-400 hover:text-red-400 transition-colors p-1" title="Очистить текст песни">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                   <div id="song-content" class="text-gray-300 text-base leading-relaxed whitespace-pre-line"></div>
                 </div>
