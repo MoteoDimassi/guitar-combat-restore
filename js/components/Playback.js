@@ -113,6 +113,11 @@ export class Playback {
     // Обновление глобального состояния
     if (window.app) {
       window.app.state.playing = this.playing;
+      
+      // ИСПРАВЛЕНИЕ БАГА: Обновляем состояние кнопок навигации при остановке
+      if (window.app.lineNavigation) {
+        window.app.lineNavigation.updateButtonStates();
+      }
     }
   }
 
