@@ -193,6 +193,9 @@ export class SyllableDragDrop {
     
     // Обновляем видимость drop-зон после их создания/обновления
     this.updateDropZonesVisibility();
+    
+    // ВАЖНО: Восстанавливаем слоги для текущего такта после перерендера BeatRow
+    this.restoreCurrentBarSyllables();
   }
 
   /**
@@ -360,6 +363,16 @@ export class SyllableDragDrop {
   getBarSyllables(barIndex) {
     if (!this.allSyllables || this.allSyllables.length === 0) return [];
     return this.allSyllables.filter(s => s && s.barIndex === barIndex);
+  }
+
+  /**
+   * Восстанавливает слоги для текущего такта после перерендера BeatRow
+   */
+  restoreCurrentBarSyllables() {
+    if (!window.app || !window.app.state) return;
+    
+    const currentBarIndex = window.app.state.currentBarIndex || 0;
+    this.renderBarSyllables(currentBarIndex);
   }
 
   /**
