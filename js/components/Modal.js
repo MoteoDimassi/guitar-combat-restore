@@ -336,6 +336,11 @@ export class Modal {
             window.app.barManager.saveToLocalStorage('bars_' + title);
           }
 
+          // Полная замена текста - очищаем и пересоздаём слоги
+          if (window.app && window.app.textUpdateManager) {
+            window.app.textUpdateManager.handleFullTextReplace(text);
+          }
+
           // Отображаем текст песни
           this.displaySongText(title, text);
 
@@ -348,6 +353,11 @@ export class Modal {
           if (window.app && window.app.optionsMenu) {
             window.app.optionsMenu.hideControlPanel();
             window.app.optionsMenu.showOptionsButton();
+          }
+
+          // Обновляем видимость кнопок песни
+          if (typeof updateSongButtons === 'function') {
+            updateSongButtons();
           }
 
           this.close();
@@ -465,6 +475,11 @@ export class Modal {
             window.app.optionsMenu.showControlPanel();
             window.app.optionsMenu.hideOptionsButton();
           }
+
+          // Обновляем видимость кнопок песни после очистки
+          if (typeof updateSongButtons === 'function') {
+            updateSongButtons();
+          }
         });
       }
 
@@ -565,12 +580,20 @@ export class Modal {
         const text = document.getElementById('edit-song-text').value.trim();
 
         if (title && text) {
-          // Обновляем песню в localStorage
+          // Получаем старый текст для сравнения
           const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+          const oldText = songs.length > 0 ? songs[songs.length - 1].text : '';
+          
+          // Обновляем песню в localStorage
           if (songs.length > 0) {
             // Обновляем последнюю песню
             songs[songs.length - 1] = { title, text, date: new Date().toISOString() };
             localStorage.setItem('userSongs', JSON.stringify(songs));
+
+            // Умное обновление привязок слогов при редактировании
+            if (window.app && window.app.textUpdateManager && oldText) {
+              window.app.textUpdateManager.handlePartialTextUpdate(oldText, text);
+            }
 
             // Инициализируем такты из обновленного текста песни
             if (window.app && window.app.barManager) {
@@ -584,6 +607,11 @@ export class Modal {
 
             // Обновляем отображение текста песни
             this.displaySongText(title, text);
+
+            // Обновляем видимость кнопок песни
+            if (typeof updateSongButtons === 'function') {
+              updateSongButtons();
+            }
 
             this.close();
           }

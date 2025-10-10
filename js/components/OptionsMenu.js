@@ -241,7 +241,7 @@ export class OptionsMenu {
     const exportPngBtn = clonedPanel.querySelector('#exportPng');
     if (exportPngBtn && window.app && window.app.exportUtils) {
       exportPngBtn.addEventListener('click', () => {
-        window.app.exportUtils.exportToPng();
+        window.app.exportUtils.exportPNG();
         this.closeMenu();
       });
     }
@@ -249,7 +249,7 @@ export class OptionsMenu {
     const downloadJsonBtn = clonedPanel.querySelector('#downloadJson');
     if (downloadJsonBtn && window.app && window.app.exportUtils) {
       downloadJsonBtn.addEventListener('click', () => {
-        window.app.exportUtils.downloadJson();
+        window.app.exportUtils.downloadJSON();
         this.closeMenu();
       });
     }
@@ -257,7 +257,7 @@ export class OptionsMenu {
     const importJsonBtn = clonedPanel.querySelector('#importJson');
     if (importJsonBtn && window.app && window.app.importUtils) {
       importJsonBtn.addEventListener('click', () => {
-        window.app.importUtils.importJson();
+        window.app.importUtils.triggerImport();
         this.closeMenu();
       });
     }
@@ -267,6 +267,39 @@ export class OptionsMenu {
       addSongTextBtn.addEventListener('click', () => {
         window.app.modal.showAddSongText();
         this.closeMenu();
+      });
+    }
+
+    // Обработчик для кнопки "Сохранить песню"
+    const saveSongBtn = clonedPanel.querySelector('#saveSongBtn');
+    if (saveSongBtn && window.app && window.app.songExporter) {
+      saveSongBtn.addEventListener('click', () => {
+        console.log('Кнопка "Сохранить песню" нажата в меню опций');
+        try {
+          console.log('Начинаем экспорт песни...');
+          window.app.songExporter.downloadSongFile();
+          console.log('Экспорт завершён');
+          this.closeMenu();
+        } catch (error) {
+          console.error('Ошибка при сохранении песни:', error);
+          alert('Ошибка при сохранении песни. Проверьте консоль для подробностей.');
+        }
+      });
+    }
+
+    // Обработчик для кнопки "Импорт песни"
+    const importSongBtn = clonedPanel.querySelector('#importSongBtn');
+    if (importSongBtn && window.app && window.app.importUtils) {
+      importSongBtn.addEventListener('click', () => {
+        console.log('Кнопка "Импорт песни" нажата в меню опций');
+        try {
+          console.log('Запускаем импорт песни...');
+          window.app.importUtils.triggerImport();
+          this.closeMenu();
+        } catch (error) {
+          console.error('Ошибка при импорте песни:', error);
+          alert('Ошибка при импорте песни. Проверьте консоль для подробностей.');
+        }
       });
     }
   }

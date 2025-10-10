@@ -24,6 +24,9 @@ import { LineNavigation } from './components/LineNavigation.js';
 import { PlaybackSync } from './components/PlaybackSync.js';
 import { OptionsMenu } from './components/OptionsMenu.js';
 import { ChordStore } from './components/ChordStore.js';
+import { SongExporter } from './utils/SongExporter.js';
+import { SongImporter } from './utils/SongImporter.js';
+import { TextUpdateManager } from './utils/TextUpdateManager.js';
 
 // Проверка поддержки Web Audio API
 if (!window.AudioContext && !window.webkitAudioContext) {
@@ -74,6 +77,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const lineNavigation = new LineNavigation(barManager, barSyllableDisplay);
   const playbackSync = new PlaybackSync(beatRow, barManager, barSyllableDisplay, chordDisplay, chordBarManager);
   const optionsMenu = new OptionsMenu();
+  
+  // Новые модули
+  const songExporter = new SongExporter();
+  const songImporter = new SongImporter();
+  const textUpdateManager = new TextUpdateManager();
 
   // Инициализация компонентов
   beatRow.init();
@@ -89,6 +97,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   barSyllableDisplay.init();
   playbackSync.init();
   optionsMenu.init();
+  
+  // Инициализация новых модулей
+  textUpdateManager.init(syllableDragDrop);
+  
+  // Отладочная информация
+  console.log('Инициализация модулей завершена');
+  console.log('songExporter:', songExporter);
+  console.log('songImporter:', songImporter);
+  console.log('textUpdateManager:', textUpdateManager);
 
   // Инициализация мобильного меню
   const mobileMenu = new MobileMenu();
@@ -124,6 +141,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     lineNavigation,
     playbackSync,
     optionsMenu,
+    songExporter,
+    songImporter,
+    textUpdateManager,
     state: {
       count: 8,
       beats: [],
@@ -285,6 +305,28 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// Функция для управления видимостью кнопок песни
+const updateSongButtons = () => {
+  const saveSongBtn = document.getElementById('saveSongBtn');
+  const importSongBtn = document.getElementById('importSongBtn');
+  
+  if (!saveSongBtn || !importSongBtn) return;
+  
+  // Проверяем, есть ли текст песни
+  const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+  const hasSongText = songs.length > 0 && songs[songs.length - 1].text && songs[songs.length - 1].text.trim().length > 0;
+  
+  if (hasSongText) {
+    // Есть текст песни - показываем кнопку "Сохранить песню"
+    saveSongBtn.classList.remove('hidden');
+    importSongBtn.classList.add('hidden');
+  } else {
+    // Нет текста песни - показываем кнопку "Импорт песни"
+    saveSongBtn.classList.add('hidden');
+    importSongBtn.classList.remove('hidden');
+  }
+};
+
 // Проверяем и отображаем сохраненный текст песни при загрузке
 const loadSavedSongText = () => {
   const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
@@ -313,12 +355,15 @@ const loadSavedSongText = () => {
       window.app.optionsMenu.hideOptionsButton();
     }
   }
+  
+  // Обновляем видимость кнопок
+  updateSongButtons();
 };
 
 // Вызываем функцию для загрузки текста песни
 loadSavedSongText();
 
-// Добавляем обработчик для кнопки добавления текста песни
+  // Добавляем обработчик для кнопки добавления текста песни
 document.addEventListener('click', (e) => {
   const addSongTextBtn = e.target.closest('#addSongTextBtn');
   if (addSongTextBtn && window.app && window.app.modal) {
@@ -329,6 +374,47 @@ document.addEventListener('click', (e) => {
   const editSongTextBtn = e.target.closest('#edit-song-text-btn');
   if (editSongTextBtn && window.app && window.app.modal) {
     window.app.modal.showEditSongText();
+  }
+});
+
+// Добавляем отдельный обработчик для кнопки сохранения песни
+document.addEventListener('click', (e) => {
+  const saveSongBtn = e.target.closest('#saveSongBtn');
+  if (saveSongBtn) {
+    console.log('Кнопка "Сохранить песню" нажата');
+    if (window.app && window.app.songExporter) {
+      try {
+        console.log('Начинаем экспорт песни...');
+        window.app.songExporter.downloadSongFile();
+        console.log('Экспорт завершён');
+      } catch (error) {
+        console.error('Ошибка при сохранении песни:', error);
+        alert('Ошибка при сохранении песни. Проверьте консоль для подробностей.');
+      }
+    } else {
+      console.error('SongExporter не найден в window.app');
+      alert('Ошибка: модуль экспорта не инициализирован');
+    }
+  }
+});
+
+// Добавляем обработчик для кнопки импорта песни
+document.addEventListener('click', (e) => {
+  const importSongBtn = e.target.closest('#importSongBtn');
+  if (importSongBtn) {
+    console.log('Кнопка "Импорт песни" нажата');
+    if (window.app && window.app.importUtils) {
+      try {
+        console.log('Запускаем импорт песни...');
+        window.app.importUtils.triggerImport();
+      } catch (error) {
+        console.error('Ошибка при импорте песни:', error);
+        alert('Ошибка при импорте песни. Проверьте консоль для подробностей.');
+      }
+    } else {
+      console.error('ImportUtils не найден в window.app');
+      alert('Ошибка: модуль импорта не инициализирован');
+    }
   }
 });
 });

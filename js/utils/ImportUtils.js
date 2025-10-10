@@ -75,6 +75,19 @@ export class ImportUtils {
       return;
     }
 
+    // Проверяем, является ли это полным экспортом песни
+    if (data.songText && window.app && window.app.songImporter) {
+      try {
+        window.app.songImporter.importFromJSON(data);
+        this.showSuccessNotification('Песня успешно импортирована!');
+        return;
+      } catch (error) {
+        console.error('Ошибка импорта полной песни:', error);
+        this.showErrorNotification('Ошибка при импорте песни: ' + error.message);
+        return;
+      }
+    }
+
     try {
       // 1. Нормализуем биты
       const normalizedBeats = data.beats.map(beat => {

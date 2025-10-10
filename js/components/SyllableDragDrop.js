@@ -21,6 +21,9 @@ export class SyllableDragDrop {
     this.initializeSyllables();
     this.updateDropZones();
     this.updateDropZonesVisibility();
+    
+    // ВАЖНО: Восстанавливаем слоги для текущего такта после загрузки
+    this.restoreCurrentBarSyllables();
   }
 
   /**
