@@ -37,8 +37,9 @@ export class SyllableDragDrop {
       return;
     }
 
-    // Если нет сохранённых данных, создаём с нуля
-    this.createAllSyllablesFromText();
+    // Если нет сохранённых данных, НЕ создаём слоги автоматически
+    // Они будут созданы только при добавлении нового текста песни
+    this.allSyllables = [];
   }
 
   /**

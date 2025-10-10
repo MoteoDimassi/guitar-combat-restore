@@ -427,8 +427,11 @@ export class Modal {
               // Инициализируем drag-and-drop для обновленных слогов
               if (window.app && window.app.syllableDragDrop) {
                 window.app.syllableDragDrop.initializeSyllables();
-                // Пересоздаём структуру слогов
-                window.app.syllableDragDrop.recreateSyllables();
+                // Пересоздаём структуру слогов ТОЛЬКО если нет сохранённых слогов
+                const savedSyllables = window.app.syllableDragDrop.loadSyllablesFromStorage();
+                if (!savedSyllables || savedSyllables.length === 0) {
+                  window.app.syllableDragDrop.recreateSyllables();
+                }
               }
               // Обновляем отображение слогов под стрелочками
               if (window.app && window.app.barSyllableDisplay) {
@@ -494,8 +497,11 @@ export class Modal {
       // Инициализируем drag-and-drop для слогов
       if (window.app && window.app.syllableDragDrop) {
         window.app.syllableDragDrop.initializeSyllables();
-        // Создаём структуру данных слогов из текста
-        window.app.syllableDragDrop.recreateSyllables();
+        // Создаём структуру данных слогов из текста ТОЛЬКО если нет сохранённых слогов
+        const savedSyllables = window.app.syllableDragDrop.loadSyllablesFromStorage();
+        if (!savedSyllables || savedSyllables.length === 0) {
+          window.app.syllableDragDrop.recreateSyllables();
+        }
       }
 
       // Инициализируем отображение слогов под стрелочками
