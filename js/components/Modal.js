@@ -356,8 +356,8 @@ export class Modal {
           }
 
           // Обновляем видимость кнопок песни
-          if (typeof updateSongButtons === 'function') {
-            updateSongButtons();
+          if (window.app && window.app.updateSongButtons) {
+            window.app.updateSongButtons();
           }
 
           this.close();
@@ -477,8 +477,13 @@ export class Modal {
           }
 
           // Обновляем видимость кнопок песни после очистки
-          if (typeof updateSongButtons === 'function') {
-            updateSongButtons();
+          if (window.app && window.app.updateSongButtons) {
+            window.app.updateSongButtons();
+          }
+
+          // Обновляем кнопки в открытом меню опций (если оно открыто)
+          if (window.app && window.app.optionsMenu) {
+            window.app.optionsMenu.updateOpenMenuButtons();
           }
         });
       }
@@ -609,8 +614,8 @@ export class Modal {
             this.displaySongText(title, text);
 
             // Обновляем видимость кнопок песни
-            if (typeof updateSongButtons === 'function') {
-              updateSongButtons();
+            if (window.app && window.app.updateSongButtons) {
+              window.app.updateSongButtons();
             }
 
             this.close();

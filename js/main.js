@@ -144,6 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     songExporter,
     songImporter,
     textUpdateManager,
+    updateSongButtons, // Функция для обновления кнопок песни
     state: {
       count: 8,
       beats: [],

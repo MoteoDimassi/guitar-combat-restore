@@ -32,8 +32,13 @@ export class SongImporter {
       console.log('Песня успешно импортирована');
       
       // Обновляем видимость кнопок песни после импорта
-      if (typeof updateSongButtons === 'function') {
-        updateSongButtons();
+      if (window.app && window.app.updateSongButtons) {
+        window.app.updateSongButtons();
+      }
+
+      // Обновляем кнопки в открытом меню опций (если оно открыто)
+      if (window.app && window.app.optionsMenu) {
+        window.app.optionsMenu.updateOpenMenuButtons();
       }
       
       return true;

@@ -91,6 +91,9 @@ export class OptionsMenu {
     // Переинициализируем обработчики для клонированных элементов ДО показа меню
     this.reinitializeClonedElements();
 
+    // Обновляем видимость кнопок песни в клонированной панели
+    this.updateClonedButtons();
+
     // Показываем меню ПОСЛЕ инициализации всех обработчиков
     this.optionsMenu.classList.remove('hidden');
     this.isMenuOpen = true;
@@ -332,6 +335,38 @@ export class OptionsMenu {
   showControlPanel() {
     if (this.controlPanel) {
       this.controlPanel.classList.remove('hidden');
+    }
+  }
+
+  // Обновляет видимость кнопок песни в клонированной панели
+  updateClonedButtons() {
+    const clonedPanel = document.getElementById('controlPanelClone');
+    if (!clonedPanel) return;
+
+    const saveSongBtn = clonedPanel.querySelector('#saveSongBtn');
+    const importSongBtn = clonedPanel.querySelector('#importSongBtn');
+    
+    if (!saveSongBtn || !importSongBtn) return;
+    
+    // Проверяем, есть ли текст песни
+    const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
+    const hasSongText = songs.length > 0 && songs[songs.length - 1].text && songs[songs.length - 1].text.trim().length > 0;
+    
+    if (hasSongText) {
+      // Есть текст песни - показываем кнопку "Сохранить песню"
+      saveSongBtn.classList.remove('hidden');
+      importSongBtn.classList.add('hidden');
+    } else {
+      // Нет текста песни - показываем кнопку "Импорт песни"
+      saveSongBtn.classList.add('hidden');
+      importSongBtn.classList.remove('hidden');
+    }
+  }
+
+  // Обновляет кнопки в открытом меню (если оно открыто)
+  updateOpenMenuButtons() {
+    if (this.isMenuOpen) {
+      this.updateClonedButtons();
     }
   }
 }
