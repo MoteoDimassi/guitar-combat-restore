@@ -52,9 +52,18 @@ export class BarManager {
     // Фильтруем строки: убираем пустые и служебные слова
     const filteredLines = this.filterLines(lines);
 
+    // Получаем аккорды из ChordStore если доступен
+    let chordsToUse = chords;
+    if (window.app && window.app.chordStore) {
+      const storedChords = window.app.chordStore.getAllChords();
+      if (storedChords.length > 0) {
+        chordsToUse = storedChords;
+      }
+    }
+
     // Создаём такты из отфильтрованных строк
     this.bars = filteredLines.map((line, index) => {
-      const chord = chords[index % chords.length] || '';
+      const chord = chordsToUse[index % chordsToUse.length] || '';
       return new Bar({
         index: index,
         arrowCount: this.defaultArrowCount,

@@ -284,7 +284,18 @@ export class BarSyllableDisplay {
       return;
     }
 
-    // Получаем текущий и следующий такт
+    // Используем ChordStore для получения аккордов
+    if (window.app.chordStore) {
+      const currentChord = window.app.chordStore.getChordForBar(barIndex);
+      const nextChord = window.app.chordStore.getNextChord(barIndex);
+
+      if (currentChord) {
+        window.app.chordDisplay.updateCurrentChord(currentChord, barIndex, 0);
+        return;
+      }
+    }
+
+    // Fallback на старую логику через BarManager
     const currentBar = this.barManager.getBar(barIndex);
     const nextBar = this.barManager.getBar(barIndex + 1);
 

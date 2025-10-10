@@ -108,14 +108,23 @@ export class TemplateManager {
       const templateData = await this.loader.loadTemplate(templateName);
 
       // Используем ImportUtils для применения шаблона (уже готовый и протестированный алгоритм)
-      this.importUtils.importData(templateData);
+      // Передаем флаг isFromTemplate = true, чтобы аккорды не импортировались
+      this.importUtils.importData(templateData, true);
 
       // Обновляем отображение аккордов после применения шаблона
+      // Используем текущие аккорды пользователя (не из шаблона)
       setTimeout(() => {
         if (window.app && window.app.chordDisplay && window.app.metronome) {
-          const chords = window.app.metronome.getChords();
-          if (chords && chords.length > 0) {
-            window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+          // Получаем аккорды из поля ввода пользователя
+          const chordsInput = document.getElementById('chordsInput');
+          if (chordsInput && chordsInput.value.trim()) {
+            window.app.metronome.updateChords(chordsInput.value);
+            const chords = window.app.metronome.getChords();
+            if (chords && chords.length > 0) {
+              window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+            } else {
+              window.app.chordDisplay.setChords('--', '--');
+            }
           } else {
             window.app.chordDisplay.setChords('--', '--');
           }

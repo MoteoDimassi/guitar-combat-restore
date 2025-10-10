@@ -284,19 +284,34 @@ export class Metronome {
           ? window.app.settings.getStrumVolume() 
           : 0.8;
         
-        // Получаем аккордные ноты (можно использовать любую логику, не привязанную к beat.play)
+        // Получаем аккордные ноты из ChordStore
         const arrowInBar = arrowIndex;
-        const chordNotes = this.chordManager.getNotesForPosition(
-          barIndex,
-          arrowInBar,
-          this.actualBeatCount
-        );
+        let chordNotes = null;
+        let chordName = null;
+
+        // Используем ChordStore для получения аккорда
+        if (window.app && window.app.chordStore) {
+          chordName = window.app.chordStore.getChordForPosition(barIndex, arrowInBar);
+          if (chordName) {
+            chordNotes = this.chordManager.getChordNotes(chordName);
+          }
+        }
+
+        // Fallback на старую логику через ChordManager
+        if (!chordNotes) {
+          chordNotes = this.chordManager.getNotesForPosition(
+            barIndex,
+            arrowInBar,
+            this.actualBeatCount
+          );
+          chordName = this.chordManager.getChordNameForPosition(barIndex, arrowInBar, this.actualBeatCount);
+        }
 
         if (Array.isArray(chordNotes) && chordNotes.length) {
           // Определяем инверсию аккорда на основе позиции в такте для разнообразия
           const inversion = arrowInBar % 3; // 0, 1, 2 - три разных инверсии
           const invertedNotes = this.chordManager.getChordNotesWithInversion(
-            this.chordManager.getChordNameForPosition(barIndex, arrowInBar, this.actualBeatCount),
+            chordName,
             inversion
           );
 
@@ -362,11 +377,18 @@ export class Metronome {
    * @param {number} barIndex - Current bar index
    */
   updateChordDisplay(arrowIndex, barIndex) {
-    if (window.app && window.app.chordDisplay) {
-      // Получаем текущий аккорд для данной позиции
-      const currentChord = this.chordManager.getChordNameForPosition(barIndex, arrowIndex, this.actualBeatCount);
+    if (window.app && window.app.chordDisplay && window.app.chordStore) {
+      // Используем ChordStore для получения текущего аккорда
+      const currentChord = window.app.chordStore.getChordForPosition(barIndex, arrowIndex);
+      
       if (currentChord) {
         window.app.chordDisplay.updateCurrentChord(currentChord, barIndex, arrowIndex);
+      } else {
+        // Fallback на старую логику через ChordManager
+        const fallbackChord = this.chordManager.getChordNameForPosition(barIndex, arrowIndex, this.actualBeatCount);
+        if (fallbackChord) {
+          window.app.chordDisplay.updateCurrentChord(fallbackChord, barIndex, arrowIndex);
+        }
       }
     }
   }

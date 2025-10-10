@@ -69,7 +69,7 @@ export class ImportUtils {
     event.target.value = '';
   }
 
-  importData(data) {
+  importData(data, isFromTemplate = false) {
     if (!data || !data.beats) {
       this.showErrorNotification('Неверный формат файла. Файл должен содержать данные боя.');
       return;
@@ -126,8 +126,8 @@ export class ImportUtils {
         }
       }
 
-      // 7. Обновляем аккорды
-      if (data.chords && document.getElementById('chordsInput')) {
+      // 7. Обновляем аккорды (только если импорт НЕ из шаблона)
+      if (!isFromTemplate && data.chords && document.getElementById('chordsInput')) {
         const chordsInput = document.getElementById('chordsInput');
         chordsInput.value = Array.isArray(data.chords) ? data.chords.join(' ') : data.chords;
         if (window.app && window.app.metronome) {
