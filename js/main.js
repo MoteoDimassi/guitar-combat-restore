@@ -351,6 +351,24 @@ export class GuitarCombatApp {
 
     // Обработчики кнопок навигации и воспроизведения
     // Привязываются автоматически в BarDisplay
+
+    // Обработчик кнопки "Политика конфиденциальности"
+    const privacyPolicyBtn = document.getElementById('privacyPolicyBtn');
+    if (privacyPolicyBtn) {
+      privacyPolicyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.showPrivacyPolicy();
+      });
+    }
+
+    // Обработчик кнопки "Условия использования"
+    const termsOfUseBtn = document.getElementById('termsOfUseBtn');
+    if (termsOfUseBtn) {
+      termsOfUseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.showTermsOfUse();
+      });
+    }
   }
 
   /**

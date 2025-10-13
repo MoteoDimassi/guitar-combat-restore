@@ -5,7 +5,7 @@
     "artist": "",
     "tempo": 100,
     "timeSignature": "8/4",
-    "createdAt": "2025-10-13T11:02:05.626Z",
+    "createdAt": "2025-10-13T11:04:56.423Z",
     "description": "Создано в Guitar Combat",
     "totalBars": 4,
     "totalBeats": 32,
@@ -56,15 +56,15 @@
           "index": 2,
           "direction": "down",
           "playStatus": {
-            "status": 2,
-            "statusString": "с приглушиванием",
-            "displaySymbol": "⊗"
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
           },
           "metadata": {
             "isPlayed": true,
-            "isMuted": true,
+            "isMuted": false,
             "isSkipped": false,
-            "cssClass": "play-status-muted"
+            "cssClass": "play-status-play"
           }
         },
         {
@@ -116,30 +116,30 @@
           "index": 6,
           "direction": "down",
           "playStatus": {
-            "status": 2,
-            "statusString": "с приглушиванием",
-            "displaySymbol": "⊗"
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
           },
           "metadata": {
             "isPlayed": true,
-            "isMuted": true,
+            "isMuted": false,
             "isSkipped": false,
-            "cssClass": "play-status-muted"
+            "cssClass": "play-status-play"
           }
         },
         {
           "index": 7,
           "direction": "up",
           "playStatus": {
-            "status": 0,
-            "statusString": "не играть",
-            "displaySymbol": "○"
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
           },
           "metadata": {
-            "isPlayed": false,
+            "isPlayed": true,
             "isMuted": false,
-            "isSkipped": true,
-            "cssClass": "play-status-skip"
+            "isSkipped": false,
+            "cssClass": "play-status-play"
           }
         }
       ],
@@ -156,7 +156,7 @@
         "isActive": true,
         "hasChords": true,
         "hasLyrics": false,
-        "playingBeats": 8
+        "playingBeats": 6
       }
     },
     {
@@ -588,7 +588,7 @@
       "dynamics": []
     },
     "generationInfo": {
-      "generatedAt": "2025-10-13T11:02:05.626Z",
+      "generatedAt": "2025-10-13T11:04:56.423Z",
       "source": "Guitar Combat",
       "version": "2.0"
     }
