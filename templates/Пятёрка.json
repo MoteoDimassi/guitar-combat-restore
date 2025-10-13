@@ -1,39 +1,194 @@
 {
-  "beats": [
+  "version": "2.0",
+  "metadata": {
+    "title": "Migrated from current format",
+    "artist": "",
+    "tempo": 113,
+    "timeSignature": "8/4",
+    "createdAt": "2025-10-13T10:25:25.951Z",
+    "description": "Создано в Guitar Combat",
+    "totalBars": 1,
+    "totalBeats": 8,
+    "duration": 4
+  },
+  "songStructure": {
+    "beatCount": 8,
+    "totalBars": 1,
+    "currentBar": 0,
+    "hasRepeats": false,
+    "repeatStructure": []
+  },
+  "bars": [
     {
-      "direction": "down",
-      "play": 1
-    },
-    {
-      "direction": "up",
-      "play": 0
-    },
-    {
-      "direction": "down",
-      "play": 1
-    },
-    {
-      "direction": "up",
-      "play": 1
-    },
-    {
-      "direction": "down",
-      "play": 0
-    },
-    {
-      "direction": "up",
-      "play": 1
-    },
-    {
-      "direction": "down",
-      "play": 1
-    },
-    {
-      "direction": "up",
-      "play": 0
+      "index": 0,
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": {
+            "status": 0,
+            "statusString": "не играть",
+            "displaySymbol": "○"
+          },
+          "metadata": {
+            "isPlayed": false,
+            "isMuted": false,
+            "isSkipped": true,
+            "cssClass": "play-status-skip"
+          }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 4,
+          "direction": "down",
+          "playStatus": {
+            "status": 0,
+            "statusString": "не играть",
+            "displaySymbol": "○"
+          },
+          "metadata": {
+            "isPlayed": false,
+            "isMuted": false,
+            "isSkipped": true,
+            "cssClass": "play-status-skip"
+          }
+        },
+        {
+          "index": 5,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 6,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 7,
+          "direction": "up",
+          "playStatus": {
+            "status": 0,
+            "statusString": "не играть",
+            "displaySymbol": "○"
+          },
+          "metadata": {
+            "isPlayed": false,
+            "isMuted": false,
+            "isSkipped": true,
+            "cssClass": "play-status-skip"
+          }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "Am",
+          "startBeat": 0,
+          "endBeat": 1,
+          "duration": 1
+        },
+        {
+          "name": "F",
+          "startBeat": 1,
+          "endBeat": 2,
+          "duration": 1
+        },
+        {
+          "name": "Dm",
+          "startBeat": 2,
+          "endBeat": 3,
+          "duration": 1
+        },
+        {
+          "name": "E",
+          "startBeat": 3,
+          "endBeat": 4,
+          "duration": 1
+        }
+      ],
+      "lyricSyllables": [],
+      "metadata": {
+        "isActive": true,
+        "hasChords": true,
+        "hasLyrics": false,
+        "playingBeats": 5
+      }
     }
   ],
-  "bpm": 100,
-  "speed": 100,
-  "timestamp": "2025-10-09T07:46:37.463Z"
+  "templates": {
+    "strummingPattern": "custom",
+    "customizations": {
+      "mutePattern": [],
+      "emphasisPattern": [],
+      "dynamics": []
+    },
+    "generationInfo": {
+      "generatedAt": "2025-10-13T10:25:25.951Z",
+      "source": "Guitar Combat",
+      "version": "2.0"
+    }
+  }
 }

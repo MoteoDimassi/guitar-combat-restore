@@ -15,6 +15,7 @@ export class ArrowDisplay {
     this.arrowSpacing = 15; // расстояние между стрелочками (уменьшено)
     this.playStatuses = []; // массив состояний воспроизведения для каждой стрелочки
     this.handleCircleClickBound = null; // привязанный обработчик клика для кружочков
+    this.preservePlayStatuses = true; // флаг сохранения состояний при изменении аккордов
   }
 
   /**
@@ -82,16 +83,27 @@ export class ArrowDisplay {
   /**
    * Устанавливает количество стрелочек
    * @param {number} count - Количество стрелочек
+   * @param {boolean} preserveStatuses - Сохранять ли текущие состояния (опционально)
    */
-  setArrowCount(count) {
+  setArrowCount(count, preserveStatuses = null) {
     if (count < 1 || count > 16) {
       console.warn('Количество стрелочек должно быть от 1 до 16');
       return;
     }
 
+    // Сохраняем текущие состояния если нужно
+    const shouldPreserve = preserveStatuses !== null ? preserveStatuses : this.preservePlayStatuses;
+    const savedStatuses = shouldPreserve ? this.saveCurrentPlayStatuses() : null;
+
     this.currentCount = count;
     this.generateArrows();
-    this.initializePlayStatuses();
+    
+    if (shouldPreserve && savedStatuses) {
+      this.restorePlayStatuses(savedStatuses);
+    } else {
+      this.initializePlayStatuses();
+    }
+    
     this.updateDisplay();
   }
 
@@ -105,6 +117,7 @@ export class ArrowDisplay {
       const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
       this.playStatuses.push(new PlayStatus(status));
     }
+    console.log(`🔄 ArrowDisplay: инициализировано ${this.currentCount} состояний (первая - PLAY, остальные - SKIP)`);
   }
 
   /**
@@ -542,6 +555,49 @@ export class ArrowDisplay {
    */
   setOnPlayStatusChange(callback) {
     this.onPlayStatusChange = callback;
+  }
+
+  /**
+   * Устанавливает флаг сохранения состояний при изменении аккордов
+   * @param {boolean} preserve - Сохранять состояния
+   */
+  setPreservePlayStatuses(preserve) {
+    this.preservePlayStatuses = preserve;
+    console.log(`🔄 ArrowDisplay: флаг сохранения состояний установлен в ${preserve}`);
+  }
+
+  /**
+   * Сохраняет текущие состояния воспроизведения
+   * @returns {Array} Массив сохраненных состояний
+   */
+  saveCurrentPlayStatuses() {
+    return this.playStatuses.map(status => status.toJSON());
+  }
+
+  /**
+   * Восстанавливает состояния воспроизведения
+   * @param {Array} savedStatuses - Массив сохраненных состояний
+   */
+  restorePlayStatuses(savedStatuses) {
+    if (!Array.isArray(savedStatuses)) {
+      console.warn('⚠️ savedStatuses должен быть массивом');
+      return;
+    }
+
+    this.playStatuses = savedStatuses.map(statusData =>
+      PlayStatus.fromJSON(statusData)
+    );
+
+    // Если количество изменилось, дополняем или обрезаем массив
+    while (this.playStatuses.length < this.currentCount) {
+      this.playStatuses.push(new PlayStatus(PlayStatus.STATUS.SKIP));
+    }
+    
+    if (this.playStatuses.length > this.currentCount) {
+      this.playStatuses = this.playStatuses.slice(0, this.currentCount);
+    }
+
+    console.log(`🔄 ArrowDisplay: восстановлено ${this.playStatuses.length} состояний`);
   }
 
   /**

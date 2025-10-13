@@ -460,8 +460,9 @@ export class ImportStrumFromJSON {
         const playStatuses = firstBar.beatUnits.map(beatUnitData => {
           return new PlayStatus(beatUnitData.playStatus.status);
         });
+        // При импорте явно устанавливаем статусы без сохранения
         this.app.arrowDisplay.setAllPlayStatuses(playStatuses);
-        console.log('🎯 Обновлены статусы воспроизведения в ArrowDisplay:', playStatuses.length);
+        console.log('🎯 Обновлены статусы воспроизведения в ArrowDisplay из импорта:', playStatuses.length);
       }
     }
     
@@ -479,36 +480,37 @@ export class ImportStrumFromJSON {
     if (!Array.isArray(bars) || bars.length === 0) {
       return;
     }
-    
-    // Собираем все уникальные аккорды из всех тактов
-    const allChords = new Set();
-    
+
+    // Собираем все аккорды в порядке их появления в тактах
+    const allChords = [];
+
     bars.forEach(bar => {
       if (bar.chordChanges && Array.isArray(bar.chordChanges)) {
-        bar.chordChanges.forEach(chordChange => {
+        // Сортируем аккорды по startBeat для правильного порядка
+        const sortedChords = bar.chordChanges.sort((a, b) => a.startBeat - b.startBeat);
+        sortedChords.forEach(chordChange => {
           if (chordChange.name) {
-            allChords.add(chordChange.name);
+            allChords.push(chordChange.name);
           }
         });
       }
     });
-    
-    if (allChords.size > 0) {
-      const chordsArray = Array.from(allChords);
-      const chordsString = chordsArray.join(' ');
-      
+
+    if (allChords.length > 0) {
+      const chordsString = allChords.join(' ');
+
       // Обновляем поле ввода аккордов
       const chordsInput = document.getElementById('chordsInput');
       if (chordsInput) {
         chordsInput.value = chordsString;
       }
-      
+
       // Парсим аккорды через ChordParser
       if (this.app.chordParser) {
         this.app.chordParser.parseChords(chordsString);
         this.app.chordParser.buildChords();
       }
-      
+
       // Обновляем ChordDisplay
       if (this.app.chordDisplay) {
         // Получаем валидные аккорды для отображения
@@ -521,7 +523,7 @@ export class ImportStrumFromJSON {
           this.app.chordDisplay.updateDisplay('--', '--');
         }
       }
-      
+
       console.log('🎸 Аккорды импортированы из тактов:', chordsString);
     }
   }
@@ -605,6 +607,11 @@ export class ImportStrumFromJSON {
     try {
       console.log('🔄 Импорт данных:', data);
       
+      // Отключаем сохранение состояний при импорте (т.к. импортируем новые состояния)
+      if (this.app.arrowDisplay) {
+        this.app.arrowDisplay.setPreservePlayStatuses(false);
+      }
+      
       // Определяем формат данных
       const format = this.detectDataFormat(data);
       console.log(`📋 Обнаружен формат: ${format}`);
@@ -623,9 +630,14 @@ export class ImportStrumFromJSON {
       // Импортируем данные в новом формате
       await this.importV2Format(processedData);
       
-      // Финальное обновление отображения
+      // Финальное обновление отображения без сохранения состояний
       if (this.app.arrowDisplay) {
         this.app.arrowDisplay.updateDisplay();
+      }
+      
+      // Включаем обратно сохранение состояний после импорта
+      if (this.app.arrowDisplay) {
+        this.app.arrowDisplay.setPreservePlayStatuses(true);
       }
       
       this.showSuccessNotification('Настройки успешно импортированы!');
@@ -634,6 +646,11 @@ export class ImportStrumFromJSON {
     } catch (error) {
       console.error('Ошибка при импорте данных:', error);
       this.showErrorNotification('Ошибка при импорте данных: ' + error.message);
+      
+      // Включаем обратно сохранение состояний в случае ошибки
+      if (this.app.arrowDisplay) {
+        this.app.arrowDisplay.setPreservePlayStatuses(true);
+      }
     }
   }
 
@@ -838,7 +855,8 @@ export class ImportStrumFromJSON {
    */
   importBeatCount(count) {
     if (this.app.arrowDisplay) {
-      this.app.arrowDisplay.setArrowCount(count);
+      // При импорте не сохраняем состояния
+      this.app.arrowDisplay.setArrowCount(count, false);
     }
 
     // Обновляем настройки

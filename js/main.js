@@ -243,6 +243,9 @@ export class GuitarCombatApp {
       this.handlePlayStatusChange(index, playStatus);
     });
     
+    // Включаем сохранение состояний по умолчанию
+    this.arrowDisplay.setPreservePlayStatuses(true);
+    
     // Инициализация отображения аккордов
     this.chordDisplay.init('#chordDisplay');
     console.log('🎵 ChordDisplay инициализирован:', this.chordDisplay.isInitialized());
@@ -373,6 +376,11 @@ export class GuitarCombatApp {
   handleChordsInputChange(chordsString) {
     console.log('🎵 Обновление аккордов:', chordsString);
     
+    // Включаем сохранение состояний стрелочек при изменении аккордов
+    if (this.arrowDisplay) {
+      this.arrowDisplay.setPreservePlayStatuses(true);
+    }
+    
     // Обновляем парсер аккордов
     this.chordParser.updateChords(chordsString, this.settings.beatCount, this.settings.chordChanges);
     
@@ -412,9 +420,9 @@ export class GuitarCombatApp {
         this.domElements.countSelect.value = beatCount;
       }
       
-      // Обновляем отображение стрелочек
+      // Обновляем отображение стрелочек без сохранения состояний при явном изменении количества
       if (this.arrowDisplay) {
-        this.arrowDisplay.setArrowCount(beatCount);
+        this.arrowDisplay.setArrowCount(beatCount, false);
       }
       
       // Пересоздаем такты с новым количеством долей
@@ -659,8 +667,9 @@ export class GuitarCombatApp {
 
   /**
    * Обновляет отображение
+   * @param {boolean} preserveArrowStatuses - Сохранять ли состояния стрелочек (опционально)
    */
-  updateDisplay() {
+  updateDisplay(preserveArrowStatuses = true) {
     // Обновляем отображение тактов (если инициализирован)
     if (this.barDisplay && this.domElements.barContainer) {
       this.barDisplay.setBars(this.bars);
@@ -671,7 +680,8 @@ export class GuitarCombatApp {
     
     // Обновляем отображение стрелочек
     if (this.arrowDisplay) {
-      this.arrowDisplay.setArrowCount(this.settings.beatCount);
+      // Сохраняем состояния по умолчанию при обычных обновлениях
+      this.arrowDisplay.setArrowCount(this.settings.beatCount, preserveArrowStatuses);
     }
     
     // Обновляем отображение аккордов
@@ -915,6 +925,11 @@ export class GuitarCombatApp {
     try {
       console.log('🎲 Генерация случайного боя...');
       
+      // Отключаем сохранение состояний при генерации случайного боя
+      if (this.arrowDisplay) {
+        this.arrowDisplay.setPreservePlayStatuses(false);
+      }
+      
       // Получаем текущее количество стрелочек
       const currentCount = this.arrowDisplay.currentCount || 8;
       
@@ -927,6 +942,11 @@ export class GuitarCombatApp {
       // Анализируем сгенерированный бой
       const analysis = this.randomStrumGenerator.analyzeStrum(randomPlayStatuses);
       
+      // Включаем обратно сохранение состояний после генерации
+      if (this.arrowDisplay) {
+        this.arrowDisplay.setPreservePlayStatuses(true);
+      }
+      
       console.log('✅ Случайный бой сгенерирован:', analysis);
       
       // Показываем краткую информацию пользователю
@@ -936,6 +956,12 @@ export class GuitarCombatApp {
       
     } catch (error) {
       console.error('❌ Ошибка генерации случайного боя:', error);
+      
+      // Включаем обратно сохранение состояний в случае ошибки
+      if (this.arrowDisplay) {
+        this.arrowDisplay.setPreservePlayStatuses(true);
+      }
+      
       this.showError('Ошибка генерации случайного боя');
     }
   }

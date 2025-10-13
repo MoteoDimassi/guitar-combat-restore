@@ -142,6 +142,11 @@ export class TemplateManager {
     try {
       console.log('🎯 Применение шаблона:', templateData.templateInfo?.name || 'Без названия');
       
+      // Отключаем сохранение состояний при применении шаблона
+      if (app.arrowDisplay) {
+        app.arrowDisplay.setPreservePlayStatuses(false);
+      }
+      
       // Применяем метаданные
       if (templateData.metadata) {
         await this.applyMetadata(templateData.metadata);
@@ -162,13 +167,24 @@ export class TemplateManager {
         await this.applyTemplateSettings(templateData.templates);
       }
       
-      // Обновляем отображение
-      app.updateDisplay();
+      // Обновляем отображение без сохранения состояний
+      app.updateDisplay(false);
+      
+      // Включаем обратно сохранение состояний после применения шаблона
+      if (app.arrowDisplay) {
+        app.arrowDisplay.setPreservePlayStatuses(true);
+      }
       
       console.log('✅ Шаблон успешно применён');
       
     } catch (error) {
       console.error('❌ Ошибка применения шаблона:', error);
+      
+      // Включаем обратно сохранение состояний в случае ошибки
+      if (app.arrowDisplay) {
+        app.arrowDisplay.setPreservePlayStatuses(true);
+      }
+      
       throw error;
     }
   }
@@ -207,7 +223,8 @@ export class TemplateManager {
     if (songStructure.beatCount) {
       app.settings.beatCount = songStructure.beatCount;
       if (app.arrowDisplay) {
-        app.arrowDisplay.setArrowCount(songStructure.beatCount);
+        // При применении шаблона не сохраняем состояния
+        app.arrowDisplay.setArrowCount(songStructure.beatCount, false);
       }
       console.log(`🥁 Установлено количество долей: ${songStructure.beatCount}`);
     }
@@ -274,6 +291,7 @@ export class TemplateManager {
         const playStatuses = firstBar.beatUnits.map(beatUnitData => {
           return new PlayStatus(beatUnitData.playStatus.status);
         });
+        // При применении шаблона явно устанавливаем статусы без сохранения
         app.arrowDisplay.setAllPlayStatuses(playStatuses);
         console.log('🎯 Обновлены статусы воспроизведения в ArrowDisplay из шаблона:', playStatuses.length);
       }
@@ -291,40 +309,41 @@ export class TemplateManager {
    */
   async importChordsFromBars(bars) {
     const app = window.guitarCombatApp;
-    
+
     if (!Array.isArray(bars) || bars.length === 0) {
       return;
     }
-    
-    // Собираем все уникальные аккорды из всех тактов
-    const allChords = new Set();
-    
+
+    // Собираем все аккорды в порядке их появления в тактах
+    const allChords = [];
+
     bars.forEach(bar => {
       if (bar.chordChanges && Array.isArray(bar.chordChanges)) {
-        bar.chordChanges.forEach(chordChange => {
+        // Сортируем аккорды по startBeat для правильного порядка
+        const sortedChords = bar.chordChanges.sort((a, b) => a.startBeat - b.startBeat);
+        sortedChords.forEach(chordChange => {
           if (chordChange.name) {
-            allChords.add(chordChange.name);
+            allChords.push(chordChange.name);
           }
         });
       }
     });
-    
-    if (allChords.size > 0) {
-      const chordsArray = Array.from(allChords);
-      const chordsString = chordsArray.join(' ');
-      
+
+    if (allChords.length > 0) {
+      const chordsString = allChords.join(' ');
+
       // Обновляем поле ввода аккордов
       const chordsInput = document.getElementById('chordsInput');
       if (chordsInput) {
         chordsInput.value = chordsString;
       }
-      
+
       // Парсим аккорды через ChordParser
       if (app.chordParser) {
         app.chordParser.parseChords(chordsString);
         app.chordParser.buildChords();
       }
-      
+
       // Обновляем ChordDisplay
       if (app.chordDisplay) {
         // Получаем валидные аккорды для отображения
@@ -337,7 +356,7 @@ export class TemplateManager {
           app.chordDisplay.updateDisplay('--', '--');
         }
       }
-      
+
       console.log('🎸 Аккорды импортированы из тактов шаблона:', chordsString);
     }
   }

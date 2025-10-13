@@ -94,17 +94,17 @@ class DownloadManager {
     collectBarsDataV2() {
         const app = window.guitarCombatApp;
         const bars = [];
-        
+
         if (!app || !app.bars || app.bars.length === 0) {
             // Если тактов нет, создаём один такт из текущих настроек
             return [this.createBarFromCurrentSettings()];
         }
-        
+
         // Собираем данные из существующих тактов
         app.bars.forEach((bar, index) => {
             const barData = {
                 index: index,
-                beatUnits: this.collectBeatUnits(bar),
+                beatUnits: this.collectBeatUnitsV2(bar, index),
                 chordChanges: this.collectChordChanges(bar),
                 lyricSyllables: this.collectLyricSyllables(bar),
                 // Дополнительная информация о такте
@@ -115,10 +115,10 @@ class DownloadManager {
                     playingBeats: this.countPlayingBeats(bar)
                 }
             };
-            
+
             bars.push(barData);
         });
-        
+
         return bars;
     }
 
@@ -129,7 +129,7 @@ class DownloadManager {
      */
     collectBeatUnits(bar) {
         const beatUnits = [];
-        
+
         if (bar.beatUnits && bar.beatUnits.length > 0) {
             bar.beatUnits.forEach((beatUnit, index) => {
                 const beatData = {
@@ -141,7 +141,7 @@ class DownloadManager {
                         displaySymbol: beatUnit.playStatus.getDisplaySymbol()
                     }
                 };
-                
+
                 // Дополнительная информация
                 beatData.metadata = {
                     isPlayed: beatUnit.isPlayed(),
@@ -149,7 +149,7 @@ class DownloadManager {
                     isSkipped: beatUnit.isSkipped(),
                     cssClass: beatUnit.getCSSClass()
                 };
-                
+
                 beatUnits.push(beatData);
             });
         } else {
@@ -170,7 +170,87 @@ class DownloadManager {
                 });
             }
         }
-        
+
+        return beatUnits;
+    }
+
+    /**
+     * Собирает информацию о долях в такте (улучшенная версия)
+     * @param {Bar} bar - Объект такта
+     * @param {number} barIndex - Индекс такта
+     * @returns {Array} Массив долей
+     */
+    collectBeatUnitsV2(bar, barIndex) {
+        const beatUnits = [];
+
+        // Для первого такта всегда используем статусы из ArrowDisplay, чтобы обеспечить синхронизацию
+        if (barIndex === 0 && window.guitarCombatApp?.arrowDisplay) {
+            const arrowDisplay = window.guitarCombatApp.arrowDisplay;
+            const playStatuses = arrowDisplay.getAllPlayStatuses();
+
+            playStatuses.forEach((playStatus, index) => {
+                const beatData = {
+                    index: index,
+                    direction: index % 2 === 0 ? 'down' : 'up',
+                    playStatus: {
+                        status: playStatus.status,
+                        statusString: playStatus.getStatusString(),
+                        displaySymbol: playStatus.getDisplaySymbol()
+                    }
+                };
+
+                // Дополнительная информация
+                beatData.metadata = {
+                    isPlayed: playStatus.isPlayed(),
+                    isMuted: playStatus.isMuted(),
+                    isSkipped: playStatus.isSkipped(),
+                    cssClass: playStatus.getCSSClass()
+                };
+
+                beatUnits.push(beatData);
+            });
+        } else if (bar.beatUnits && bar.beatUnits.length > 0) {
+            // Для остальных тактов используем данные из такта
+            bar.beatUnits.forEach((beatUnit, index) => {
+                const beatData = {
+                    index: index,
+                    direction: index % 2 === 0 ? 'down' : 'up',
+                    playStatus: {
+                        status: beatUnit.playStatus.status,
+                        statusString: beatUnit.playStatus.getStatusString(),
+                        displaySymbol: beatUnit.playStatus.getDisplaySymbol()
+                    }
+                };
+
+                // Дополнительная информация
+                beatData.metadata = {
+                    isPlayed: beatUnit.isPlayed(),
+                    isMuted: beatUnit.isMuted(),
+                    isSkipped: beatUnit.isSkipped(),
+                    cssClass: beatUnit.getCSSClass()
+                };
+
+                beatUnits.push(beatData);
+            });
+        } else {
+            // Fallback
+            const arrowDisplay = window.guitarCombatApp?.arrowDisplay;
+            if (arrowDisplay) {
+                const playStatuses = arrowDisplay.getAllPlayStatuses();
+                playStatuses.forEach((playStatus, index) => {
+                    beatUnits.push({
+                        index: index,
+                        direction: index % 2 === 0 ? 'down' : 'up',
+                        playStatus: {
+                            status: playStatus.status,
+                            statusString: playStatus.getStatusString(),
+                            displaySymbol: playStatus.getDisplaySymbol()
+                        }
+                    });
+                });
+            }
+        }
+
         return beatUnits;
     }
 
