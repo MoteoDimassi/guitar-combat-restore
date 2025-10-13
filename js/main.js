@@ -1,421 +1,798 @@
-/**
- * @fileoverview Main entry point of the Guitar Combat application.
- * Initializes all components, manages global state, and handles application lifecycle events.
- * This file serves as the central orchestrator for the guitar rhythm training application.
- */
+// Главный файл приложения Guitar Combat
+// Объединяет все компоненты и управляет общей логикой
 
-import { BeatRow } from './components/BeatRow.js';
-import { Controls } from './components/Controls.js';
-import { Playback } from './components/Playback.js';
-import { ExportUtils } from './utils/ExportUtils.js';
-import { ImportUtils } from './utils/ImportUtils.js';
-import { Metronome } from './components/Metronome.js';
-import { Modal } from './components/Modal.js';
-import { MobileMenu } from './components/MobileMenu.js';
-import { TemplateManager } from './components/TemplateManager.js';
-import { ChordDisplay } from './components/ChordDisplay.js';
-import { SyllableDragDrop } from './components/SyllableDragDrop.js';
-import { Settings } from './components/Settings.js';
-import { BarManager } from './managers/BarManager.js';
-import { BarSyllableDisplay } from './components/BarSyllableDisplay.js';
-import { ChordBarManager } from './components/ChordBarManager.js';
-import { ChordManager } from './components/ChordManager.js';
-import { LineNavigation } from './components/LineNavigation.js';
-import { PlaybackSync } from './components/PlaybackSync.js';
-import { OptionsMenu } from './components/OptionsMenu.js';
-import { ChordStore } from './components/ChordStore.js';
-import { SongExporter } from './utils/SongExporter.js';
-import { SongImporter } from './utils/SongImporter.js';
-import { TextUpdateManager } from './utils/TextUpdateManager.js';
-
-// Проверка поддержки Web Audio API
-if (!window.AudioContext && !window.webkitAudioContext) {
-  console.warn('Web Audio API не поддерживается в этом браузере. Некоторые функции могут не работать.');
-}
+// Импорты компонентов
+import { ChordBuilder } from './Chords/ChordBuilder.js';
+import { ChordParser } from './Chords/ChordParser.js';
+import { ChordDisplay } from './Chords/ChordDisplay.js';
+import { Bar } from './Measure/Bar.js';
+import { BeatUnit } from './Measure/BeatUnit.js';
+import { ChordChange } from './Measure/ChordChange.js';
+import { LyricSyllable } from './Measure/LyricSyllable.js';
+import { BarSequenceBuilder } from './Measure/BarSequenceBuilder.js';
+import { BarNavigation } from './Measure/BarNavigation.js';
+import { BarDisplay } from './View/BarDisplay.js';
+import { ArrowDisplay } from './Strum/ArrowDisplay.js';
+import { Modal } from './ModalWindows/Modal.js';
+import { PrivacyPolicyModal } from './ModalWindows/PrivacyPolicyModal.js';
+import { TermsOfUseModal } from './ModalWindows/TermsOfUseModal.js';
+import { PlayStatus } from './Measure/PlayStatus.js';
 
 /**
- * Handles window resize events to adapt the application layout.
- * Re-renders components to ensure proper responsiveness on different screen sizes.
- * Called automatically when the window is resized.
- *
- * @function handleResize
+ * Главный класс приложения Guitar Combat
+ * Управляет всеми компонентами и координирует их работу
  */
-function handleResize() {
-  // Re-render beat row component to adapt to new screen size
-  if (window.app && window.app.beatRow) {
-    window.app.beatRow.render();
+export class GuitarCombatApp {
+  constructor() {
+    // Инициализация компонентов
+    this.chordBuilder = new ChordBuilder();
+    this.chordParser = new ChordParser();
+    this.chordDisplay = new ChordDisplay();
+    this.barSequenceBuilder = new BarSequenceBuilder();
+    this.barNavigation = new BarNavigation();
+    this.barDisplay = new BarDisplay();
+    this.arrowDisplay = new ArrowDisplay();
+    this.modal = new Modal();
+    this.privacyModal = new PrivacyPolicyModal();
+    this.termsModal = new TermsOfUseModal();
+    
+    // Массив тактов
+    this.bars = [];
+    
+    // Текущие настройки
+    this.settings = {
+      beatCount: 4,        // количество долей в такте
+      bpm: 120,           // темп
+      chordChanges: {},   // правила смены аккордов
+      isPlaying: false    // состояние воспроизведения
+    };
+    
+    // DOM элементы
+    this.domElements = {
+      chordsInput: null,
+      beatCountInput: null,
+      bpmInput: null,
+      countSelect: null,
+      nextLineBtn: null,
+      prevLineBtn: null,
+      playBtn: null,
+      barContainer: null,
+      barInfo: null,
+      arrowContainer: null
+    };
+    
+    // Колбэки
+    this.callbacks = {
+      onChordsChange: null,
+      onBarChange: null,
+      onPlaybackStart: null,
+      onPlaybackStop: null
+    };
   }
-}
-
-
-/**
- * Main application initialization function.
- * Sets up all components, initializes global state, and binds event handlers.
- * Called when the DOM content has finished loading.
- *
- * @async
- * @event DOMContentLoaded
- * @param {Event} event - DOM content loaded event
- */
-document.addEventListener('DOMContentLoaded', async () => {
-  // Create component instances
-  const beatRow = new BeatRow();
-  const controls = new Controls(beatRow);
-  const playback = new Playback(beatRow);
-  const exportUtils = new ExportUtils(beatRow);
-  const importUtils = new ImportUtils(beatRow);
-  const metronome = new Metronome();
-  const chordDisplay = new ChordDisplay();
-  const templateManager = new TemplateManager(beatRow, controls);
-  const syllableDragDrop = new SyllableDragDrop(beatRow);
-  const settings = new Settings();
-  const barManager = new BarManager();
-  const barSyllableDisplay = new BarSyllableDisplay(beatRow, barManager);
-  const chordManager = new ChordManager();
-  const chordStore = new ChordStore(); // Новое хранилище аккордов
-  const chordBarManager = new ChordBarManager(barManager, chordManager, chordDisplay, beatRow);
-  const lineNavigation = new LineNavigation(barManager, barSyllableDisplay);
-  const playbackSync = new PlaybackSync(beatRow, barManager, barSyllableDisplay, chordDisplay, chordBarManager);
-  const optionsMenu = new OptionsMenu();
-  
-  // Новые модули
-  const songExporter = new SongExporter();
-  const songImporter = new SongImporter();
-  const textUpdateManager = new TextUpdateManager();
-
-  // Инициализация компонентов
-  beatRow.init();
-  controls.init();
-  playback.init();
-  exportUtils.init();
-  importUtils.init();
-  metronome.init();
-  chordDisplay.init();
-  templateManager.init();
-  syllableDragDrop.init();
-  settings.init();
-  barSyllableDisplay.init();
-  playbackSync.init();
-  optionsMenu.init();
-  
-  // Инициализация новых модулей
-  textUpdateManager.init(syllableDragDrop);
-  
-  // Отладочная информация
-  console.log('Инициализация модулей завершена');
-  console.log('songExporter:', songExporter);
-  console.log('songImporter:', songImporter);
-  console.log('textUpdateManager:', textUpdateManager);
-
-  // Инициализация мобильного меню
-  const mobileMenu = new MobileMenu();
-  mobileMenu.init();
-
-  // Инициализация модального окна
-  const modal = new Modal();
-  modal.init();
-  
-  // Связываем обновление drop-зон с рендерингом beatRow
-  beatRow.setOnRenderComplete(() => {
-    syllableDragDrop.updateDropZones();
-  });
-
-  // Глобальное состояние приложения
-  window.app = {
-    beatRow,
-    controls,
-    playback,
-    exportUtils,
-    importUtils,
-    metronome,
-    chordDisplay,
-    modal,
-    templateManager,
-    syllableDragDrop,
-    settings,
-    barManager,
-    barSyllableDisplay,
-    chordManager,
-    chordStore, // Хранилище аккордов
-    chordBarManager,
-    lineNavigation,
-    playbackSync,
-    optionsMenu,
-    songExporter,
-    songImporter,
-    textUpdateManager,
-    updateSongButtons, // Функция для обновления кнопок песни
-    state: {
-      count: 8,
-      beats: [],
-      playing: false,
-      currentIndex: 0,
-      bpm: 90,
-      speed: 100,
-      chords: [],
-      currentBarIndex: 0 // Индекс текущего активного такта
-    }
-  };
-
-  // Установка начальных значений
-  controls.setCount(8);
-  controls.updateBpmLabel();
-  
-  // Инициализация метронома с правильным количеством стрелочек
-  metronome.setBeatCount(8);
-  
-  // Добаваем обработчик поля ввода аккордов
-  const chordsInput = document.getElementById('chordsInput');
-  if (chordsInput) {
-    // Обновляем аккорды при вводе
-    chordsInput.addEventListener('input', () => {
-      const chordsString = chordsInput.value;
-
-      // Обновляем ChordStore - центральное хранилище аккордов
-      if (window.app && window.app.chordStore) {
-        window.app.chordStore.updateFromString(chordsString);
-        window.app.chordStore.saveToLocalStorage();
-      }
-
-      // Обновляем аккорды в метрономе (для обратной совместимости)
-      if (window.app && window.app.metronome) {
-        window.app.metronome.updateChords(chordsString);
-      }
-
-      // Обновляем отображение аккордов для текущего такта
-      if (window.app && window.app.chordDisplay && window.app.chordStore) {
-        const currentBarIndex = window.app.state.currentBarIndex || 0;
-        const currentChord = window.app.chordStore.getChordForBar(currentBarIndex);
-        const nextChord = window.app.chordStore.getNextChord(currentBarIndex);
-        
-        if (currentChord) {
-          window.app.chordDisplay.setChords(currentChord, nextChord || currentChord);
-        } else {
-          window.app.chordDisplay.setChords('--', '--');
-        }
-      }
-
-      // Если воспроизведение активно, обновляем текущую позицию
-      if (window.app && window.app.playback && window.app.playback.isPlaying()) {
-        const currentIndex = window.app.state.currentIndex;
-        const currentBarIndex = window.app.state.currentBarIndex;
-        
-        if (window.app.metronome && window.app.metronome.onBeatCallback) {
-          window.app.metronome.updateChordDisplay(currentIndex, currentBarIndex);
-        }
-      }
-    });
-
-    // Инициализируем ChordStore при загрузке
-    // Пытаемся загрузить из localStorage, если не получается - парсим из input
-    if (!window.app.chordStore.loadFromLocalStorage()) {
-      window.app.chordStore.updateFromString(chordsInput.value);
-    } else {
-      // Если загрузили из localStorage, обновляем поле ввода
-      const savedChords = window.app.chordStore.getAllChords();
-      if (savedChords.length > 0) {
-        chordsInput.value = savedChords.join(' ');
-      }
-    }
-
-    // Обновляем метроном с аккордами из ChordStore
-    window.app.metronome.updateChords(chordsInput.value);
-
-    // Показываем начальные аккорды сразу при загрузке
-    if (window.app && window.app.chordDisplay && window.app.chordStore) {
-      window.app.chordDisplay.show();
-
-      const currentBarIndex = window.app.state.currentBarIndex || 0;
-      const currentChord = window.app.chordStore.getChordForBar(currentBarIndex);
-      const nextChord = window.app.chordStore.getNextChord(currentBarIndex);
-
-      if (currentChord) {
-        window.app.chordDisplay.setChords(currentChord, nextChord || currentChord);
-      } else {
-        window.app.chordDisplay.setChords('--', '--');
-      }
-    }
-  }
-  
-  // Добавляем обработчик изменения размера окна для адаптивности
-  window.addEventListener('resize', handleResize);
-
-  // ДОБАВИТЬ: Мобильная оптимизация для AudioContext
-  // Обработчик изменения видимости страницы (для мобильных браузеров)
-  document.addEventListener('visibilitychange', () => {
-    if (window.app && window.app.metronome && window.app.playback) {
-      if (document.hidden) {
-        // Страница скрыта - можно приостановить для экономии ресурсов
-        window.app.playback.stopPlayback();
-      } else {
-        // Страница стала видимой - возобновляем если пользователь ожидает этого
-        // Не автоматически возобновляем, чтобы избежать неожиданного звука
-      }
-    }
-  });
 
   /**
-   * Unlocks the AudioContext on user interaction to comply with browser autoplay policies.
-   * This is required for audio playback to work in modern browsers.
-   * Removes event listeners after successful unlock to prevent unnecessary processing.
-   *
-   * @async
-   * @function unlockAudioContext
-   * @throws {Error} If AudioContext resume fails
+   * Инициализирует приложение
    */
-  const unlockAudioContext = async () => {
-    if (window.app && window.app.metronome && window.app.metronome.audioCtx) {
-      if (window.app.metronome.audioCtx.state === 'suspended') {
-        try {
-          await window.app.metronome.audioCtx.resume();
-        } catch (error) {
-          console.error('Failed to unlock AudioContext:', error);
-        }
-      }
-    }
-    // Remove event listeners after first successful interaction
-    document.removeEventListener('touchstart', unlockAudioContext);
-    document.removeEventListener('touchend', unlockAudioContext);
-    document.removeEventListener('click', unlockAudioContext);
-  };
-
-  // Добавляем обработчики для разблокировки AudioContext при первом взаимодействии
-  document.addEventListener('touchstart', unlockAudioContext, { once: true });
-  document.addEventListener('touchend', unlockAudioContext, { once: true });
-  document.addEventListener('click', unlockAudioContext, { once: true });
-
-  // Добавляем обработчик для ссылки политики конфиденциальности в футере
-  
-  // Обработчик клика делегируем на документ
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('footer a[href="#"]');
-  if (!link) return;
-
-  if (link.textContent.includes('Политика конфиденциальности')) {
-    e.preventDefault();
-    if (window.app && window.app.modal) {
-      window.app.modal.showPrivacyPolicy();
+  async init() {
+    try {
+      console.log('🎸 Инициализация Guitar Combat...');
+      
+      // Инициализация DOM элементов
+      this.initDOMElements();
+      
+      // Синхронизируем настройки с DOM элементами
+      this.syncSettingsWithDOM();
+      
+      // Инициализация компонентов
+      this.initComponents();
+      
+      // Привязка событий
+      this.bindEvents();
+      
+      // Загрузка сохраненных данных
+      this.loadSavedData();
+      
+      // Первоначальное обновление интерфейса
+      this.updateDisplay();
+      
+      // Парсинг начальных аккордов из поля ввода
+      this.parseInitialChords();
+      
+      console.log('✅ Guitar Combat успешно инициализирован');
+      
+    } catch (error) {
+      console.error('❌ Ошибка инициализации:', error);
+      this.showError('Ошибка инициализации приложения');
     }
   }
-  
-  if (link.textContent.includes('Условия использования')) {
-    e.preventDefault();
-    if (window.app && window.app.modal) {
-      window.app.modal.showTermsOfUse();
+
+  /**
+   * Инициализирует DOM элементы
+   */
+  initDOMElements() {
+    this.domElements = {
+      chordsInput: document.getElementById('chordsInput'),
+      beatCountInput: document.getElementById('beatCountInput'),
+      bpmInput: document.getElementById('bpmInput'),
+      countSelect: document.getElementById('countSelect'),
+      nextLineBtn: document.getElementById('nextLineBtn'),
+      prevLineBtn: document.getElementById('prevLineBtn'),
+      playBtn: document.getElementById('playBtn'),
+      barContainer: document.getElementById('barContainer'),
+      barInfo: document.getElementById('barInfo'),
+      arrowContainer: document.getElementById('beatRow') // Используем beatRow как контейнер для стрелочек
+    };
+
+    // Проверяем наличие критически важных элементов
+    const criticalElements = ['chordsInput', 'countSelect', 'arrowContainer'];
+    const missingCriticalElements = criticalElements.filter(id => !this.domElements[id]);
+    
+    if (missingCriticalElements.length > 0) {
+      throw new Error(`Отсутствуют критически важные DOM элементы: ${missingCriticalElements.join(', ')}`);
+    }
+
+    // Проверяем наличие опциональных элементов
+    const optionalElements = ['nextLineBtn', 'prevLineBtn', 'playBtn', 'barContainer', 'barInfo', 'beatCountInput', 'bpmInput'];
+    const missingOptionalElements = optionalElements.filter(id => !this.domElements[id]);
+    
+    if (missingOptionalElements.length > 0) {
+      console.warn('⚠️ Отсутствуют опциональные DOM элементы:', missingOptionalElements.join(', '));
     }
   }
-});
 
-// Функция для управления видимостью кнопок песни
-const updateSongButtons = () => {
-  const saveSongBtn = document.getElementById('saveSongBtn');
-  const importSongBtn = document.getElementById('importSongBtn');
-  
-  if (!saveSongBtn || !importSongBtn) return;
-  
-  // Проверяем, есть ли текст песни
-  const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
-  const hasSongText = songs.length > 0 && songs[songs.length - 1].text && songs[songs.length - 1].text.trim().length > 0;
-  
-  if (hasSongText) {
-    // Есть текст песни - показываем кнопку "Сохранить песню"
-    saveSongBtn.classList.remove('hidden');
-    importSongBtn.classList.add('hidden');
-  } else {
-    // Нет текста песни - показываем кнопку "Импорт песни"
-    saveSongBtn.classList.add('hidden');
-    importSongBtn.classList.remove('hidden');
+  /**
+   * Синхронизирует настройки с DOM элементами
+   */
+  syncSettingsWithDOM() {
+    // Синхронизируем количество стрелочек с выпадающим меню
+    if (this.domElements.countSelect) {
+      this.settings.beatCount = parseInt(this.domElements.countSelect.value) || 8;
+    }
+    
+    // Синхронизируем BPM с полем ввода (если есть)
+    if (this.domElements.bpmInput) {
+      this.settings.bpm = parseInt(this.domElements.bpmInput.value) || 120;
+    }
+    
+    console.log('🔄 Настройки синхронизированы с DOM:', this.settings);
   }
-};
 
-// Проверяем и отображаем сохраненный текст песни при загрузке
-const loadSavedSongText = () => {
-  const songs = JSON.parse(localStorage.getItem('userSongs') || '[]');
-  if (songs.length > 0) {
-    const latestSong = songs[songs.length - 1]; // Берем последнюю сохраненную песню
-    if (window.app && window.app.modal) {
-      window.app.modal.displaySongText(latestSong.title, latestSong.text);
-    }
-    // Показываем drop-зоны, так как есть текст песни
-    if (window.app && window.app.syllableDragDrop) {
-      window.app.syllableDragDrop.showDropZones();
-    }
-    // Скрываем панель управления и показываем кнопку опций
-    if (window.app && window.app.optionsMenu) {
-      window.app.optionsMenu.hideControlPanel();
-      window.app.optionsMenu.showOptionsButton();
-    }
-  } else {
-    // Если нет текста песни, убеждаемся, что секция управления тактами скрыта
-    if (window.app && window.app.settings) {
-      window.app.settings.hideBarManagement();
-    }
-    // Показываем панель управления и скрываем кнопку опций
-    if (window.app && window.app.optionsMenu) {
-      window.app.optionsMenu.showControlPanel();
-      window.app.optionsMenu.hideOptionsButton();
-    }
-  }
-  
-  // Обновляем видимость кнопок
-  updateSongButtons();
-};
-
-// Вызываем функцию для загрузки текста песни
-loadSavedSongText();
-
-  // Добавляем обработчик для кнопки добавления текста песни
-document.addEventListener('click', (e) => {
-  const addSongTextBtn = e.target.closest('#addSongTextBtn');
-  if (addSongTextBtn && window.app && window.app.modal) {
-    window.app.modal.showAddSongText();
-  }
-  
-  // Добавляем обработчик для кнопки редактирования текста песни
-  const editSongTextBtn = e.target.closest('#edit-song-text-btn');
-  if (editSongTextBtn && window.app && window.app.modal) {
-    window.app.modal.showEditSongText();
-  }
-});
-
-// Добавляем отдельный обработчик для кнопки сохранения песни
-document.addEventListener('click', (e) => {
-  const saveSongBtn = e.target.closest('#saveSongBtn');
-  if (saveSongBtn) {
-    console.log('Кнопка "Сохранить песню" нажата');
-    if (window.app && window.app.songExporter) {
-      try {
-        console.log('Начинаем экспорт песни...');
-        window.app.songExporter.downloadSongFile();
-        console.log('Экспорт завершён');
-      } catch (error) {
-        console.error('Ошибка при сохранении песни:', error);
-        alert('Ошибка при сохранении песни. Проверьте консоль для подробностей.');
-      }
+  /**
+   * Инициализирует компоненты
+   */
+  initComponents() {
+    // Инициализация модальных окон
+    this.modal.init();
+    this.privacyModal.init();
+    this.termsModal.init();
+    
+    // Инициализация отображения тактов (если есть контейнер)
+    if (this.domElements.barContainer) {
+      const containerSelector = '#barContainer';
+      const infoSelector = this.domElements.barInfo ? '#barInfo' : null;
+      this.barDisplay.init(containerSelector, infoSelector);
+      
+      // Настройка колбэков для BarDisplay
+      this.barDisplay.setOnBarChange((barIndex, bar) => {
+        this.handleBarChange(barIndex, bar);
+      });
+      
+      this.barDisplay.setOnPlaybackStart(() => {
+        this.handlePlaybackStart();
+      });
+      
+      this.barDisplay.setOnPlaybackStop(() => {
+        this.handlePlaybackStop();
+      });
     } else {
-      console.error('SongExporter не найден в window.app');
-      alert('Ошибка: модуль экспорта не инициализирован');
+      console.warn('⚠️ BarDisplay не инициализирован - отсутствует контейнер barContainer');
+    }
+    
+    // Инициализация отображения стрелочек
+    this.arrowDisplay.init('#beatRow', '#countSelect');
+    
+    // Устанавливаем callback для изменения состояний воспроизведения
+    this.arrowDisplay.setOnPlayStatusChange((index, playStatus) => {
+      this.handlePlayStatusChange(index, playStatus);
+    });
+    
+    // Инициализация отображения аккордов
+    this.chordDisplay.init('#chordDisplay');
+    console.log('🎵 ChordDisplay инициализирован:', this.chordDisplay.isInitialized());
+    
+    // Инициализация навигации по тактам
+    this.barNavigation.init();
+    
+    // Настройка колбэков для BarNavigation
+    this.barNavigation.setOnBarChange((barIndex) => {
+      this.handleBarNavigationChange(barIndex);
+    });
+  }
+
+  /**
+   * Привязывает события к DOM элементам
+   */
+  bindEvents() {
+    // Обработчик изменения поля аккордов (постоянный парсинг)
+    if (this.domElements.chordsInput) {
+      // Обработчик для мгновенного обновления при вводе
+      this.domElements.chordsInput.addEventListener('input', (e) => {
+        this.handleChordsInputChange(e.target.value);
+      });
+      
+      // Дополнительный обработчик для изменения (на случай если input не сработает)
+      this.domElements.chordsInput.addEventListener('change', (e) => {
+        this.handleChordsInputChange(e.target.value);
+      });
+      
+      // Обработчик для обновления при потере фокуса
+      this.domElements.chordsInput.addEventListener('blur', (e) => {
+        this.handleChordsInputChange(e.target.value);
+      });
+    }
+
+    // Обработчик изменения количества долей
+    if (this.domElements.beatCountInput) {
+      this.domElements.beatCountInput.addEventListener('change', (e) => {
+        this.handleBeatCountChange(parseInt(e.target.value));
+      });
+    }
+
+    // Обработчик изменения темпа
+    if (this.domElements.bpmInput) {
+      this.domElements.bpmInput.addEventListener('input', (e) => {
+        this.handleBpmChange(parseInt(e.target.value));
+      });
+    }
+
+    // Обработчик изменения количества стрелочек
+    if (this.domElements.countSelect) {
+      this.domElements.countSelect.addEventListener('change', (e) => {
+        this.handleBeatCountChange(parseInt(e.target.value));
+      });
+    }
+
+    // Обработчики кнопок навигации и воспроизведения
+    // Привязываются автоматически в BarDisplay
+  }
+
+  /**
+   * Парсит начальные аккорды из поля ввода
+   */
+  parseInitialChords() {
+    if (!this.domElements.chordsInput) {
+      console.warn('⚠️ Поле ввода аккордов не найдено');
+      return;
+    }
+
+    const chordsString = this.domElements.chordsInput.value;
+    console.log('🎵 Парсинг начальных аккордов:', chordsString || '(пустое поле)');
+    
+    // Всегда вызываем обработчик, даже для пустой строки
+    this.handleChordsInputChange(chordsString || '');
+  }
+
+  /**
+   * Обрабатывает изменение поля аккордов
+   * @param {string} chordsString - Строка с аккордами
+   */
+  handleChordsInputChange(chordsString) {
+    console.log('🎵 Обновление аккордов:', chordsString);
+    
+    // Обновляем парсер аккордов
+    this.chordParser.updateChords(chordsString, this.settings.beatCount, this.settings.chordChanges);
+    
+    // Получаем статистику парсинга
+    const stats = this.chordParser.getStats();
+    console.log('📊 Статистика парсинга:', stats);
+    
+    // Создаем такты на основе аккордов
+    this.createBarsFromChords();
+    
+    // Обновляем отображение аккордов
+    this.updateChordDisplay();
+    
+    // Обновляем отображение
+    this.updateDisplay();
+    
+    // Сохраняем данные
+    this.saveData();
+    
+    // Вызываем колбэк
+    if (this.callbacks.onChordsChange) {
+      this.callbacks.onChordsChange(chordsString, stats);
     }
   }
+
+  /**
+   * Обрабатывает изменение количества долей в такте
+   * @param {number} beatCount - Количество долей
+   */
+  handleBeatCountChange(beatCount) {
+    if (beatCount > 0 && beatCount <= 16) {
+      console.log('🥁 Изменение количества долей:', beatCount);
+      this.settings.beatCount = beatCount;
+      
+      // Синхронизируем количество стрелочек
+      if (this.domElements.countSelect) {
+        this.domElements.countSelect.value = beatCount;
+      }
+      
+      // Обновляем отображение стрелочек
+      if (this.arrowDisplay) {
+        this.arrowDisplay.setArrowCount(beatCount);
+      }
+      
+      // Пересоздаем такты с новым количеством долей
+      this.createBarsFromChords();
+      this.updateDisplay();
+      this.saveData();
+    }
+  }
+
+  /**
+   * Обрабатывает изменение темпа
+   * @param {number} bpm - Темп в ударах в минуту
+   */
+  handleBpmChange(bpm) {
+    if (bpm > 0 && bpm <= 300) {
+      console.log('🎼 Изменение темпа:', bpm);
+      this.settings.bpm = bpm;
+      this.saveData();
+    }
+  }
+
+  /**
+   * Обновляет отображение аккордов на основе текущего такта
+   */
+  updateChordDisplay() {
+    if (!this.chordDisplay || !this.chordDisplay.isInitialized()) {
+      console.warn('⚠️ ChordDisplay не инициализирован');
+      return;
+    }
+
+    // Если нет тактов, пытаемся получить аккорды напрямую из парсера
+    if (this.bars.length === 0) {
+      const validChords = this.chordParser.getValidChords();
+      if (validChords.length > 0) {
+        const currentChord = validChords[0].name;
+        const nextChord = validChords.length > 1 ? validChords[1].name : null;
+        this.chordDisplay.updateDisplay(currentChord, nextChord);
+        console.log('🎵 Отображение аккордов из парсера:', { currentChord, nextChord });
+        return;
+      } else {
+        this.chordDisplay.clear();
+        return;
+      }
+    }
+
+    // Получаем текущий такт из навигации
+    let currentBar = null;
+    const currentBarIndex = this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0;
+    
+    console.log('🎵 Обновление отображения аккордов:', {
+      currentBarIndex,
+      totalBars: this.bars.length
+    });
+    
+    if (this.bars.length > 0 && currentBarIndex < this.bars.length) {
+      currentBar = this.bars[currentBarIndex];
+      console.log('🎵 Используем такт:', currentBarIndex, 'с аккордом:', currentBar.getChordForBeat(0));
+    }
+    
+    if (!currentBar) {
+      this.chordDisplay.clear();
+      return;
+    }
+
+    // Получаем аккорды из текущего такта
+    const currentBarChords = this.getChordsFromBar(currentBar);
+    const currentChord = currentBarChords.current;
+    const nextChord = currentBarChords.next;
+
+    // Если в текущем такте несколько аккордов, показываем их все
+    const allCurrentChords = this.getAllChordsFromBar(currentBar);
+    const displayCurrentChord = allCurrentChords.length > 1 ? allCurrentChords : currentChord;
+
+    this.chordDisplay.updateDisplay(displayCurrentChord, nextChord);
+    console.log('🎵 Отображение аккордов из такта:', { 
+      currentChord: displayCurrentChord, 
+      nextChord,
+      barIndex: this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0
+    });
+  }
+
+  /**
+   * Получает аккорды из такта (текущий и следующий)
+   * @param {Bar} bar - Текущий такт
+   * @returns {Object} Объект с current и next аккордами
+   */
+  getChordsFromBar(bar) {
+    if (!bar || !bar.chordChanges || bar.chordChanges.length === 0) {
+      return { current: null, next: null };
+    }
+
+    // Получаем первый аккорд из текущего такта (аккорд на первой доле)
+    const currentChord = bar.getChordForBeat(0);
+    
+    // Получаем следующий аккорд из следующего такта
+    let nextChord = null;
+    const currentBarIndex = this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0;
+    
+    console.log('🎵 Получение аккордов для такта:', {
+      currentBarIndex,
+      totalBars: this.bars.length,
+      currentBar: bar.barIndex
+    });
+    
+    if (currentBarIndex + 1 < this.bars.length) {
+      const nextBar = this.bars[currentBarIndex + 1];
+      nextChord = nextBar.getChordForBeat(0);
+      console.log('🎵 Следующий аккорд из такта:', nextBar.barIndex, '=', nextChord);
+    }
+
+    return { current: currentChord, next: nextChord };
+  }
+
+  /**
+   * Получает все аккорды из текущего такта (для поддержки нескольких аккордов в такте)
+   * @param {Bar} bar - Текущий такт
+   * @returns {string[]} Массив названий аккордов в такте
+   */
+  getAllChordsFromBar(bar) {
+    if (!bar || !bar.chordChanges || bar.chordChanges.length === 0) {
+      return [];
+    }
+
+    // Возвращаем все уникальные аккорды из такта
+    const chords = bar.chordChanges.map(chordChange => chordChange.name);
+    return [...new Set(chords)]; // Убираем дубликаты
+  }
+
+  /**
+   * Создает такты на основе аккордов используя BarSequenceBuilder
+   */
+  createBarsFromChords() {
+    const validChords = this.chordParser.getValidChords();
+    
+    if (validChords.length === 0) {
+      // Создаем один пустой такт
+      this.bars = [new Bar(0, this.settings.beatCount)];
+      console.log('📊 Создан пустой такт (нет аккордов)');
+    } else {
+      // Используем BarSequenceBuilder для создания тактов
+      this.barSequenceBuilder.beatCount = this.settings.beatCount;
+      const chordNames = validChords.map(chord => chord.name);
+      this.bars = this.barSequenceBuilder.buildFromChordArray(chordNames);
+      console.log(`📊 Создано ${this.bars.length} тактов через BarSequenceBuilder:`, chordNames);
+      
+      // Проверяем аккорды в каждом такте
+      this.bars.forEach((bar, index) => {
+        const chord = bar.getChordForBeat(0);
+        console.log(`📊 Такт ${index}: аккорд = ${chord}`);
+      });
+    }
+    
+    // Обновляем навигацию по тактам
+    console.log('🧭 Обновление навигации:', {
+      barsCount: this.bars.length,
+      navigationState: this.barNavigation.getState()
+    });
+    
+    this.barNavigation.setTotalBars(this.bars.length);
+    this.barNavigation.setCurrentBarIndex(0);
+    
+    console.log('🧭 Навигация обновлена:', this.barNavigation.getState());
+  }
+
+  /**
+   * Обрабатывает смену такта
+   * @param {number} barIndex - Индекс нового такта
+   * @param {Bar} bar - Объект такта
+   */
+  handleBarChange(barIndex, bar) {
+    console.log('🔄 Смена такта:', barIndex);
+    
+    // Обновляем отображение аккордов при смене такта
+    this.updateChordDisplay();
+    
+    if (this.callbacks.onBarChange) {
+      this.callbacks.onBarChange(barIndex, bar);
+    }
+  }
+
+  /**
+   * Обрабатывает навигацию по тактам через BarNavigation
+   * @param {number} barIndex - Индекс нового такта
+   */
+  handleBarNavigationChange(barIndex) {
+    console.log('🧭 Навигация по тактам:', barIndex);
+    
+    // Синхронизируем с BarDisplay если он инициализирован
+    if (this.barDisplay && this.domElements.barContainer) {
+      this.barDisplay.goToBar(barIndex);
+    }
+    
+    // Принудительно обновляем отображение аккордов
+    console.log('🎵 Принудительное обновление ChordDisplay после смены такта');
+    this.updateChordDisplay();
+    
+    // Вызываем общий колбэк смены такта
+    const currentBar = this.bars[barIndex] || null;
+    if (this.callbacks.onBarChange) {
+      this.callbacks.onBarChange(barIndex, currentBar);
+    }
+  }
+
+  /**
+   * Обрабатывает начало воспроизведения
+   */
+  handlePlaybackStart() {
+    console.log('▶️ Начало воспроизведения');
+    this.settings.isPlaying = true;
+    
+    if (this.callbacks.onPlaybackStart) {
+      this.callbacks.onPlaybackStart();
+    }
+  }
+
+  /**
+   * Обрабатывает остановку воспроизведения
+   */
+  handlePlaybackStop() {
+    console.log('⏹️ Остановка воспроизведения');
+    this.settings.isPlaying = false;
+    
+    if (this.callbacks.onPlaybackStop) {
+      this.callbacks.onPlaybackStop();
+    }
+  }
+
+  /**
+   * Обновляет отображение
+   */
+  updateDisplay() {
+    // Обновляем отображение тактов (если инициализирован)
+    if (this.barDisplay && this.domElements.barContainer) {
+      this.barDisplay.setBars(this.bars);
+    }
+    
+    // Обновляем навигацию по тактам
+    this.barNavigation.setTotalBars(this.bars.length);
+    
+    // Обновляем отображение стрелочек
+    if (this.arrowDisplay) {
+      this.arrowDisplay.setArrowCount(this.settings.beatCount);
+    }
+    
+    // Обновляем отображение аккордов
+    this.updateChordDisplay();
+    
+    // Обновляем информацию о состоянии
+    this.updateStatusInfo();
+  }
+
+  /**
+   * Обрабатывает изменение состояния воспроизведения
+   * @param {number} index - Индекс стрелочки
+   * @param {PlayStatus} playStatus - Новое состояние воспроизведения
+   */
+  handlePlayStatusChange(index, playStatus) {
+    console.log(`🔄 Изменение состояния воспроизведения для стрелочки ${index + 1}:`, {
+      статус: playStatus.getStatusString(),
+      символ: playStatus.getDisplaySymbol(),
+      играет: playStatus.isPlayed(),
+      приглушен: playStatus.isMuted(),
+      пропущен: playStatus.isSkipped()
+    });
+    
+    // Здесь можно добавить логику для обновления тактов или других компонентов
+    // Например, обновить текущий такт с новыми состояниями воспроизведения
+    if (this.bars && this.bars.length > 0 && this.barNavigation) {
+      const currentBarIndex = this.barNavigation.getCurrentBarIndex();
+      if (currentBarIndex >= 0 && currentBarIndex < this.bars.length) {
+        const currentBar = this.bars[currentBarIndex];
+        currentBar.setBeatPlayStatus(index, playStatus);
+        console.log(`📝 Обновлен такт ${currentBarIndex + 1}, позиция ${index + 1}`);
+      }
+    }
+  }
+
+  /**
+   * Обновляет информацию о состоянии
+   */
+  updateStatusInfo() {
+    const stats = this.chordParser.getStats();
+    const state = this.barDisplay && this.domElements.barContainer ? this.barDisplay.getState() : null;
+    const arrowState = this.arrowDisplay ? this.arrowDisplay.getState() : null;
+    const chordDisplayState = this.chordDisplay ? this.chordDisplay.getState() : null;
+    const navigationState = this.barNavigation ? this.barNavigation.getState() : null;
+    
+    console.log('📈 Статистика:', {
+      аккорды: stats,
+      такты: state,
+      стрелочки: arrowState,
+      отображение_аккордов: chordDisplayState,
+      навигация_по_тактам: navigationState,
+      настройки: this.settings
+    });
+  }
+
+  /**
+   * Показывает модальное окно политики конфиденциальности
+   */
+  showPrivacyPolicy() {
+    this.privacyModal.show();
+  }
+
+  /**
+   * Показывает модальное окно условий использования
+   */
+  showTermsOfUse() {
+    this.termsModal.show();
+  }
+
+  /**
+   * Показывает ошибку пользователю
+   * @param {string} message - Сообщение об ошибке
+   */
+  showError(message) {
+    console.error('❌ Ошибка:', message);
+    this.modal.open('Ошибка', `<p class="text-red-400">${message}</p>`);
+  }
+
+  /**
+   * Сохраняет данные в localStorage
+   */
+  saveData() {
+    try {
+      const data = {
+        settings: this.settings,
+        chords: this.chordParser.toJSON(),
+        bars: this.bars.map(bar => bar.toJSON()),
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem('guitarCombatData', JSON.stringify(data));
+      console.log('💾 Данные сохранены');
+    } catch (error) {
+      console.error('❌ Ошибка сохранения:', error);
+    }
+  }
+
+  /**
+   * Загружает сохраненные данные из localStorage
+   */
+  loadSavedData() {
+    try {
+      const saved = localStorage.getItem('guitarCombatData');
+      if (!saved) return;
+      
+      const data = JSON.parse(saved);
+      
+      // Восстанавливаем настройки
+      if (data.settings) {
+        this.settings = { ...this.settings, ...data.settings };
+      }
+      
+      // Восстанавливаем аккорды
+      if (data.chords) {
+        this.chordParser = ChordParser.fromJSON(data.chords);
+      }
+      
+      // Восстанавливаем такты
+      if (data.bars) {
+        this.bars = data.bars.map(barData => Bar.fromJSON(barData));
+      }
+      
+      // Обновляем поля ввода
+      if (this.domElements.chordsInput && this.chordParser.parsedChords.length > 0) {
+        this.domElements.chordsInput.value = this.chordParser.parsedChords.join(' ');
+      }
+      
+      if (this.domElements.beatCountInput) {
+        this.domElements.beatCountInput.value = this.settings.beatCount;
+      }
+      
+      if (this.domElements.bpmInput) {
+        this.domElements.bpmInput.value = this.settings.bpm;
+      }
+      
+      if (this.domElements.countSelect) {
+        this.domElements.countSelect.value = this.settings.beatCount;
+      }
+      
+      console.log('📂 Данные загружены');
+    } catch (error) {
+      console.error('❌ Ошибка загрузки:', error);
+    }
+  }
+
+  /**
+   * Очищает все данные
+   */
+  clearAllData() {
+    this.bars = [];
+    this.chordParser.clear();
+    
+    if (this.domElements.chordsInput) {
+      this.domElements.chordsInput.value = '';
+    }
+    
+    this.updateDisplay();
+    this.saveData();
+    
+    console.log('🗑️ Все данные очищены');
+  }
+
+  /**
+   * Устанавливает колбэк для изменения аккордов
+   * @param {Function} callback - Колбэк функция
+   */
+  setOnChordsChange(callback) {
+    this.callbacks.onChordsChange = callback;
+  }
+
+  /**
+   * Устанавливает колбэк для смены такта
+   * @param {Function} callback - Колбэк функция
+   */
+  setOnBarChange(callback) {
+    this.callbacks.onBarChange = callback;
+  }
+
+  /**
+   * Устанавливает колбэк для начала воспроизведения
+   * @param {Function} callback - Колбэк функция
+   */
+  setOnPlaybackStart(callback) {
+    this.callbacks.onPlaybackStart = callback;
+  }
+
+  /**
+   * Устанавливает колбэк для остановки воспроизведения
+   * @param {Function} callback - Колбэк функция
+   */
+  setOnPlaybackStop(callback) {
+    this.callbacks.onPlaybackStop = callback;
+  }
+
+  /**
+   * Получает текущее состояние приложения
+   * @returns {Object} Состояние приложения
+   */
+  getState() {
+    return {
+      settings: { ...this.settings },
+      chordStats: this.chordParser.getStats(),
+      displayState: this.barDisplay && this.domElements.barContainer ? this.barDisplay.getState() : null,
+      arrowState: this.arrowDisplay ? this.arrowDisplay.getState() : null,
+      chordDisplayState: this.chordDisplay ? this.chordDisplay.getState() : null,
+      navigationState: this.barNavigation ? this.barNavigation.getState() : null,
+      barsCount: this.bars.length
+    };
+  }
+
+  /**
+   * Получает экземпляр приложения (синглтон)
+   * @returns {GuitarCombatApp} Экземпляр приложения
+   */
+  static getInstance() {
+    if (!GuitarCombatApp.instance) {
+      GuitarCombatApp.instance = new GuitarCombatApp();
+    }
+    return GuitarCombatApp.instance;
+  }
+}
+
+// Экспорт для использования в других модулях
+export default GuitarCombatApp;
+
+// Автоматическая инициализация при загрузке DOM
+document.addEventListener('DOMContentLoaded', () => {
+  const app = GuitarCombatApp.getInstance();
+  app.init();
 });
 
-// Добавляем обработчик для кнопки импорта песни
-document.addEventListener('click', (e) => {
-  const importSongBtn = e.target.closest('#importSongBtn');
-  if (importSongBtn) {
-    console.log('Кнопка "Импорт песни" нажата');
-    if (window.app && window.app.importUtils) {
-      try {
-        console.log('Запускаем импорт песни...');
-        window.app.importUtils.triggerImport();
-      } catch (error) {
-        console.error('Ошибка при импорте песни:', error);
-        alert('Ошибка при импорте песни. Проверьте консоль для подробностей.');
-      }
-    } else {
-      console.error('ImportUtils не найден в window.app');
-      alert('Ошибка: модуль импорта не инициализирован');
-    }
-  }
-});
-});
+// Экспорт в глобальную область для отладки
+window.GuitarCombatApp = GuitarCombatApp;
