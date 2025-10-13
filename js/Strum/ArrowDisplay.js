@@ -196,8 +196,8 @@ export class ArrowDisplay {
       <div class="arrow-icon ${colorClass} transition-colors duration-200 mb-2" style="width: ${this.arrowSize}px; height: ${this.arrowSize}px;">
         ${svgContent}
       </div>
-      <div class="play-status-circle cursor-pointer transition-all duration-200 hover:scale-110" 
-           data-index="${arrow.index}" 
+      <div class="play-status-circle cursor-pointer transition-all duration-200 hover:scale-110"
+           data-index="${arrow.index}"
            title="Кликните для изменения: ${playStatus.getStatusString()}">
         ${playStatus.getDisplayHTML()}
       </div>
@@ -523,10 +523,16 @@ export class ArrowDisplay {
    */
   setAllPlayStatuses(playStatuses) {
     if (Array.isArray(playStatuses)) {
-      this.playStatuses = playStatuses.map(status => 
-        status instanceof PlayStatus ? status : new PlayStatus(status)
-      );
+      console.log('🎯 ArrowDisplay.setAllPlayStatuses: устанавливаем', playStatuses.length, 'статусов');
+      
+      this.playStatuses = playStatuses.map((status, index) => {
+        const playStatus = status instanceof PlayStatus ? status : new PlayStatus(status);
+        return playStatus;
+      });
+      
       this.updateDisplay();
+    } else {
+      console.warn('⚠️ setAllPlayStatuses получил не массив:', playStatuses);
     }
   }
 

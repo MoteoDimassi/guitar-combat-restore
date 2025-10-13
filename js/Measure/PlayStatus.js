@@ -78,13 +78,13 @@ export class PlayStatus {
    */
   getDisplayHTML() {
     switch (this.status) {
-      case PlayStatus.STATUS.SKIP: 
+      case PlayStatus.STATUS.SKIP:
         return '<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#6b7280" stroke-width="2"/></svg>';
-      case PlayStatus.STATUS.PLAY: 
+      case PlayStatus.STATUS.PLAY:
         return '<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ef4444" stroke="none"/></svg>';
-      case PlayStatus.STATUS.MUTED: 
+      case PlayStatus.STATUS.MUTED:
         return '<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="white" stroke-width="2"/><path d="M8 8l8 8M16 8l-8 8" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/></svg>';
-      default: 
+      default:
         return '<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="red" stroke-width="2"/></svg>';
     }
   }

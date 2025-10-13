@@ -13,10 +13,14 @@ import { BarSequenceBuilder } from './Measure/BarSequenceBuilder.js';
 import { BarNavigation } from './Measure/BarNavigation.js';
 import { BarDisplay } from './View/BarDisplay.js';
 import { ArrowDisplay } from './Strum/ArrowDisplay.js';
+import { RandomStrumGenerator } from './Strum/RandomStrumGenerator.js';
 import { Modal } from './ModalWindows/Modal.js';
 import { PrivacyPolicyModal } from './ModalWindows/PrivacyPolicyModal.js';
 import { TermsOfUseModal } from './ModalWindows/TermsOfUseModal.js';
 import { PlayStatus } from './Measure/PlayStatus.js';
+import { DownloadManager } from './Functions/DownloadManager.js';
+import { TempoManager } from './Functions/TempoManager.js';
+import { ImportStrumFromJSON } from './Functions/ImportStrumFromJSON.js';
 
 /**
  * Главный класс приложения Guitar Combat
@@ -32,9 +36,13 @@ export class GuitarCombatApp {
     this.barNavigation = new BarNavigation();
     this.barDisplay = new BarDisplay();
     this.arrowDisplay = new ArrowDisplay();
+    this.randomStrumGenerator = new RandomStrumGenerator();
     this.modal = new Modal();
     this.privacyModal = new PrivacyPolicyModal();
     this.termsModal = new TermsOfUseModal();
+    this.downloadManager = new DownloadManager();
+    this.tempoManager = new TempoManager();
+    this.importStrumFromJSON = new ImportStrumFromJSON(this);
     
     // Массив тактов
     this.bars = [];
@@ -83,11 +91,17 @@ export class GuitarCombatApp {
       // Синхронизируем настройки с DOM элементами
       this.syncSettingsWithDOM();
       
-      // Инициализация компонентов
-      this.initComponents();
-      
-      // Привязка событий
-      this.bindEvents();
+    // Инициализация компонентов
+    this.initComponents();
+    
+    // Привязка событий
+    this.bindEvents();
+    
+    // Инициализация менеджера темпа
+    this.initTempoManager();
+    
+    // Инициализация импорта JSON
+    this.importStrumFromJSON.init();
       
       // Загрузка сохраненных данных
       this.loadSavedData();
@@ -154,7 +168,35 @@ export class GuitarCombatApp {
       this.settings.bpm = parseInt(this.domElements.bpmInput.value) || 120;
     }
     
+    // Синхронизируем BPM с TempoManager (если инициализирован)
+    if (this.tempoManager && this.tempoManager.isReady()) {
+      this.tempoManager.setTempo(this.settings.bpm);
+    }
+    
     console.log('🔄 Настройки синхронизированы с DOM:', this.settings);
+  }
+
+  /**
+   * Инициализирует менеджер темпа
+   */
+  initTempoManager() {
+    try {
+      console.log('🎼 Инициализация TempoManager...');
+      
+      // Инициализируем менеджер темпа
+      this.tempoManager.init();
+      
+      // Устанавливаем колбэк для изменения темпа
+      this.tempoManager.setOnTempoChange((bpm) => {
+        this.handleTempoChange(bpm);
+      });
+      
+      console.log('✅ TempoManager успешно инициализирован');
+      
+    } catch (error) {
+      console.error('❌ Ошибка инициализации TempoManager:', error);
+      // Не прерываем инициализацию приложения, если TempoManager не инициализировался
+    }
   }
 
   /**
@@ -252,6 +294,22 @@ export class GuitarCombatApp {
       });
     }
 
+    // Обработчик кнопки "Случайный бой"
+    const generateBtn = document.getElementById('generateBtn');
+    if (generateBtn) {
+      generateBtn.addEventListener('click', () => {
+        this.generateRandomStrum();
+      });
+    }
+
+    // Обработчик кнопки скачивания настроек
+    const downloadJsonBtn = document.getElementById('downloadJson');
+    if (downloadJsonBtn) {
+      downloadJsonBtn.addEventListener('click', () => {
+        this.downloadManager.downloadJson();
+      });
+    }
+
     // Обработчики кнопок навигации и воспроизведения
     // Привязываются автоматически в BarDisplay
   }
@@ -340,6 +398,21 @@ export class GuitarCombatApp {
       this.settings.bpm = bpm;
       this.saveData();
     }
+  }
+
+  /**
+   * Обрабатывает изменение темпа через TempoManager
+   * @param {number} bpm - Темп в ударах в минуту
+   */
+  handleTempoChange(bpm) {
+    console.log('🎼 Изменение темпа через TempoManager:', bpm);
+    this.settings.bpm = bpm;
+    this.saveData();
+    
+    // Здесь можно добавить дополнительную логику, например:
+    // - Обновление метронома
+    // - Пересчет интервалов воспроизведения
+    // - Уведомление других компонентов об изменении темпа
   }
 
   /**
@@ -650,6 +723,7 @@ export class GuitarCombatApp {
         settings: this.settings,
         chords: this.chordParser.toJSON(),
         bars: this.bars.map(bar => bar.toJSON()),
+        tempoManager: this.tempoManager ? this.tempoManager.toJSON() : null,
         timestamp: new Date().toISOString()
       };
       
@@ -683,6 +757,11 @@ export class GuitarCombatApp {
       // Восстанавливаем такты
       if (data.bars) {
         this.bars = data.bars.map(barData => Bar.fromJSON(barData));
+      }
+      
+      // Восстанавливаем состояние TempoManager
+      if (data.tempoManager && this.tempoManager) {
+        this.tempoManager.fromJSON(data.tempoManager);
       }
       
       // Обновляем поля ввода
@@ -769,8 +848,17 @@ export class GuitarCombatApp {
       arrowState: this.arrowDisplay ? this.arrowDisplay.getState() : null,
       chordDisplayState: this.chordDisplay ? this.chordDisplay.getState() : null,
       navigationState: this.barNavigation ? this.barNavigation.getState() : null,
+      tempoManagerState: this.tempoManager ? this.tempoManager.getState() : null,
       barsCount: this.bars.length
     };
+  }
+
+  /**
+   * Получает менеджер темпа
+   * @returns {TempoManager} Менеджер темпа
+   */
+  getTempoManager() {
+    return this.tempoManager;
   }
 
   /**
@@ -783,6 +871,66 @@ export class GuitarCombatApp {
     }
     return GuitarCombatApp.instance;
   }
+
+  /**
+   * Генерирует случайный бой для текущего количества стрелочек
+   */
+  generateRandomStrum() {
+    try {
+      console.log('🎲 Генерация случайного боя...');
+      
+      // Получаем текущее количество стрелочек
+      const currentCount = this.arrowDisplay.currentCount || 8;
+      
+      // Генерируем случайный бой
+      const randomPlayStatuses = this.randomStrumGenerator.generateRandomStrum(currentCount);
+      
+      // Устанавливаем новые состояния в ArrowDisplay
+      this.arrowDisplay.setAllPlayStatuses(randomPlayStatuses);
+      
+      // Анализируем сгенерированный бой
+      const analysis = this.randomStrumGenerator.analyzeStrum(randomPlayStatuses);
+      
+      console.log('✅ Случайный бой сгенерирован:', analysis);
+      
+      // Показываем краткую информацию пользователю
+      this.showNotification(
+        `Случайный бой сгенерирован! Играющих долей: ${analysis.playCount}/${analysis.total}`
+      );
+      
+    } catch (error) {
+      console.error('❌ Ошибка генерации случайного боя:', error);
+      this.showError('Ошибка генерации случайного боя');
+    }
+  }
+
+  /**
+   * Показывает уведомление пользователю
+   * @param {string} message - Сообщение
+   */
+  showNotification(message) {
+    // Простая реализация уведомления
+    console.log('📢', message);
+    
+    // Можно расширить для показа в UI
+    if (typeof window !== 'undefined' && window.alert) {
+      // Для отладки - показываем alert
+      // window.alert(message);
+    }
+  }
+
+  /**
+   * Показывает ошибку пользователю
+   * @param {string} error - Сообщение об ошибке
+   */
+  showError(error) {
+    console.error('❌', error);
+    
+    // Можно расширить для показа в UI
+    if (typeof window !== 'undefined' && window.alert) {
+      window.alert(`Ошибка: ${error}`);
+    }
+  }
 }
 
 // Экспорт для использования в других модулях
@@ -792,7 +940,11 @@ export default GuitarCombatApp;
 document.addEventListener('DOMContentLoaded', () => {
   const app = GuitarCombatApp.getInstance();
   app.init();
+  
+  // Делаем приложение доступным глобально для DownloadManager
+  window.guitarCombatApp = app;
 });
 
 // Экспорт в глобальную область для отладки
 window.GuitarCombatApp = GuitarCombatApp;
+window.TempoManager = TempoManager;
