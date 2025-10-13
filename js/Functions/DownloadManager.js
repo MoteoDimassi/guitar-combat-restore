@@ -2,19 +2,39 @@ import { PlayStatus } from '../Measure/PlayStatus.js';
 
 /**
  * DownloadManager - класс для скачивания настроек боя
- * Собирает данные о стрелочках, аккордах, темпе и статусах
+ * Поддерживает множественные форматы экспорта с фокусом на тактовую структуру
  */
 class DownloadManager {
     constructor() {
         this.data = {
             timestamp: new Date().toISOString(),
-            version: "1.0",
+            version: "2.0",
             settings: {}
+        };
+        this.exportFormats = ['v2', 'current', 'legacy'];
+    }
+
+    /**
+     * Собирает все данные о настройках боя в новом формате
+     * @returns {Object} Объект с настройками боя в формате v2
+     */
+    collectBattleSettingsV2() {
+        const bars = this.collectBarsDataV2();
+        const metadata = this.collectMetadata();
+        const songStructure = this.collectSongStructure();
+        const templates = this.collectTemplates();
+        
+        return {
+            version: "2.0",
+            metadata: metadata,
+            songStructure: songStructure,
+            bars: bars,
+            templates: templates
         };
     }
 
     /**
-     * Собирает все данные о настройках боя
+     * Собирает все данные о настройках боя (для обратной совместимости)
      * @returns {Object} Объект с настройками боя
      */
     collectBattleSettings() {
@@ -27,6 +47,263 @@ class DownloadManager {
             bars: this.getBarsData()
         };
         return this.data;
+    }
+
+    /**
+     * Собирает метаданные о композиции
+     * @returns {Object} Метаданные
+     */
+    collectMetadata() {
+        const app = window.guitarCombatApp;
+        
+        return {
+            title: app?.songTitle || "Без названия",
+            artist: app?.songArtist || "",
+            tempo: this.getTempo(),
+            timeSignature: `${this.getArrowsPerBar()}/4`,
+            createdAt: new Date().toISOString(),
+            description: "Создано в Guitar Combat",
+            // Дополнительные метаданные
+            totalBars: app?.bars?.length || 1,
+            totalBeats: this.getTotalBeats(),
+            duration: this.calculateDuration()
+        };
+    }
+
+    /**
+     * Собирает информацию о структуре песни
+     * @returns {Object} Структура песни
+     */
+    collectSongStructure() {
+        const app = window.guitarCombatApp;
+        
+        return {
+            beatCount: this.getArrowsPerBar(),
+            totalBars: app?.bars?.length || 1,
+            currentBar: app?.barNavigation?.getCurrentBarIndex() || 0,
+            // Информация о повторениях
+            hasRepeats: this.detectRepeats(),
+            repeatStructure: this.getRepeatStructure()
+        };
+    }
+
+    /**
+     * Собирает полную информацию о тактах
+     * @returns {Array} Массив тактов с детальной информацией
+     */
+    collectBarsDataV2() {
+        const app = window.guitarCombatApp;
+        const bars = [];
+        
+        if (!app || !app.bars || app.bars.length === 0) {
+            // Если тактов нет, создаём один такт из текущих настроек
+            return [this.createBarFromCurrentSettings()];
+        }
+        
+        // Собираем данные из существующих тактов
+        app.bars.forEach((bar, index) => {
+            const barData = {
+                index: index,
+                beatUnits: this.collectBeatUnits(bar),
+                chordChanges: this.collectChordChanges(bar),
+                lyricSyllables: this.collectLyricSyllables(bar),
+                // Дополнительная информация о такте
+                metadata: {
+                    isActive: this.isBarActive(index),
+                    hasChords: bar.chordChanges && bar.chordChanges.length > 0,
+                    hasLyrics: bar.lyricSyllables && bar.lyricSyllables.length > 0,
+                    playingBeats: this.countPlayingBeats(bar)
+                }
+            };
+            
+            bars.push(barData);
+        });
+        
+        return bars;
+    }
+
+    /**
+     * Собирает информацию о долях в такте
+     * @param {Bar} bar - Объект такта
+     * @returns {Array} Массив долей
+     */
+    collectBeatUnits(bar) {
+        const beatUnits = [];
+        
+        if (bar.beatUnits && bar.beatUnits.length > 0) {
+            bar.beatUnits.forEach((beatUnit, index) => {
+                const beatData = {
+                    index: index,
+                    direction: index % 2 === 0 ? 'down' : 'up',
+                    playStatus: {
+                        status: beatUnit.playStatus.status,
+                        statusString: beatUnit.playStatus.getStatusString(),
+                        displaySymbol: beatUnit.playStatus.getDisplaySymbol()
+                    }
+                };
+                
+                // Дополнительная информация
+                beatData.metadata = {
+                    isPlayed: beatUnit.isPlayed(),
+                    isMuted: beatUnit.isMuted(),
+                    isSkipped: beatUnit.isSkipped(),
+                    cssClass: beatUnit.getCSSClass()
+                };
+                
+                beatUnits.push(beatData);
+            });
+        } else {
+            // Если beatUnits нет, создаём из ArrowDisplay
+            const arrowDisplay = window.guitarCombatApp?.arrowDisplay;
+            if (arrowDisplay) {
+                const playStatuses = arrowDisplay.getAllPlayStatuses();
+                playStatuses.forEach((playStatus, index) => {
+                    beatUnits.push({
+                        index: index,
+                        direction: index % 2 === 0 ? 'down' : 'up',
+                        playStatus: {
+                            status: playStatus.status,
+                            statusString: playStatus.getStatusString(),
+                            displaySymbol: playStatus.getDisplaySymbol()
+                        }
+                    });
+                });
+            }
+        }
+        
+        return beatUnits;
+    }
+
+    /**
+     * Собирает информацию о сменах аккордов в такте
+     * @param {Bar} bar - Объект такта
+     * @returns {Array} Массив смен аккордов
+     */
+    collectChordChanges(bar) {
+        const chordChanges = [];
+        
+        if (bar.chordChanges && bar.chordChanges.length > 0) {
+            bar.chordChanges.forEach(chordChange => {
+                chordChanges.push({
+                    name: chordChange.name,
+                    startBeat: chordChange.startBeat,
+                    endBeat: chordChange.endBeat,
+                    duration: chordChange.getDuration()
+                });
+            });
+        } else {
+            // Пробуем получить аккорды из ChordParser
+            const app = window.guitarCombatApp;
+            if (app && app.chordParser) {
+                const validChords = app.chordParser.getValidChords();
+                if (validChords.length > 0) {
+                    chordChanges.push({
+                        name: validChords[0].name,
+                        startBeat: 0,
+                        endBeat: bar.beatCount || 4,
+                        duration: bar.beatCount || 4
+                    });
+                }
+            }
+        }
+        
+        return chordChanges;
+    }
+
+    /**
+     * Собирает информацию о слогах в такте
+     * @param {Bar} bar - Объект такта
+     * @returns {Array} Массив слогов
+     */
+    collectLyricSyllables(bar) {
+        const syllables = [];
+        
+        if (bar.lyricSyllables && bar.lyricSyllables.length > 0) {
+            bar.lyricSyllables.forEach(syllable => {
+                syllables.push({
+                    text: syllable.text,
+                    startBeat: syllable.startBeat,
+                    duration: syllable.duration,
+                    endBeat: syllable.endBeat
+                });
+            });
+        }
+        
+        return syllables;
+    }
+
+    /**
+     * Собирает информацию о шаблонах
+     * @returns {Object} Данные о шаблонах
+     */
+    collectTemplates() {
+        const app = window.guitarCombatApp;
+        
+        return {
+            strummingPattern: app?.currentStrummingPattern || "custom",
+            customizations: {
+                mutePattern: this.getMutePattern(),
+                emphasisPattern: this.getEmphasisPattern(),
+                dynamics: this.getDynamicsPattern()
+            },
+            generationInfo: {
+                generatedAt: new Date().toISOString(),
+                source: "Guitar Combat",
+                version: "2.0"
+            }
+        };
+    }
+
+    /**
+     * Создаёт такт из текущих настроек (если тактов нет)
+     * @returns {Object} Данные такта
+     */
+    createBarFromCurrentSettings() {
+        const beatCount = this.getArrowsPerBar();
+        const arrowDisplay = window.guitarCombatApp?.arrowDisplay;
+        
+        const beatUnits = [];
+        for (let i = 0; i < beatCount; i++) {
+            let playStatus = PlayStatus.STATUS.SKIP;
+            
+            if (arrowDisplay) {
+                const status = arrowDisplay.getPlayStatus(i);
+                if (status) {
+                    playStatus = status.status;
+                }
+            }
+            
+            beatUnits.push({
+                index: i,
+                direction: i % 2 === 0 ? 'down' : 'up',
+                playStatus: {
+                    status: playStatus,
+                    statusString: playStatus === 1 ? 'играть' : playStatus === 2 ? 'с приглушиванием' : 'не играть',
+                    displaySymbol: playStatus === 1 ? '●' : playStatus === 2 ? '⊗' : '○'
+                }
+            });
+        }
+        
+        // Получаем аккорды
+        const chords = this.getChords();
+        const chordChanges = chords.length > 0 ? [{
+            name: chords[0],
+            startBeat: 0,
+            endBeat: beatCount
+        }] : [];
+        
+        return {
+            index: 0,
+            beatUnits: beatUnits,
+            chordChanges: chordChanges,
+            lyricSyllables: [],
+            metadata: {
+                isActive: true,
+                hasChords: chords.length > 0,
+                hasLyrics: false,
+                playingBeats: beatUnits.filter(b => b.playStatus.status !== 0).length
+            }
+        };
     }
 
     /**
@@ -263,12 +540,35 @@ class DownloadManager {
     }
 
     /**
-     * Скачивает настройки в формате JSON
+     * Скачивает настройки в указанном формате
+     * @param {string} format - Формат экспорта ('v2', 'current', 'legacy')
      */
-    downloadJson() {
+    downloadJson(format = 'v2') {
         try {
-            const settings = this.collectBattleSettings();
-            const jsonString = JSON.stringify(settings, null, 2);
+            let data;
+            let filename;
+            
+            switch (format) {
+                case 'v2':
+                    data = this.collectBattleSettingsV2();
+                    filename = `guitar-combat-v2-${new Date().toISOString().split('T')[0]}.json`;
+                    break;
+                    
+                case 'current':
+                    data = this.collectBattleSettings();
+                    filename = `guitar-combat-current-${new Date().toISOString().split('T')[0]}.json`;
+                    break;
+                    
+                case 'legacy':
+                    data = this.exportToLegacyFormat();
+                    filename = `guitar-compat-legacy-${new Date().toISOString().split('T')[0]}.json`;
+                    break;
+                    
+                default:
+                    throw new Error(`Неподдерживаемый формат: ${format}`);
+            }
+            
+            const jsonString = JSON.stringify(data, null, 2);
             
             // Создаем blob с JSON данными
             const blob = new Blob([jsonString], { type: 'application/json' });
@@ -277,7 +577,7 @@ class DownloadManager {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `guitar-combat-settings-${new Date().toISOString().split('T')[0]}.json`;
+            link.download = filename;
             
             // Добавляем ссылку в DOM, кликаем и удаляем
             document.body.appendChild(link);
@@ -287,12 +587,31 @@ class DownloadManager {
             // Освобождаем память
             URL.revokeObjectURL(url);
             
-            console.log('Настройки боя скачаны:', settings);
+            console.log(`Настройки боя скачаны в формате ${format}:`, data);
             
         } catch (error) {
             console.error('Ошибка при скачивании настроек:', error);
             alert('Произошла ошибка при скачивании настроек. Проверьте консоль для подробностей.');
         }
+    }
+
+    /**
+     * Экспортирует данные в старый формат (для совместимости)
+     * @returns {Object} Данные в старом формате
+     */
+    exportToLegacyFormat() {
+        const v2Data = this.collectBattleSettingsV2();
+        const firstBar = v2Data.bars[0];
+        
+        return {
+            beats: firstBar.beatUnits.map(unit => ({
+                direction: unit.direction,
+                play: unit.playStatus.status
+            })),
+            bpm: v2Data.metadata.tempo,
+            speed: 100,
+            timestamp: v2Data.metadata.createdAt
+        };
     }
 
     /**
@@ -311,6 +630,59 @@ class DownloadManager {
 • Тактов: ${settings.settings.bars.length}
 • Стрелочки: ${settings.settings.arrows.length}
         `.trim();
+    }
+
+    /**
+     * Вспомогательные методы для нового формата
+     */
+    getTotalBeats() {
+        const app = window.guitarCombatApp;
+        if (app && app.bars) {
+            return app.bars.reduce((total, bar) => total + (bar.beatCount || 4), 0);
+        }
+        return this.getArrowsPerBar();
+    }
+
+    calculateDuration() {
+        const tempo = this.getTempo();
+        const totalBeats = this.getTotalBeats();
+        // Длительность в секундах = (количество_ударов / темп) * 60
+        return Math.round((totalBeats / tempo) * 60);
+    }
+
+    detectRepeats() {
+        // Логика определения повторений в композиции
+        return false; // Заглушка
+    }
+
+    getRepeatStructure() {
+        // Логика получения структуры повторений
+        return []; // Заглушка
+    }
+
+    isBarActive(index) {
+        // Проверка, активен ли такт
+        return true; // Заглушка
+    }
+
+    countPlayingBeats(bar) {
+        if (!bar.beatUnits) return 0;
+        return bar.beatUnits.filter(beat => beat.isPlayed()).length;
+    }
+
+    getMutePattern() {
+        // Получение паттерна глушения
+        return []; // Заглушка
+    }
+
+    getEmphasisPattern() {
+        // Получение паттерна акцентов
+        return []; // Заглушка
+    }
+
+    getDynamicsPattern() {
+        // Получение паттерна динамики
+        return []; // Заглушка
     }
 }
 

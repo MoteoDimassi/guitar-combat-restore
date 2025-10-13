@@ -1,0 +1,240 @@
+{
+  "version": "2.0",
+  "templateInfo": {
+    "name": "Пример поп-песни",
+    "id": "pop-song-example",
+    "category": "song",
+    "difficulty": "intermediate",
+    "description": "Пример поп-песни с аккордами и текстом",
+    "tags": ["song", "chords", "lyrics", "example"],
+    "author": "Guitar Combat",
+    "createdAt": "2025-10-13T10:08:07.701Z"
+  },
+  "metadata": {
+    "title": "Пример песни",
+    "artist": "Пример исполнителя",
+    "tempo": 120,
+    "timeSignature": "4/4",
+    "description": "Пример поп-песни с аккордами и текстом для демонстрации возможностей"
+  },
+  "songStructure": {
+    "beatCount": 4,
+    "totalBars": 8,
+    "structure": ["verse", "verse", "chorus", "chorus"]
+  },
+  "bars": [
+    {
+      "index": 0,
+      "section": "verse",
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "C",
+          "startBeat": 0,
+          "endBeat": 4
+        }
+      ],
+      "lyricSyllables": [
+        {
+          "text": "Пер-",
+          "startBeat": 0,
+          "duration": 2
+        },
+        {
+          "text": "вый ",
+          "startBeat": 2,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "section": "verse",
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "Am",
+          "startBeat": 0,
+          "endBeat": 4
+        }
+      ],
+      "lyricSyllables": [
+        {
+          "text": "ку-",
+          "startBeat": 0,
+          "duration": 2
+        },
+        {
+          "text": "плет",
+          "startBeat": 2,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "section": "chorus",
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": { "status": 0, "statusString": "не играть" }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "F",
+          "startBeat": 0,
+          "endBeat": 2
+        },
+        {
+          "name": "G",
+          "startBeat": 2,
+          "endBeat": 4
+        }
+      ],
+      "lyricSyllables": [
+        {
+          "text": "При-",
+          "startBeat": 0,
+          "duration": 2
+        },
+        {
+          "text": "пев",
+          "startBeat": 2,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "section": "chorus",
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": { "status": 1, "statusString": "играть" }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "C",
+          "startBeat": 0,
+          "endBeat": 4
+        }
+      ],
+      "lyricSyllables": [
+        {
+          "text": "ко-",
+          "startBeat": 0,
+          "duration": 2
+        },
+        {
+          "text": "ро-",
+          "startBeat": 2,
+          "duration": 2
+        }
+      ]
+    }
+  ],
+  "templates": {
+    "strummingPattern": "Простой ровный бой",
+    "customizations": {
+      "accentPattern": [true, false, true, false],
+      "mutePattern": [false, false, false, false],
+      "dynamics": [1.0, 0.8, 1.0, 0.8]
+    },
+    "variations": [
+      {
+        "name": "Более энергичный припев",
+        "description": "Усиление акцентов в припеве",
+        "accentPattern": [true, false, true, true]
+      }
+    ]
+  },
+  "educational": {
+    "learningTips": [
+      "Следите за сменой аккордов в тактах 2 и 3",
+      "В припеве используйте более сильные удары",
+      "Текст должен совпадать с ритмом игры"
+    ],
+    "commonMistakes": [
+      "Путаница с аккордами в припеве",
+      "Несовпадение текста и ритма",
+      "Слишком сильные удары в куплете"
+    ],
+    "relatedPatterns": ["Простой бой", "Рок-бой"]
+  }
+}

@@ -1,42 +1,109 @@
 {
-  "version": "1.0",
-  "generatedAt": "2025-10-10T09:44:49.944Z",
+  "version": "2.0",
+  "generatedAt": "2025-10-13T10:08:38.039Z",
+  "formats": ["v2", "legacy"],
+  "categories": [
+    {
+      "id": "basic",
+      "name": "Базовые паттерны",
+      "description": "Основные паттерны бо́я для начинающих"
+    },
+    {
+      "id": "advanced",
+      "name": "Сложные паттерны",
+      "description": "Продвинутые паттерны с элементами перебора"
+    },
+    {
+      "id": "song",
+      "name": "Примеры песен",
+      "description": "Готовые примеры песен с аккордами и текстом"
+    }
+  ],
   "templates": [
     {
-      "name": "Восьмёрка",
-      "file": "Восьмёрка.json",
-      "id": "Восьмёрка",
-      "description": "Восьмёрка паттерн (16 ударов)"
+      "name": "Пятерка",
+      "file": "Пятерка-v2.json",
+      "id": "pyaterka",
+      "category": "basic",
+      "description": "Пятерка паттерн (8 ударов)",
+      "difficulty": "beginner",
+      "tags": ["basic", "strumming", "popular"],
+      "formats": ["v2", "legacy"]
     },
     {
-      "name": "Восьмёрка с глушением",
-      "file": "Восьмёрка с глушением.json",
-      "id": "Восьмёрка с глушением",
-      "description": "Восьмёрка с глушением паттерн (16 ударов)"
+      "name": "Пятерка (legacy)",
+      "file": "Пятерка.json",
+      "id": "pyaterka-legacy",
+      "category": "basic",
+      "description": "Пятерка паттерн (8 ударов) - старый формат",
+      "difficulty": "beginner",
+      "tags": ["basic", "strumming", "popular", "legacy"],
+      "formats": ["legacy"]
     },
     {
-      "name": "Пятёрка",
-      "file": "Пятёрка.json",
-      "id": "Пятёрка",
-      "description": "Пятёрка паттерн (8 ударов)"
+      "name": "Пятерка с глушением",
+      "file": "Пятерка с глушением.json",
+      "id": "pyaterka-mute",
+      "category": "basic",
+      "description": "Пятерка с глушением паттерн (8 ударов)",
+      "difficulty": "intermediate",
+      "tags": ["basic", "strumming", "muted"],
+      "formats": ["legacy"]
     },
     {
-      "name": "Пятёрка с глушением",
-      "file": "Пятёрка с глушением.json",
-      "id": "Пятёрка с глушением",
-      "description": "Пятёрка с глушением паттерн (8 ударов)"
+      "name": "Шестерка",
+      "file": "Шестерка.json",
+      "id": "shestyorka",
+      "category": "basic",
+      "description": "Шестерка паттерн (8 ударов)",
+      "difficulty": "beginner",
+      "tags": ["basic", "strumming"],
+      "formats": ["legacy"]
     },
     {
-      "name": "Шестёрка",
-      "file": "Шестёрка.json",
-      "id": "Шестёрка",
-      "description": "Шестёрка паттерн (8 ударов)"
+      "name": "Шестерка с глушением",
+      "file": "Шестерка с глушением.json",
+      "id": "shestyorka-mute",
+      "category": "basic",
+      "description": "Шестерка с глушением паттерн (8 ударов)",
+      "difficulty": "intermediate",
+      "tags": ["basic", "strumming", "muted"],
+      "formats": ["legacy"]
     },
     {
-      "name": "Шестёрка с глушением",
-      "file": "Шестёрка с глушением.json",
-      "id": "Шестёрка с глушением",
-      "description": "Шестёрка с глушением паттерн (8 ударов)"
+      "name": "Восьмерка",
+      "file": "Восьмерка.json",
+      "id": "vosmeryorka",
+      "category": "basic",
+      "description": "Восьмерка паттерн (16 ударов)",
+      "difficulty": "beginner",
+      "tags": ["basic", "strumming"],
+      "formats": ["legacy"]
+    },
+    {
+      "name": "Восьмерка с глушением",
+      "file": "Восьмерка с глушением.json",
+      "id": "vosmeryorka-mute",
+      "category": "basic",
+      "description": "Восьмерка с глушением паттерн (16 ударов)",
+      "difficulty": "intermediate",
+      "tags": ["basic", "strumming", "muted"],
+      "formats": ["legacy"]
+    },
+    {
+      "name": "Пример поп-песни",
+      "file": "Пример-песни-v2.json",
+      "id": "pop-song-example",
+      "category": "song",
+      "description": "Пример поп-песни с аккордами и текстом",
+      "difficulty": "intermediate",
+      "tags": ["song", "chords", "lyrics"],
+      "formats": ["v2"]
     }
-  ]
+  ],
+  "migration": {
+    "legacySupport": true,
+    "autoConvert": true,
+    "fallbackFormat": "legacy"
+  }
 }

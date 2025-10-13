@@ -21,6 +21,7 @@ import { PlayStatus } from './Measure/PlayStatus.js';
 import { DownloadManager } from './Functions/DownloadManager.js';
 import { TempoManager } from './Functions/TempoManager.js';
 import { ImportStrumFromJSON } from './Functions/ImportStrumFromJSON.js';
+import { TemplateManager } from './Functions/TemplateManager.js';
 
 /**
  * Главный класс приложения Guitar Combat
@@ -43,6 +44,7 @@ export class GuitarCombatApp {
     this.downloadManager = new DownloadManager();
     this.tempoManager = new TempoManager();
     this.importStrumFromJSON = new ImportStrumFromJSON(this);
+    this.templateManager = new TemplateManager();
     
     // Массив тактов
     this.bars = [];
@@ -102,6 +104,9 @@ export class GuitarCombatApp {
     
     // Инициализация импорта JSON
     this.importStrumFromJSON.init();
+    
+    // Инициализация менеджера шаблонов
+    this.templateManager.init();
       
       // Загрузка сохраненных данных
       this.loadSavedData();
@@ -306,7 +311,38 @@ export class GuitarCombatApp {
     const downloadJsonBtn = document.getElementById('downloadJson');
     if (downloadJsonBtn) {
       downloadJsonBtn.addEventListener('click', () => {
-        this.downloadManager.downloadJson();
+        // По умолчанию экспортируем в новом формате v2
+        this.downloadManager.downloadJson('v2');
+      });
+    }
+    
+    // Обработчики кнопок для разных форматов экспорта
+    const downloadV2Btn = document.getElementById('downloadJsonV2');
+    if (downloadV2Btn) {
+      downloadV2Btn.addEventListener('click', () => {
+        this.downloadManager.downloadJson('v2');
+      });
+    }
+    
+    const downloadCurrentBtn = document.getElementById('downloadJsonCurrent');
+    if (downloadCurrentBtn) {
+      downloadCurrentBtn.addEventListener('click', () => {
+        this.downloadManager.downloadJson('current');
+      });
+    }
+    
+    const downloadLegacyBtn = document.getElementById('downloadJsonLegacy');
+    if (downloadLegacyBtn) {
+      downloadLegacyBtn.addEventListener('click', () => {
+        this.downloadManager.downloadJson('legacy');
+      });
+    }
+    
+    // Обработчик кнопки применения шаблона
+    const applyTemplateBtn = document.getElementById('applyTemplate');
+    if (applyTemplateBtn) {
+      applyTemplateBtn.addEventListener('click', () => {
+        this.handleApplyTemplate();
       });
     }
 
@@ -916,6 +952,99 @@ export class GuitarCombatApp {
     if (typeof window !== 'undefined' && window.alert) {
       // Для отладки - показываем alert
       // window.alert(message);
+    }
+  }
+
+  /**
+   * Обрабатывает применение шаблона
+   */
+  async handleApplyTemplate() {
+    try {
+      // Показываем список доступных шаблонов
+      const templates = this.templateManager.getAllTemplates();
+      
+      if (templates.length === 0) {
+        this.showError('Нет доступных шаблонов');
+        return;
+      }
+      
+      // Создаём простое диалоговое окно для выбора шаблона
+      const templateId = await this.showTemplateSelectionDialog(templates);
+      
+      if (templateId) {
+        console.log(`🎯 Применение шаблона: ${templateId}`);
+        
+        // Загружаем и применяем шаблон
+        const templateData = await this.templateManager.loadTemplate(templateId);
+        await this.templateManager.applyTemplate(templateData);
+        
+        this.showNotification(`Шаблон "${templateData.templateInfo?.name || templateId}" применён`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Ошибка применения шаблона:', error);
+      this.showError(`Ошибка применения шаблона: ${error.message}`);
+    }
+  }
+
+  /**
+   * Показывает диалоговое окно для выбора шаблона
+   * @param {Array} templates - Массив шаблонов
+   * @returns {Promise<string|null>} ID выбранного шаблона
+   */
+  async showTemplateSelectionDialog(templates) {
+    return new Promise((resolve) => {
+      // Создаём модальное окно
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-md w-full max-h-96 overflow-y-auto">
+          <h3 class="text-lg font-semibold mb-4">Выберите шаблон</h3>
+          <div class="space-y-2">
+            ${templates.map(template => `
+              <button class="template-btn w-full text-left p-3 border rounded hover:bg-gray-100 transition-colors" data-template-id="${template.id}">
+                <div class="font-medium">${template.name}</div>
+                <div class="text-sm text-gray-600">${template.description}</div>
+                <div class="text-xs text-gray-500">Категория: ${template.category} | Формат: ${template.formats?.join(', ') || 'legacy'}</div>
+              </button>
+            `).join('')}
+          </div>
+          <div class="mt-4 flex justify-end space-x-2">
+            <button class="cancel-btn px-4 py-2 text-gray-600 hover:text-gray-800">Отмена</button>
+          </div>
+        </div>
+      `;
+      
+      // Добавляем обработчики событий
+      modal.addEventListener('click', (e) => {
+        if (e.target.classList.contains('template-btn')) {
+          const templateId = e.target.dataset.templateId;
+          document.body.removeChild(modal);
+          resolve(templateId);
+        } else if (e.target.classList.contains('cancel-btn') || e.target === modal) {
+          document.body.removeChild(modal);
+          resolve(null);
+        }
+      });
+      
+      // Добавляем модальное окно на страницу
+      document.body.appendChild(modal);
+    });
+  }
+
+  /**
+   * Сохраняет текущую композицию как шаблон
+   * @param {string} name - Название шаблона
+   * @param {string} description - Описание шаблона
+   */
+  async saveAsTemplate(name, description) {
+    try {
+      const templateData = await this.templateManager.saveAsTemplate(name, description);
+      this.showNotification(`Шаблон "${name}" создан`);
+      return templateData;
+    } catch (error) {
+      console.error('❌ Ошибка сохранения шаблона:', error);
+      this.showError(`Ошибка сохранения шаблона: ${error.message}`);
     }
   }
 
