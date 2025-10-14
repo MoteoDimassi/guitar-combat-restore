@@ -87,7 +87,7 @@ export class ArrowDisplay {
    */
   setArrowCount(count, preserveStatuses = null) {
     if (count < 1 || count > 16) {
-      console.warn('Количество стрелочек должно быть от 1 до 16');
+      // Количество стрелочек должно быть от 1 до 16
       return;
     }
 
@@ -117,7 +117,7 @@ export class ArrowDisplay {
       const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
       this.playStatuses.push(new PlayStatus(status));
     }
-    console.log(`🔄 ArrowDisplay: инициализировано ${this.currentCount} состояний (первая - PLAY, остальные - SKIP)`);
+    // Инициализировано состояний
   }
 
   /**
@@ -301,7 +301,7 @@ export class ArrowDisplay {
       this.arrows[index].isActive = !this.arrows[index].isActive;
       this.updateDisplay();
       
-      console.log(`Стрелочка ${index + 1} (${this.arrows[index].direction}): ${this.arrows[index].isActive ? 'активна' : 'неактивна'}`);
+      // Состояние стрелочки изменено
     }
   }
 
@@ -342,7 +342,7 @@ export class ArrowDisplay {
       this.updateDisplay();
       
       const status = this.playStatuses[index];
-      console.log(`Кружок ${index + 1}: ${status.getStatusString()} (${status.getDisplaySymbol()})`);
+      // Состояние кружка изменено
       
       // Вызываем callback, если он установлен
       if (this.onPlayStatusChange) {
@@ -536,7 +536,7 @@ export class ArrowDisplay {
    */
   setAllPlayStatuses(playStatuses) {
     if (Array.isArray(playStatuses)) {
-      console.log('🎯 ArrowDisplay.setAllPlayStatuses: устанавливаем', playStatuses.length, 'статусов');
+      // Устанавливаем статусы
       
       this.playStatuses = playStatuses.map((status, index) => {
         const playStatus = status instanceof PlayStatus ? status : new PlayStatus(status);
@@ -545,7 +545,7 @@ export class ArrowDisplay {
       
       this.updateDisplay();
     } else {
-      console.warn('⚠️ setAllPlayStatuses получил не массив:', playStatuses);
+      // setAllPlayStatuses получил не массив
     }
   }
 
@@ -563,7 +563,7 @@ export class ArrowDisplay {
    */
   setPreservePlayStatuses(preserve) {
     this.preservePlayStatuses = preserve;
-    console.log(`🔄 ArrowDisplay: флаг сохранения состояний установлен в ${preserve}`);
+    // Флаг сохранения состояний изменен
   }
 
   /**
@@ -580,7 +580,7 @@ export class ArrowDisplay {
    */
   restorePlayStatuses(savedStatuses) {
     if (!Array.isArray(savedStatuses)) {
-      console.warn('⚠️ savedStatuses должен быть массивом');
+      // savedStatuses должен быть массивом
       return;
     }
 
@@ -597,7 +597,7 @@ export class ArrowDisplay {
       this.playStatuses = this.playStatuses.slice(0, this.currentCount);
     }
 
-    console.log(`🔄 ArrowDisplay: восстановлено ${this.playStatuses.length} состояний`);
+    // Состояния восстановлены
   }
 
   /**
@@ -647,5 +647,52 @@ export class ArrowDisplay {
     }
     
     this.updateDisplay();
+  }
+
+  /**
+   * Подсвечивает текущую воспроизводимую стрелочку
+   * @param {number} beatIndex - Индекс стрелочки
+   */
+  setCurrentBeat(beatIndex) {
+    // Сначала убираем подсветку со всех стрелочек
+    this.clearCurrentBeatHighlight();
+    
+    if (beatIndex >= 0 && beatIndex < this.arrows.length) {
+      const arrowElement = this.container.querySelector(`[data-index="${beatIndex}"]`);
+      if (arrowElement) {
+        // Добавляем класс для подсветки текущей воспроизводимой стрелочки
+        arrowElement.classList.add('playing-now');
+        
+        // Находим иконку стрелочки и делаем её зеленой
+        const arrowIcon = arrowElement.querySelector('.arrow-icon');
+        if (arrowIcon) {
+          arrowIcon.classList.add('text-green-500');
+          arrowIcon.classList.remove('text-gray-300', 'text-[#38e07b]');
+        }
+      }
+    }
+  }
+
+  /**
+   * Очищает подсветку текущей воспроизводимой стрелочки
+   */
+  clearCurrentBeatHighlight() {
+    const playingArrows = this.container.querySelectorAll('.playing-now');
+    playingArrows.forEach(arrow => {
+      arrow.classList.remove('playing-now');
+      
+      // Возвращаем исходный цвет иконки
+      const arrowIcon = arrow.querySelector('.arrow-icon');
+      if (arrowIcon) {
+        arrowIcon.classList.remove('text-green-500');
+        // Восстанавливаем цвет в зависимости от состояния
+        const index = parseInt(arrow.dataset.index);
+        if (this.arrows[index] && this.arrows[index].isActive) {
+          arrowIcon.classList.add('text-[#38e07b]');
+        } else {
+          arrowIcon.classList.add('text-gray-300');
+        }
+      }
+    });
   }
 }

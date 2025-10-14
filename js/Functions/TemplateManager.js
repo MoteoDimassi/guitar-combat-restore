@@ -34,7 +34,7 @@ export class TemplateManager {
       
       this.manifest = await response.json();
     } catch (error) {
-      console.error('❌ Ошибка загрузки манифеста:', error);
+      // Ошибка загрузки манифеста
       // Создаём базовый манифест если загрузка не удалась
       this.manifest = {
         version: "2.0",

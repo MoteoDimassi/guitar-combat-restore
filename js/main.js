@@ -23,6 +23,7 @@ import { TempoManager } from './Functions/TempoManager.js';
 import { ImportStrumFromJSON } from './Functions/ImportStrumFromJSON.js';
 import { TemplateSetter } from './Strum/TemplateSetter.js';
 import { TemplateManager } from './Functions/TemplateManager.js';
+import { AudioController } from './Audio/AudioController.js';
 
 /**
  * Главный класс приложения Guitar Combat
@@ -47,6 +48,7 @@ this.templateSetter = new TemplateSetter();
     this.tempoManager = new TempoManager();
     this.importStrumFromJSON = new ImportStrumFromJSON(this);
     this.templateManager = new TemplateManager();
+    this.audioController = new AudioController();
     
     // Массив тактов
     this.bars = [];
@@ -56,7 +58,8 @@ this.templateSetter = new TemplateSetter();
       beatCount: 4,        // количество долей в такте
       bpm: 120,           // темп
       chordChanges: {},   // правила смены аккордов
-      isPlaying: false    // состояние воспроизведения
+      isPlaying: false,   // состояние воспроизведения
+      audioVolume: 0.7    // громкость аудио
     };
     
     // DOM элементы
@@ -109,6 +112,9 @@ this.templateSetter = new TemplateSetter();
 
     // Инициализация менеджера шаблонов
     this.templateManager.init();
+    
+    // Инициализация аудио системы
+    await this.initAudioSystem();
       
       // Загрузка сохраненных данных
       this.loadSavedData();
@@ -203,11 +209,73 @@ async initTemplateSetter() {
   try {
     await this.templateSetter.init(this.templateManager, this.arrowDisplay);
     this.templateSetter.bindTemplateSelect('#templates-select');
-    console.log('✅ TemplateSetter инициализирован');
+    // TemplateSetter инициализирован
   } catch (error) {
-    console.error('❌ Ошибка инициализации TemplateSetter:', error);
+    // Ошибка инициализации TemplateSetter
   }
 }
+
+  /**
+   * Инициализирует аудио систему
+   */
+  async initAudioSystem() {
+    try {
+      // Устанавливаем колбэки для аудио системы
+      this.audioController.setOnLoadProgress((progress) => {
+        // Загрузка аудио
+      });
+      
+      this.audioController.setOnLoadComplete(() => {
+        // Аудио система загружена и готова к работе
+      });
+      
+      this.audioController.setOnError((error) => {
+        // Ошибка аудио системы
+        this.showError(`Ошибка аудио системы: ${error.message}`);
+      });
+      
+      this.audioController.setOnPlayStart(() => {
+        this.settings.isPlaying = true;
+        
+        // Обновляем кнопку воспроизведения
+        this.updateToggleBtn(true);
+        
+        if (this.callbacks.onPlaybackStart) {
+          this.callbacks.onPlaybackStart();
+        }
+      });
+      
+      this.audioController.setOnPlayStop(() => {
+        this.settings.isPlaying = false;
+        
+        // Обновляем кнопку воспроизведения
+        this.updateToggleBtn(false);
+        
+        if (this.callbacks.onPlaybackStop) {
+          this.callbacks.onPlaybackStop();
+        }
+      });
+      
+      this.audioController.setOnBeat((barIndex, beatIndex, chordData) => {
+        // Обновляем визуальное отображение текущего удара
+        this.updateCurrentBeat(barIndex, beatIndex);
+      });
+      
+      // Инициализируем аудио систему с необходимыми зависимостями
+      await this.audioController.init({
+        chordParser: this.chordParser,
+        chordBuilder: this.chordBuilder,
+        tempoManager: this.tempoManager
+      });
+      
+      // Устанавливаем начальную громкость
+      this.audioController.setVolume(this.settings.audioVolume);
+      
+    } catch (error) {
+      // Ошибка инициализации аудио системы
+      this.showError(`Ошибка инициализации аудио системы: ${error.message}`);
+    }
+  }
 
   /**
    * Инициализирует компоненты
@@ -353,6 +421,42 @@ async initTemplateSetter() {
 
     // Обработчики кнопок навигации и воспроизведения
     // Привязываются автоматически в BarDisplay
+    
+    // Обработчик кнопки toggleBtn (основная кнопка воспроизведения)
+    const toggleBtn = document.getElementById('toggleBtn');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        if (this.settings.isPlaying) {
+          this.stopAudioPlayback();
+        } else {
+          this.startAudioPlayback();
+        }
+      });
+    }
+    
+    // Обработчик ползунка громкости
+    const volumeSlider = document.getElementById('audioVolumeSlider');
+    const volumeLabel = document.getElementById('audioVolumeLabel');
+    
+    if (volumeSlider) {
+      volumeSlider.addEventListener('input', (e) => {
+        const volume = parseFloat(e.target.value) / 100;
+        this.setAudioVolume(volume);
+        
+        // Обновляем метку
+        if (volumeLabel) {
+          volumeLabel.textContent = e.target.value + '%';
+        }
+      });
+      
+      // Устанавливаем начальное значение
+      volumeSlider.value = this.settings.audioVolume * 100;
+      
+      // Обновляем метку
+      if (volumeLabel) {
+        volumeLabel.textContent = Math.round(this.settings.audioVolume * 100) + '%';
+      }
+    }
 
     // Обработчик кнопки "Политика конфиденциальности"
     const privacyPolicyBtn = document.getElementById('privacyPolicyBtn');
@@ -482,7 +586,7 @@ async initTemplateSetter() {
         const currentChord = validChords[0].name;
         const nextChord = validChords.length > 1 ? validChords[1].name : null;
         this.chordDisplay.updateDisplay(currentChord, nextChord);
-        console.log('🎵 Отображение аккордов из парсера:', { currentChord, nextChord });
+        // Отображение аккордов из парсера
         return;
       } else {
         this.chordDisplay.clear();
@@ -496,7 +600,7 @@ async initTemplateSetter() {
 
     if (this.bars.length > 0 && currentBarIndex < this.bars.length) {
       currentBar = this.bars[currentBarIndex];
-      console.log('🎵 Используем такт:', currentBarIndex, 'с аккордом:', currentBar.getChordForBeat(0));
+      // Используем такт с аккордом
     }
     
     if (!currentBar) {
@@ -628,6 +732,108 @@ async initTemplateSetter() {
     if (this.callbacks.onPlaybackStop) {
       this.callbacks.onPlaybackStop();
     }
+  }
+
+  /**
+   * Начинает воспроизведение с аудио
+   */
+  startAudioPlayback() {
+    if (!this.audioController || !this.audioController.isInitialized) {
+      this.showError('Аудио система не инициализирована');
+      return;
+    }
+    
+    try {
+      // Убедимся, что такты содержат правильные статусы из ArrowDisplay
+      this.syncBarsWithArrowDisplay();
+      
+      this.audioController.startPlayback({
+        beatCount: this.settings.beatCount,
+        bars: this.bars
+      });
+    } catch (error) {
+      // Ошибка начала воспроизведения
+      this.showError(`Ошибка начала воспроизведения: ${error.message}`);
+    }
+  }
+
+  /**
+   * Синхронизирует статусы в тактах с текущими состояниями ArrowDisplay
+   */
+  syncBarsWithArrowDisplay() {
+    if (!this.arrowDisplay || !this.bars || this.bars.length === 0) {
+      return;
+    }
+    
+    // Получаем текущие статусы из ArrowDisplay
+    const arrowStatuses = this.arrowDisplay.getAllPlayStatuses();
+    
+    // Обновляем статусы в текущем такте
+    const currentBarIndex = this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0;
+    if (currentBarIndex < this.bars.length) {
+      const currentBar = this.bars[currentBarIndex];
+      
+      arrowStatuses.forEach((playStatus, beatIndex) => {
+        if (beatIndex < currentBar.beatUnits.length) {
+          currentBar.setBeatPlayStatus(beatIndex, playStatus);
+        }
+      });
+    }
+  }
+
+  /**
+   * Останавливает воспроизведение с аудио
+   */
+  stopAudioPlayback() {
+    if (this.audioController) {
+      this.audioController.stopPlayback();
+    }
+  }
+
+  /**
+   * Обновляет текущий удар в интерфейсе
+   * @param {number} barIndex - Индекс такта
+   * @param {number} beatIndex - Индекс удара
+   */
+  updateCurrentBeat(barIndex, beatIndex) {
+    // Обновляем навигацию по тактам
+    if (this.barNavigation) {
+      this.barNavigation.setCurrentBarIndex(barIndex);
+    }
+    
+    // Обновляем отображение стрелочек - подсвечиваем текущую
+    if (this.arrowDisplay) {
+      this.arrowDisplay.setCurrentBeat(beatIndex);
+      
+      // Добавляем небольшую задержку для визуального эффекта
+      setTimeout(() => {
+        if (this.arrowDisplay) {
+          this.arrowDisplay.clearCurrentBeatHighlight();
+        }
+      }, 200); // Подсветка на 200мс
+    }
+  }
+
+  /**
+   * Устанавливает громкость аудио
+   * @param {number} volume - Громкость от 0 до 1
+   */
+  setAudioVolume(volume) {
+    this.settings.audioVolume = Math.max(0, Math.min(1, volume));
+    
+    if (this.audioController) {
+      this.audioController.setVolume(this.settings.audioVolume);
+    }
+    
+    this.saveData();
+  }
+
+  /**
+   * Получает текущую громкость аудио
+   * @returns {number} Текущая громкость
+   */
+  getAudioVolume() {
+    return this.settings.audioVolume;
   }
 
   /**
@@ -1014,6 +1220,36 @@ async initTemplateSetter() {
   //     window.alert(`Ошибка: ${error}`);
   //   }
   // }
+
+  /**
+   * Обновляет состояние кнопки toggleBtn
+   * @param {boolean} isPlaying - Состояние воспроизведения
+   */
+  updateToggleBtn(isPlaying) {
+    const toggleBtn = document.getElementById('toggleBtn');
+    if (!toggleBtn) return;
+    
+    if (isPlaying) {
+      // Изменяем иконку на паузу
+      toggleBtn.innerHTML = `
+        <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="4" width="4" height="16"></rect>
+          <rect x="14" y="4" width="4" height="16"></rect>
+        </svg>
+      `;
+      toggleBtn.classList.remove('bg-[#38e07b]');
+      toggleBtn.classList.add('bg-red-600');
+    } else {
+      // Изменяем иконку на play
+      toggleBtn.innerHTML = `
+        <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 5v14l11-7z"></path>
+        </svg>
+      `;
+      toggleBtn.classList.remove('bg-red-600');
+      toggleBtn.classList.add('bg-[#38e07b]');
+    }
+  }
 }
 
 // Экспорт для использования в других модулях
@@ -1031,3 +1267,92 @@ document.addEventListener('DOMContentLoaded', () => {
 // Экспорт в глобальную область для отладки
 window.GuitarCombatApp = GuitarCombatApp;
 window.TempoManager = TempoManager;
+
+// Глобальные функции для тестирования аудио
+window.testAudioNote = async function(noteName) {
+  const app = GuitarCombatApp.getInstance();
+  if (app.audioController) {
+    try {
+      await app.audioController.testNote(noteName);
+    } catch (error) {
+      // Ошибка тестирования ноты
+    }
+  }
+};
+
+window.testAudioChord = async function(chordName) {
+  const app = GuitarCombatApp.getInstance();
+  if (app.audioController) {
+    try {
+      await app.audioController.testChord(chordName);
+    } catch (error) {
+      // Ошибка тестирования аккорда
+    }
+  }
+};
+
+window.getAvailableNotes = function() {
+  const app = GuitarCombatApp.getInstance();
+  if (app.audioController) {
+    return app.audioController.getAvailableTestNotes();
+  }
+  return [];
+};
+
+window.getAudioStatus = function() {
+  const app = GuitarCombatApp.getInstance();
+  if (app.audioController) {
+    return app.audioController.getLoadStatus();
+  }
+  return null;
+};
+
+// Тестовые функции для отладки воспроизведения
+window.testPlayback = function() {
+  const app = GuitarCombatApp.getInstance();
+  if (app.audioController && app.audioController.isInitialized) {
+    // Тестовое воспроизведение
+    try {
+      app.startAudioPlayback();
+    } catch (error) {
+      // Ошибка тестового воспроизведения
+    }
+  } else {
+    // Аудио система не инициализирована
+  }
+};
+
+window.testMuteSound = function() {
+  const app = GuitarCombatApp.getInstance();
+  if (app.audioController && app.audioController.audioEngine && app.audioController.audioEngine.noteManager) {
+    // Тестирование звука приглушения
+    try {
+      app.audioController.audioEngine.noteManager.playMute();
+    } catch (error) {
+      // Ошибка тестирования приглушения
+    }
+  } else {
+    // Аудио система не инициализирована
+  }
+};
+
+window.getBarsInfo = function() {
+  const app = GuitarCombatApp.getInstance();
+  if (app.bars && app.bars.length > 0) {
+    // Информация о тактах
+    app.bars.forEach((bar, index) => {
+      // Информация о такте
+    });
+  } else {
+    // Такты не найдены
+  }
+};
+
+window.getArrowDisplayInfo = function() {
+  const app = GuitarCombatApp.getInstance();
+  if (app.arrowDisplay) {
+    // Информация о стрелочках
+  } else {
+    // ArrowDisplay не найден
+  }
+};

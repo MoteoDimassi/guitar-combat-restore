@@ -15,6 +15,18 @@
     body {
       font-family: "Space Grotesk", "Noto Sans", sans-serif;
     }
+    
+    /* Стили для визуальной индикации воспроизведения */
+    .playing-now .arrow-icon {
+      color: #10b981 !important; /* Зеленый цвет для текущей воспроизводимой стрелочки */
+      transform: scale(1.2);
+      transition: all 0.1s ease-in-out;
+    }
+
+    .playing-now .play-status-circle {
+      transform: scale(1.1);
+      transition: all 0.1s ease-in-out;
+    }
   </style>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="css/styles.css">
@@ -102,6 +114,15 @@
                   <!-- Выпадающее меню настроек -->
                   <div id="settingsMenu" class="hidden absolute top-12 right-0 w-72 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 p-4">
                     <h3 class="text-white text-lg font-medium mb-4">Настройки звука</h3>
+                    
+                    <!-- Громкость аудио -->
+                    <div class="mb-5">
+                      <div class="flex justify-between items-center mb-2">
+                        <label class="text-gray-300 text-sm font-medium">Громкость аудио</label>
+                        <span id="audioVolumeLabel" class="text-[#38e07b] text-sm font-bold">70%</span>
+                      </div>
+                      <input id="audioVolumeSlider" type="range" min="0" max="100" value="70" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#38e07b]">
+                    </div>
                     
                     <!-- Громкость боя -->
                     <div class="mb-5">
@@ -364,6 +385,21 @@
   </script>
   <!-- Подключение основного JavaScript модуля -->
   <script type="module" src="js/main.js"></script>
+  
+  <!-- JavaScript для аудио системы -->
+  <script>
+    // Обновление метки громкости аудио
+    document.addEventListener('DOMContentLoaded', function() {
+      const volumeSlider = document.getElementById('audioVolumeSlider');
+      const volumeLabel = document.getElementById('audioVolumeLabel');
+      
+      if (volumeSlider && volumeLabel) {
+        volumeSlider.addEventListener('input', function() {
+          volumeLabel.textContent = this.value + '%';
+        });
+      }
+    });
+  </script>
   
   <!-- JavaScript для активных стилей навигации -->
   <script>

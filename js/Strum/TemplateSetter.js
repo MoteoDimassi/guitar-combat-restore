@@ -25,9 +25,9 @@ export class TemplateSetter {
     try {
       await this.loadManifest();
       await this.scanTemplates();
-      console.log(`✅ TemplateSetter: загружено ${this.templates.length} шаблонов`);
+      // TemplateSetter: шаблоны загружены
     } catch (error) {
-      console.error('❌ Ошибка инициализации TemplateSetter:', error);
+      // Ошибка инициализации TemplateSetter
     }
   }
 
@@ -43,7 +43,7 @@ export class TemplateSetter {
 
       this.manifest = await response.json();
     } catch (error) {
-      console.error('❌ Ошибка загрузки манифеста:', error);
+      // Ошибка загрузки манифеста
       // Создаём базовый манифест если загрузка не удалась
       this.manifest = {
         version: "2.0",
@@ -57,7 +57,7 @@ export class TemplateSetter {
    */
   async scanTemplates() {
     if (!this.manifest || !this.manifest.templates) {
-      console.warn('⚠️ Манифест не содержит шаблонов');
+      // Манифест не содержит шаблонов
       return;
     }
 
@@ -65,7 +65,7 @@ export class TemplateSetter {
       template.formats && template.formats.includes('v2')
     );
 
-    console.log(`📋 TemplateSetter: найдено ${this.templates.length} шаблонов v2 формата`);
+    // Найдено шаблонов v2 формата
   }
 
   /**
@@ -76,7 +76,7 @@ export class TemplateSetter {
     this.templatesSelect = document.querySelector(selector);
 
     if (!this.templatesSelect) {
-      console.error(`❌ Элемент select не найден: ${selector}`);
+      // Элемент select не найден
       return;
     }
 
@@ -139,7 +139,7 @@ export class TemplateSetter {
       }
     });
 
-    console.log(`📝 TemplateSetter: заполнен список ${this.templates.length} шаблонами`);
+    // Список шаблонов заполнен
   }
 
   /**
@@ -166,7 +166,7 @@ export class TemplateSetter {
         throw new Error('TemplateManager не инициализирован');
       }
 
-      console.log(`🎯 TemplateSetter: применяем шаблон ${templateId}`);
+      // Применяем шаблон
 
       // Загружаем данные шаблона
       const templateData = await this.templateManager.loadTemplate(templateId);
@@ -179,7 +179,7 @@ export class TemplateSetter {
         this.templatesSelect.value = templateId;
       }
 
-      console.log(`✅ TemplateSetter: шаблон ${templateId} успешно применён`);
+      // Шаблон успешно применён
 
       // Вызываем событие применения шаблона
       if (this.onTemplateApplied) {
@@ -187,7 +187,7 @@ export class TemplateSetter {
       }
 
     } catch (error) {
-      console.error(`❌ Ошибка применения шаблона ${templateId}:`, error);
+      // Ошибка применения шаблона
 
       // Сбрасываем выбор в селекте при ошибке
       if (this.templatesSelect) {
@@ -249,9 +249,9 @@ export class TemplateSetter {
       await this.loadManifest();
       await this.scanTemplates();
       this.populateTemplateSelect();
-      console.log(`🔄 TemplateSetter: список шаблонов обновлён`);
+      // Список шаблонов обновлён
     } catch (error) {
-      console.error('❌ Ошибка обновления шаблонов:', error);
+      // Ошибка обновления шаблонов
     }
   }
 
