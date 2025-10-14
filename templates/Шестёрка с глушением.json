@@ -143,18 +143,11 @@
           }
         }
       ],
-      "chordChanges": [
-        {
-          "name": "Am",
-          "startBeat": 0,
-          "endBeat": 8,
-          "duration": 8
-        }
-      ],
+      "chordChanges": [],
       "lyricSyllables": [],
       "metadata": {
         "isActive": true,
-        "hasChords": true,
+        "hasChords": false,
         "hasLyrics": false,
         "playingBeats": 6
       }
@@ -283,18 +276,11 @@
           }
         }
       ],
-      "chordChanges": [
-        {
-          "name": "Dm",
-          "startBeat": 0,
-          "endBeat": 8,
-          "duration": 8
-        }
-      ],
+      "chordChanges": [],
       "lyricSyllables": [],
       "metadata": {
         "isActive": true,
-        "hasChords": true,
+        "hasChords": false,
         "hasLyrics": false,
         "playingBeats": 8
       }
@@ -423,18 +409,11 @@
           }
         }
       ],
-      "chordChanges": [
-        {
-          "name": "E",
-          "startBeat": 0,
-          "endBeat": 8,
-          "duration": 8
-        }
-      ],
+      "chordChanges": [],
       "lyricSyllables": [],
       "metadata": {
         "isActive": true,
-        "hasChords": true,
+        "hasChords": false,
         "hasLyrics": false,
         "playingBeats": 8
       }
@@ -563,18 +542,11 @@
           }
         }
       ],
-      "chordChanges": [
-        {
-          "name": "Am",
-          "startBeat": 0,
-          "endBeat": 8,
-          "duration": 8
-        }
-      ],
+      "chordChanges": [],
       "lyricSyllables": [],
       "metadata": {
         "isActive": true,
-        "hasChords": true,
+        "hasChords": false,
         "hasLyrics": false,
         "playingBeats": 8
       }
