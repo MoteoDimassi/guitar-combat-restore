@@ -1,7 +1,10 @@
 {
   "version": "2.0",
-  "generatedAt": "2025-10-13T10:08:38.039Z",
-  "formats": ["v2", "legacy"],
+  "generatedAt": "2025-10-13T18:43:51.544Z",
+  "formats": [
+    "v2",
+    "legacy"
+  ],
   "categories": [
     {
       "id": "basic",
@@ -19,91 +22,73 @@
       "description": "Готовые примеры песен с аккордами и текстом"
     }
   ],
-  "templates": [
-    {
-      "name": "Пятерка",
-      "file": "Пятерка-v2.json",
-      "id": "pyaterka",
-      "category": "basic",
-      "description": "Пятерка паттерн (8 ударов)",
-      "difficulty": "beginner",
-      "tags": ["basic", "strumming", "popular"],
-      "formats": ["v2", "legacy"]
-    },
-    {
-      "name": "Пятерка (legacy)",
-      "file": "Пятерка.json",
-      "id": "pyaterka-legacy",
-      "category": "basic",
-      "description": "Пятерка паттерн (8 ударов) - старый формат",
-      "difficulty": "beginner",
-      "tags": ["basic", "strumming", "popular", "legacy"],
-      "formats": ["legacy"]
-    },
-    {
-      "name": "Пятерка с глушением",
-      "file": "Пятерка с глушением.json",
-      "id": "pyaterka-mute",
-      "category": "basic",
-      "description": "Пятерка с глушением паттерн (8 ударов)",
-      "difficulty": "intermediate",
-      "tags": ["basic", "strumming", "muted"],
-      "formats": ["legacy"]
-    },
-    {
-      "name": "Шестерка",
-      "file": "Шестерка.json",
-      "id": "shestyorka",
-      "category": "basic",
-      "description": "Шестерка паттерн (8 ударов)",
-      "difficulty": "beginner",
-      "tags": ["basic", "strumming"],
-      "formats": ["legacy"]
-    },
-    {
-      "name": "Шестерка с глушением",
-      "file": "Шестерка с глушением.json",
-      "id": "shestyorka-mute",
-      "category": "basic",
-      "description": "Шестерка с глушением паттерн (8 ударов)",
-      "difficulty": "intermediate",
-      "tags": ["basic", "strumming", "muted"],
-      "formats": ["legacy"]
-    },
-    {
-      "name": "Восьмерка",
-      "file": "Восьмерка.json",
-      "id": "vosmeryorka",
-      "category": "basic",
-      "description": "Восьмерка паттерн (16 ударов)",
-      "difficulty": "beginner",
-      "tags": ["basic", "strumming"],
-      "formats": ["legacy"]
-    },
-    {
-      "name": "Восьмерка с глушением",
-      "file": "Восьмерка с глушением.json",
-      "id": "vosmeryorka-mute",
-      "category": "basic",
-      "description": "Восьмерка с глушением паттерн (16 ударов)",
-      "difficulty": "intermediate",
-      "tags": ["basic", "strumming", "muted"],
-      "formats": ["legacy"]
-    },
-    {
-      "name": "Пример поп-песни",
-      "file": "Пример-песни-v2.json",
-      "id": "pop-song-example",
-      "category": "song",
-      "description": "Пример поп-песни с аккордами и текстом",
-      "difficulty": "intermediate",
-      "tags": ["song", "chords", "lyrics"],
-      "formats": ["v2"]
-    }
-  ],
   "migration": {
     "legacySupport": true,
     "autoConvert": true,
     "fallbackFormat": "legacy"
-  }
+  },
+  "templates": [
+    {
+      "name": "Пятёрка",
+      "file": "Пятёрка.json",
+      "id": "пяте-рка",
+      "category": "basic",
+      "description": "Пятёрка паттерн боя",
+      "difficulty": "beginner",
+      "tags": [
+        "basic",
+        "strumming"
+      ],
+      "formats": [
+        "v2"
+      ]
+    },
+    {
+      "name": "Пятёрка с глушением",
+      "file": "Пятёрка с глушением.json",
+      "id": "пяте-рка-с-глушением",
+      "category": "advanced",
+      "description": "Пятёрка с глушением паттерн боя",
+      "difficulty": "intermediate",
+      "tags": [
+        "basic",
+        "strumming",
+        "muted"
+      ],
+      "formats": [
+        "v2"
+      ]
+    },
+    {
+      "name": "Шестёрка",
+      "file": "Шестёрка.json",
+      "id": "шесте-рка",
+      "category": "basic",
+      "description": "Шестёрка паттерн боя",
+      "difficulty": "beginner",
+      "tags": [
+        "basic",
+        "strumming"
+      ],
+      "formats": [
+        "v2"
+      ]
+    },
+    {
+      "name": "Шестёрка с глушением",
+      "file": "Шестёрка с глушением.json",
+      "id": "шесте-рка-с-глушением",
+      "category": "advanced",
+      "description": "Шестёрка с глушением паттерн боя",
+      "difficulty": "intermediate",
+      "tags": [
+        "basic",
+        "strumming",
+        "muted"
+      ],
+      "formats": [
+        "v2"
+      ]
+    }
+  ]
 }

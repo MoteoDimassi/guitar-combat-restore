@@ -42,8 +42,6 @@ export class TempoManager {
    */
   init(options = {}) {
     try {
-      console.log('🎼 Инициализация TempoManager...');
-      
       // Получаем DOM элементы
       this.elements.slider = document.getElementById('bpm');
       this.elements.label = document.getElementById('bpmLabel');
@@ -69,10 +67,8 @@ export class TempoManager {
       this.setTempo(this.currentBpm);
       
       this.isInitialized = true;
-      console.log('✅ TempoManager успешно инициализирован');
-      
+
     } catch (error) {
-      console.error('❌ Ошибка инициализации TempoManager:', error);
       throw error;
     }
   }
@@ -103,7 +99,6 @@ export class TempoManager {
       this.decrementTempo();
     });
     
-    console.log('🔗 События TempoManager привязаны');
   }
 
   /**
@@ -131,7 +126,6 @@ export class TempoManager {
         this.callbacks.onTempoChange(this.currentBpm);
       }
       
-      console.log(`🎼 Темп изменен на: ${this.currentBpm} BPM`);
     }
   }
 
@@ -196,7 +190,6 @@ export class TempoManager {
       this.setTempo(this.settings.maxBpm);
     }
     
-    console.log('⚙️ Настройки TempoManager обновлены:', this.settings);
   }
 
   /**
@@ -236,7 +229,6 @@ export class TempoManager {
    */
   reset() {
     this.setTempo(this.settings.defaultBpm);
-    console.log('🔄 TempoManager сброшен к значениям по умолчанию');
   }
 
   /**
@@ -257,7 +249,6 @@ export class TempoManager {
     }
     
     this.isInitialized = false;
-    console.log('🗑️ TempoManager уничтожен');
   }
 
   /**
@@ -285,7 +276,6 @@ export class TempoManager {
       this.updateSettings(data.settings);
     }
     
-    console.log('📂 TempoManager загружен из JSON');
   }
 }
 

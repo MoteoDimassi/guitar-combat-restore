@@ -16,23 +16,13 @@ class ManifestGenerator {
    * Основной метод генерации manifest
    */
   generate() {
-    console.log('🏗️  Генерация manifest.json...');
-
     try {
       const templateFiles = this.getTemplateFiles();
-      console.log(`📁 Найдено ${templateFiles.length} файлов шаблонов`);
-
       const templates = this.processTemplateFiles(templateFiles);
-      console.log(`✅ Обработано ${templates.length} шаблонов`);
-
       const manifest = this.createManifest(templates);
       this.writeManifest(manifest);
 
-      console.log('🎉 manifest.json успешно сгенерирован!');
-      console.log(`📊 Всего шаблонов: ${templates.length}`);
-
     } catch (error) {
-      console.error('❌ Ошибка генерации manifest:', error.message);
       process.exit(1);
     }
   }
@@ -45,7 +35,8 @@ class ManifestGenerator {
     return files.filter(file =>
       file.endsWith('.json') &&
       file !== 'manifest.json' &&
-      file !== '.DS_Store' // Игнорировать системные файлы
+      file !== '.DS_Store' && // Игнорировать системные файлы
+      !file.includes('test-import') // Игнорировать тестовые файлы
     );
   }
 
@@ -61,7 +52,6 @@ class ManifestGenerator {
 
         return this.generateTemplateMetadata(fileName, templateData);
       } catch (error) {
-        console.warn(`⚠️  Пропущен файл ${fileName}: ${error.message}`);
         return null;
       }
     }).filter(Boolean); // Убрать null значения
@@ -73,14 +63,20 @@ class ManifestGenerator {
   generateTemplateMetadata(fileName, templateData) {
     const nameWithoutExt = path.parse(fileName).name;
     const displayName = this.fileNameToDisplayName(nameWithoutExt);
-    const id = nameWithoutExt; // Используем имя файла как ID без изменений
+    const id = this.generateId(nameWithoutExt);
 
-    return {
+    const metadata = {
       name: displayName,
-      file: fileName, // Используем оригинальное имя файла без переименования
+      file: fileName,
       id: id,
-      description: this.generateDescription(templateData, displayName)
+      category: this.determineCategory(fileName),
+      description: this.generateDescription(templateData, displayName),
+      difficulty: this.determineDifficulty(fileName),
+      tags: this.generateTags(fileName),
+      formats: this.determineFormats(templateData)
     };
+
+    return metadata;
   }
 
   /**
@@ -154,10 +150,94 @@ class ManifestGenerator {
    */
   createManifest(templates) {
     return {
-      version: '1.0',
+      version: '2.0',
       generatedAt: new Date().toISOString(),
+      formats: ['v2', 'legacy'],
+      categories: [
+        {
+          "id": "basic",
+          "name": "Базовые паттерны",
+          "description": "Основные паттерны бо́я для начинающих"
+        },
+        {
+          "id": "advanced",
+          "name": "Сложные паттерны",
+          "description": "Продвинутые паттерны с элементами перебора"
+        },
+        {
+          "id": "song",
+          "name": "Примеры песен",
+          "description": "Готовые примеры песен с аккордами и текстом"
+        }
+      ],
+      migration: {
+        legacySupport: true,
+        autoConvert: true,
+        fallbackFormat: "legacy"
+      },
       templates: templates.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
     };
+  }
+
+  /**
+   * Определить категорию по имени файла
+   */
+  determineCategory(fileName) {
+    const name = fileName.toLowerCase();
+    if (name.includes('пример') || name.includes('песн')) {
+      return 'song';
+    }
+    if (name.includes('глушен') || name.includes('mute')) {
+      return 'advanced';
+    }
+    return 'basic';
+  }
+
+  /**
+   * Определить сложность по имени файла
+   */
+  determineDifficulty(fileName) {
+    const name = fileName.toLowerCase();
+    if (name.includes('глушен') || name.includes('mute')) {
+      return 'intermediate';
+    }
+    if (name.includes('пример') || name.includes('песн')) {
+      return 'intermediate';
+    }
+    return 'beginner';
+  }
+
+  /**
+   * Сгенерировать теги по имени файла
+   */
+  generateTags(fileName) {
+    const tags = ['basic', 'strumming'];
+    const name = fileName.toLowerCase();
+
+    if (name.includes('глушен') || name.includes('mute')) {
+      tags.push('muted');
+    }
+    if (name.includes('пример') || name.includes('песн')) {
+      tags.push('song', 'chords', 'lyrics');
+    }
+    if (name.includes('популярн') || name.includes('popular')) {
+      tags.push('popular');
+    }
+    if (name.includes('legacy')) {
+      tags.push('legacy');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Определить поддерживаемые форматы
+   */
+  determineFormats(templateData) {
+    if (templateData.version === '2.0' || templateData.metadata || templateData.songStructure) {
+      return ['v2'];
+    }
+    return ['legacy'];
   }
 
   /**

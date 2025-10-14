@@ -21,7 +21,6 @@ export class RandomStrumGenerator {
    */
   generateRandomStrum(count) {
     if (count < 1) {
-      console.warn('Количество длительностей должно быть больше 0');
       return [];
     }
 

@@ -34,16 +34,13 @@ export class ChordDisplay {
    */
   init(containerSelector = '#chordDisplay') {
     this.container = document.querySelector(containerSelector);
-    
+
     if (!this.container) {
-      console.warn('⚠️ Контейнер для отображения аккордов не найден:', containerSelector);
       return;
     }
 
     this.createDisplayElements();
     this.updateDisplay();
-    
-    console.log('✅ ChordDisplay инициализирован');
   }
 
   /**
@@ -110,11 +107,6 @@ export class ChordDisplay {
     } else {
       this.nextChordElement.style.display = 'none';
     }
-
-    console.log('🎵 Аккорды обновлены:', {
-      текущий: this.currentChord,
-      следующий: this.nextChord
-    });
   }
 
   /**
@@ -216,7 +208,5 @@ export class ChordDisplay {
     this.nextChordElement = null;
     this.currentChord = null;
     this.nextChord = null;
-    
-    console.log('🗑️ ChordDisplay уничтожен');
   }
 }

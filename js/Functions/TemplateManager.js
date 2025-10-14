@@ -18,9 +18,7 @@ export class TemplateManager {
     try {
       await this.loadManifest();
       await this.loadCategories();
-      console.log('✅ TemplateManager инициализирован');
     } catch (error) {
-      console.error('❌ Ошибка инициализации TemplateManager:', error);
     }
   }
 
@@ -35,7 +33,6 @@ export class TemplateManager {
       }
       
       this.manifest = await response.json();
-      console.log('📋 Манифест шаблонов загружен:', this.manifest);
     } catch (error) {
       console.error('❌ Ошибка загрузки манифеста:', error);
       // Создаём базовый манифест если загрузка не удалась
@@ -58,8 +55,6 @@ export class TemplateManager {
     this.manifest.categories.forEach(category => {
       this.categories.set(category.id, category);
     });
-    
-    console.log(`📂 Загружено ${this.categories.size} категорий`);
   }
 
   /**
@@ -94,7 +89,6 @@ export class TemplateManager {
       
       return templateData;
     } catch (error) {
-      console.error(`❌ Ошибка загрузки шаблона ${templateId}:`, error);
       throw error;
     }
   }
@@ -138,53 +132,14 @@ export class TemplateManager {
     if (!app) {
       throw new Error('Приложение Guitar Combat не найдено');
     }
-    
+
     try {
-      console.log('🎯 Применение шаблона:', templateData.templateInfo?.name || 'Без названия');
-      
-      // Отключаем сохранение состояний при применении шаблона
-      if (app.arrowDisplay) {
-        app.arrowDisplay.setPreservePlayStatuses(false);
-      }
-      
-      // Применяем метаданные
-      if (templateData.metadata) {
-        await this.applyMetadata(templateData.metadata);
-      }
-      
-      // Применяем структуру песни
-      if (templateData.songStructure) {
-        await this.applySongStructure(templateData.songStructure);
-      }
-      
-      // Применяем такты
-      if (templateData.bars && templateData.bars.length > 0) {
-        await this.applyBarsFromTemplate(templateData.bars);
-      }
-      
-      // Применяем шаблоны
-      if (templateData.templates) {
-        await this.applyTemplateSettings(templateData.templates);
-      }
-      
-      // Обновляем отображение без сохранения состояний
-      app.updateDisplay(false);
-      
-      // Включаем обратно сохранение состояний после применения шаблона
-      if (app.arrowDisplay) {
-        app.arrowDisplay.setPreservePlayStatuses(true);
-      }
-      
-      console.log('✅ Шаблон успешно применён');
-      
+      // Используем метод importData из ImportStrumFromJSON для полного импорта шаблона
+      // Этот метод уже содержит всю логику определения формата, миграции и применения
+      await app.importStrumFromJSON.importData(templateData);
+
     } catch (error) {
-      console.error('❌ Ошибка применения шаблона:', error);
-      
-      // Включаем обратно сохранение состояний в случае ошибки
-      if (app.arrowDisplay) {
-        app.arrowDisplay.setPreservePlayStatuses(true);
-      }
-      
+      // Уведомления об ошибках уже показывает ImportStrumFromJSON.importData()
       throw error;
     }
   }
@@ -194,19 +149,28 @@ export class TemplateManager {
    * @param {Object} metadata - Метаданные
    */
   async applyMetadata(metadata) {
+    if (!metadata) return;
+
     const app = window.guitarCombatApp;
-    
+
     // Импорт темпа
-    if (metadata.tempo && app.tempoManager) {
-      app.tempoManager.setTempo(metadata.tempo);
-      console.log(`🎵 Установлен темп: ${metadata.tempo} BPM`);
+    if (metadata.tempo) {
+      this.importBPM(metadata.tempo);
     }
-    
+
+    // Импорт размера такта
+    if (metadata.timeSignature) {
+      const [beats] = metadata.timeSignature.split('/');
+      if (beats && !isNaN(beats)) {
+        this.importBeatCount(parseInt(beats));
+      }
+    }
+
     // Сохраняем дополнительную информацию
     if (metadata.title) {
       app.songTitle = metadata.title;
     }
-    
+
     if (metadata.artist) {
       app.songArtist = metadata.artist;
     }
@@ -226,13 +190,11 @@ export class TemplateManager {
         // При применении шаблона не сохраняем состояния
         app.arrowDisplay.setArrowCount(songStructure.beatCount, false);
       }
-      console.log(`🥁 Установлено количество долей: ${songStructure.beatCount}`);
     }
     
     // Обновляем общее количество тактов
     if (songStructure.totalBars && app.barNavigation) {
       app.barNavigation.setTotalBars(songStructure.totalBars);
-      console.log(`📊 Установлено количество тактов: ${songStructure.totalBars}`);
     }
   }
 
@@ -241,49 +203,59 @@ export class TemplateManager {
    * @param {Array} bars - Массив тактов из шаблона
    */
   async applyBarsFromTemplate(bars) {
+    if (!Array.isArray(bars) || bars.length === 0) {
+      return;
+    }
+
     const app = window.guitarCombatApp;
-    const { Bar } = await import('../Measure/Bar.js');
-    const { PlayStatus } = await import('../Measure/PlayStatus.js');
-    
+
     // Очищаем существующие такты
     app.bars = [];
-    
+
+    // Импортируем Bar из правильного модуля
+    const { Bar } = await import('../Measure/Bar.js');
+    const { PlayStatus } = await import('../Measure/PlayStatus.js');
+
     // Создаём новые такты
-    for (const barData of bars) {
-      const bar = new Bar(barData.index, barData.beatUnits?.length || 4);
-      
-      // Применяем beatUnits
-      if (barData.beatUnits) {
-        barData.beatUnits.forEach(beatUnitData => {
-          if (beatUnitData.index < bar.beatUnits.length) {
-            bar.beatUnits[beatUnitData.index].setPlayStatus(beatUnitData.playStatus.status);
+    for (let index = 0; index < bars.length; index++) {
+      const barData = bars[index];
+      const bar = new Bar(index, barData.beatUnits?.length || 4);
+
+      // Импортируем beatUnits
+      if (barData.beatUnits && Array.isArray(barData.beatUnits)) {
+        for (let beatIndex = 0; beatIndex < barData.beatUnits.length; beatIndex++) {
+          const beatUnitData = barData.beatUnits[beatIndex];
+          if (beatIndex < bar.beatUnits.length) {
+            bar.beatUnits[beatIndex] = await this.convertBeatUnit(beatUnitData);
           }
-        });
+        }
       }
-      
-      // Применяем аккорды
-      if (barData.chordChanges) {
-        barData.chordChanges.forEach(chordData => {
-          bar.addChordChange(chordData.name, chordData.startBeat, chordData.endBeat);
-        });
+
+      // Импортируем смены аккордов
+      if (barData.chordChanges && Array.isArray(barData.chordChanges)) {
+        for (const chordData of barData.chordChanges) {
+          const chordChange = await this.convertChordChange(chordData);
+          bar.chordChanges.push(chordChange);
+        }
       }
-      
-      // Применяем слоги
-      if (barData.lyricSyllables) {
-        barData.lyricSyllables.forEach(syllableData => {
-          bar.addLyricSyllable(syllableData.text, syllableData.startBeat, syllableData.duration);
-        });
+
+      // Импортируем слоги
+      if (barData.lyricSyllables && Array.isArray(barData.lyricSyllables)) {
+        for (const syllableData of barData.lyricSyllables) {
+          const syllable = await this.convertLyricSyllable(syllableData);
+          bar.lyricSyllables.push(syllable);
+        }
       }
-      
+
       app.bars.push(bar);
     }
-    
-    // Обновляем навигацию
+
+    // Обновляем навигацию по тактам
     if (app.barNavigation) {
       app.barNavigation.setTotalBars(bars.length);
       app.barNavigation.setCurrentBarIndex(0);
     }
-    
+
     // Обновляем ArrowDisplay статусами из первого такта
     if (bars.length > 0 && app.arrowDisplay) {
       const firstBar = bars[0];
@@ -293,14 +265,12 @@ export class TemplateManager {
         });
         // При применении шаблона явно устанавливаем статусы без сохранения
         app.arrowDisplay.setAllPlayStatuses(playStatuses);
-        console.log('🎯 Обновлены статусы воспроизведения в ArrowDisplay из шаблона:', playStatuses.length);
       }
     }
-    
+
     // Обновляем аккорды из тактов
     await this.importChordsFromBars(bars);
-    
-    console.log(`📊 Создано ${bars.length} тактов из шаблона`);
+
   }
 
   /**
@@ -357,7 +327,99 @@ export class TemplateManager {
         }
       }
 
-      console.log('🎸 Аккорды импортированы из тактов шаблона:', chordsString);
+    }
+  }
+
+  /**
+   * Конвертирует beatUnit из JSON в объект
+   * @param {Object} beatUnitData - Данные beatUnit
+   * @returns {BeatUnit} Объект BeatUnit
+   */
+  async convertBeatUnit(beatUnitData) {
+    const { BeatUnit } = await import('../Measure/BeatUnit.js');
+    const { PlayStatus } = await import('../Measure/PlayStatus.js');
+
+    let playStatus;
+    if (beatUnitData.playStatus) {
+      // Новый формат с объектом playStatus
+      playStatus = new PlayStatus(beatUnitData.playStatus.status);
+    } else {
+      // Обратная совместимость
+      playStatus = new PlayStatus(beatUnitData.status || 0);
+    }
+
+    const beatUnit = new BeatUnit(beatUnitData.index, playStatus);
+
+    // Сохраняем направление если нужно
+    if (beatUnitData.direction) {
+      beatUnit.direction = beatUnitData.direction;
+    }
+
+    return beatUnit;
+  }
+
+  /**
+   * Конвертирует chordChange из JSON в объект
+   * @param {Object} chordData - Данные аккорда
+   * @returns {ChordChange} Объект ChordChange
+   */
+  async convertChordChange(chordData) {
+    const { ChordChange } = await import('../Measure/ChordChange.js');
+    return new ChordChange(chordData.name, chordData.startBeat, chordData.endBeat);
+  }
+
+  /**
+   * Конвертирует lyricSyllable из JSON в объект
+   * @param {Object} syllableData - Данные слога
+   * @returns {LyricSyllable} Объект LyricSyllable
+   */
+  async convertLyricSyllable(syllableData) {
+    const { LyricSyllable } = await import('../Measure/LyricSyllable.js');
+    return new LyricSyllable(syllableData.text, syllableData.startBeat, syllableData.duration);
+  }
+
+  /**
+   * Импортирует BPM
+   * @param {number} bpm - Темп
+   */
+  importBPM(bpm) {
+    const app = window.guitarCombatApp;
+    if (app.tempoManager) {
+      app.tempoManager.setTempo(bpm);
+    }
+
+    // Также обновляем DOM элементы напрямую
+    const bpmSlider = document.getElementById('bpm');
+    const bpmLabel = document.getElementById('bpmLabel');
+    if (bpmSlider && bpmLabel) {
+      bpmSlider.value = bpm;
+      bpmLabel.textContent = bpm;
+    }
+
+    // Обновляем настройки приложения
+    if (app.settings) {
+      app.settings.bpm = bpm;
+    }
+  }
+
+  /**
+   * Импортирует количество долей в такте
+   * @param {number} count - Количество долей
+   */
+  importBeatCount(count) {
+    const app = window.guitarCombatApp;
+    if (app.arrowDisplay) {
+      // При импорте не сохраняем состояния
+      app.arrowDisplay.setArrowCount(count, false);
+    }
+
+    // Обновляем настройки
+    app.settings.beatCount = count;
+
+    // Обновляем DOM элемент
+    const countSelect = document.getElementById('countSelect');
+    if (countSelect) {
+      countSelect.value = count;
     }
   }
 
@@ -371,7 +433,6 @@ export class TemplateManager {
     // Импорт паттерна боя
     if (templates.strummingPattern) {
       app.currentStrummingPattern = templates.strummingPattern;
-      console.log(`🎸 Установлен паттерн: ${templates.strummingPattern}`);
     }
     
     // Импорт кастомизаций
@@ -439,8 +500,6 @@ export class TemplateManager {
       createdAt: new Date().toISOString()
     };
     
-    console.log('💾 Шаблон создан:', templateData.templateInfo);
-    
     return templateData;
   }
 
@@ -454,26 +513,26 @@ export class TemplateManager {
       const name = templateData.templateInfo?.name || 'template';
       filename = `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.json`;
     }
-    
+
     const jsonString = JSON.stringify(templateData, null, 2);
-    
+
     // Создаем blob с JSON данными
     const blob = new Blob([jsonString], { type: 'application/json' });
-    
+
     // Создаем ссылку для скачивания
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
-    
+
     // Добавляем ссылку в DOM, кликаем и удаляем
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Освобождаем память
     URL.revokeObjectURL(url);
-    
-    console.log(`📤 Шаблон экспортирован: ${filename}`);
+
   }
+
 }

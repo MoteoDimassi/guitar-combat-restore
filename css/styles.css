@@ -1833,6 +1833,12 @@ body {
   font-weight: bold;
 }
 
+/* Стили для плейсхолдера шаблонов */
+.template-placeholder {
+  color: #9CA3AF; /* gray-400 */
+  font-style: italic;
+}
+
 /* Стили для отображения символов статусов */
 .play-status-circle {
   display: inline-flex;

@@ -77,7 +77,6 @@ export class ImportStrumFromJSON {
         const data = JSON.parse(e.target.result);
         await this.importData(data);
       } catch (error) {
-        console.error('Ошибка при импорте JSON:', error);
         this.showErrorNotification('Ошибка при импорте файла: ' + error.message);
       }
     };
@@ -325,7 +324,6 @@ export class ImportStrumFromJSON {
       
       // Показываем предупреждения если есть
       if (validation.warnings.length > 0) {
-        console.warn('⚠️ Предупреждения при импорте:', validation.warnings);
       }
       
       // Импорт метаданных
@@ -340,10 +338,7 @@ export class ImportStrumFromJSON {
       // Импорт шаблонов
       await this.importTemplates(data.templates);
       
-      console.log('✅ Импорт формата v2 завершён успешно');
-      
     } catch (error) {
-      console.error('❌ Ошибка импорта формата v2:', error);
       throw error;
     }
   }
@@ -402,7 +397,6 @@ export class ImportStrumFromJSON {
    */
   async importBarsV2(bars) {
     if (!Array.isArray(bars) || bars.length === 0) {
-      console.warn('⚠️ Массив тактов пуст или отсутствует');
       return;
     }
     
@@ -462,14 +456,12 @@ export class ImportStrumFromJSON {
         });
         // При импорте явно устанавливаем статусы без сохранения
         this.app.arrowDisplay.setAllPlayStatuses(playStatuses);
-        console.log('🎯 Обновлены статусы воспроизведения в ArrowDisplay из импорта:', playStatuses.length);
       }
     }
     
     // Обновляем аккорды из тактов
     await this.importChordsFromBars(bars);
     
-    console.log(`📊 Импортировано ${bars.length} тактов`);
   }
 
   /**
@@ -524,7 +516,6 @@ export class ImportStrumFromJSON {
         }
       }
 
-      console.log('🎸 Аккорды импортированы из тактов:', chordsString);
     }
   }
 
@@ -605,8 +596,6 @@ export class ImportStrumFromJSON {
     }
     
     try {
-      console.log('🔄 Импорт данных:', data);
-      
       // Отключаем сохранение состояний при импорте (т.к. импортируем новые состояния)
       if (this.app.arrowDisplay) {
         this.app.arrowDisplay.setPreservePlayStatuses(false);
@@ -614,15 +603,11 @@ export class ImportStrumFromJSON {
       
       // Определяем формат данных
       const format = this.detectDataFormat(data);
-      console.log(`📋 Обнаружен формат: ${format}`);
-      
       let processedData;
       
       // Мигрируем данные если нужно
       if (format !== 'v2') {
-        console.log(`🔄 Миграция данных из формата ${format} в v2...`);
         processedData = this.migrateData(data, format);
-        console.log('✅ Миграция завершена');
       } else {
         processedData = data;
       }
@@ -641,10 +626,8 @@ export class ImportStrumFromJSON {
       }
       
       this.showSuccessNotification('Настройки успешно импортированы!');
-      console.log('✅ Импорт завершен успешно');
-      
+
     } catch (error) {
-      console.error('Ошибка при импорте данных:', error);
       this.showErrorNotification('Ошибка при импорте данных: ' + error.message);
       
       // Включаем обратно сохранение состояний в случае ошибки
@@ -699,7 +682,6 @@ export class ImportStrumFromJSON {
   importBPM(bpm) {
     if (this.app.tempoManager) {
       this.app.tempoManager.setTempo(bpm);
-      console.log('🎵 BPM установлен:', bpm);
     }
 
     // Также обновляем DOM элементы напрямую
@@ -753,7 +735,6 @@ export class ImportStrumFromJSON {
       }
     }
 
-    console.log('🎸 Аккорды импортированы:', chordsString);
   }
 
 
@@ -763,7 +744,6 @@ export class ImportStrumFromJSON {
    */
   async importArrowStatuses(arrowStatuses) {
     if (!Array.isArray(arrowStatuses)) {
-      console.warn('ArrowStatuses должны быть массивом');
       return;
     }
 
@@ -794,7 +774,6 @@ export class ImportStrumFromJSON {
    */
   async importArrows(arrows) {
     if (!Array.isArray(arrows)) {
-      console.warn('Arrows должны быть массивом');
       return;
     }
 
@@ -818,7 +797,6 @@ export class ImportStrumFromJSON {
       this.app.arrowDisplay.setAllPlayStatuses(playStatuses);
     }
 
-    console.log('🎯 Стрелки импортированы из arrows:', playStatuses.length);
   }
 
 
@@ -828,7 +806,6 @@ export class ImportStrumFromJSON {
    */
   async importBars(bars) {
     if (!Array.isArray(bars)) {
-      console.warn('Bars должны быть массивом');
       return;
     }
 
@@ -846,7 +823,6 @@ export class ImportStrumFromJSON {
       this.app.bars.push(bar);
     }
 
-    console.log('📊 Такты импортированы:', bars.length);
   }
 
   /**

@@ -667,7 +667,7 @@ class DownloadManager {
             // Освобождаем память
             URL.revokeObjectURL(url);
             
-            console.log(`Настройки боя скачаны в формате ${format}:`, data);
+            
             
         } catch (error) {
             console.error('Ошибка при скачивании настроек:', error);

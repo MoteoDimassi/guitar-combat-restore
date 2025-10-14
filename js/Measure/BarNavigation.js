@@ -33,14 +33,11 @@ export class BarNavigation {
     this.nextButton = document.getElementById('nextLineBtn');
     
     if (!this.prevButton || !this.nextButton) {
-      console.warn('⚠️ Кнопки навигации не найдены в DOM');
       return;
     }
 
     this.bindEvents();
     this.updateNavigationState();
-    
-    console.log('✅ BarNavigation инициализирован с существующими кнопками');
   }
 
   /**
@@ -118,19 +115,10 @@ export class BarNavigation {
    * Переходит к следующему такту
    */
   goToNextBar() {
-    console.log('🧭 Переход к следующему такту:', {
-      currentIndex: this.currentBarIndex,
-      totalBars: this.totalBars,
-      canGoNext: this.currentBarIndex < this.totalBars - 1
-    });
-    
     if (this.currentBarIndex < this.totalBars - 1) {
       this.currentBarIndex++;
       this.updateNavigationState();
       this.notifyBarChange();
-      console.log('✅ Перешли к такту:', this.currentBarIndex);
-    } else {
-      console.log('⚠️ Нельзя перейти к следующему такту - уже на последнем');
     }
   }
 
@@ -313,7 +301,5 @@ export class BarNavigation {
     this.container = null;
     this.onBarChange = null;
     this.onNavigationUpdate = null;
-    
-    console.log('🗑️ BarNavigation уничтожен');
   }
 }

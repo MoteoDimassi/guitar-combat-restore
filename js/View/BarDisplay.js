@@ -51,8 +51,6 @@ export class BarDisplay {
     if (this.playBtn) {
       this.playBtn.addEventListener('click', () => this.togglePlayback());
     }
-    
-    console.log('⚠️ BarDisplay: Навигация управляется BarNavigation');
   }
 
   /**

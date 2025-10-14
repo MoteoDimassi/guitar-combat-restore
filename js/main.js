@@ -21,6 +21,7 @@ import { PlayStatus } from './Measure/PlayStatus.js';
 import { DownloadManager } from './Functions/DownloadManager.js';
 import { TempoManager } from './Functions/TempoManager.js';
 import { ImportStrumFromJSON } from './Functions/ImportStrumFromJSON.js';
+import { TemplateSetter } from './Strum/TemplateSetter.js';
 import { TemplateManager } from './Functions/TemplateManager.js';
 
 /**
@@ -42,6 +43,7 @@ export class GuitarCombatApp {
     this.privacyModal = new PrivacyPolicyModal();
     this.termsModal = new TermsOfUseModal();
     this.downloadManager = new DownloadManager();
+this.templateSetter = new TemplateSetter();
     this.tempoManager = new TempoManager();
     this.importStrumFromJSON = new ImportStrumFromJSON(this);
     this.templateManager = new TemplateManager();
@@ -85,14 +87,12 @@ export class GuitarCombatApp {
    */
   async init() {
     try {
-      console.log('🎸 Инициализация Guitar Combat...');
-      
       // Инициализация DOM элементов
       this.initDOMElements();
       
       // Синхронизируем настройки с DOM элементами
       this.syncSettingsWithDOM();
-      
+
     // Инициализация компонентов
     this.initComponents();
     
@@ -104,7 +104,9 @@ export class GuitarCombatApp {
     
     // Инициализация импорта JSON
     this.importStrumFromJSON.init();
-    
+    // Инициализация TemplateSetter
+    await this.initTemplateSetter();
+
     // Инициализация менеджера шаблонов
     this.templateManager.init();
       
@@ -117,10 +119,7 @@ export class GuitarCombatApp {
       // Парсинг начальных аккордов из поля ввода
       this.parseInitialChords();
       
-      console.log('✅ Guitar Combat успешно инициализирован');
-      
     } catch (error) {
-      console.error('❌ Ошибка инициализации:', error);
       this.showError('Ошибка инициализации приложения');
     }
   }
@@ -155,7 +154,6 @@ export class GuitarCombatApp {
     const missingOptionalElements = optionalElements.filter(id => !this.domElements[id]);
     
     if (missingOptionalElements.length > 0) {
-      console.warn('⚠️ Отсутствуют опциональные DOM элементы:', missingOptionalElements.join(', '));
     }
   }
 
@@ -178,7 +176,6 @@ export class GuitarCombatApp {
       this.tempoManager.setTempo(this.settings.bpm);
     }
     
-    console.log('🔄 Настройки синхронизированы с DOM:', this.settings);
   }
 
   /**
@@ -186,23 +183,31 @@ export class GuitarCombatApp {
    */
   initTempoManager() {
     try {
-      console.log('🎼 Инициализация TempoManager...');
-      
       // Инициализируем менеджер темпа
       this.tempoManager.init();
       
-      // Устанавливаем колбэк для изменения темпа
-      this.tempoManager.setOnTempoChange((bpm) => {
-        this.handleTempoChange(bpm);
-      });
-      
-      console.log('✅ TempoManager успешно инициализирован');
-      
-    } catch (error) {
-      console.error('❌ Ошибка инициализации TempoManager:', error);
-      // Не прерываем инициализацию приложения, если TempoManager не инициализировался
-    }
+     // Устанавливаем колбэк для изменения темпа
+     this.tempoManager.setOnTempoChange((bpm) => {
+       this.handleTempoChange(bpm);
+     });
+
+   } catch (error) {
+     // Не прерываем инициализацию приложения, если TempoManager не инициализировался
+   }
+ }
+
+/**
+ * Инициализирует TemplateSetter
+ */
+async initTemplateSetter() {
+  try {
+    await this.templateSetter.init(this.templateManager, this.arrowDisplay);
+    this.templateSetter.bindTemplateSelect('#templates-select');
+    console.log('✅ TemplateSetter инициализирован');
+  } catch (error) {
+    console.error('❌ Ошибка инициализации TemplateSetter:', error);
   }
+}
 
   /**
    * Инициализирует компоненты
@@ -232,7 +237,6 @@ export class GuitarCombatApp {
         this.handlePlaybackStop();
       });
     } else {
-      console.warn('⚠️ BarDisplay не инициализирован - отсутствует контейнер barContainer');
     }
     
     // Инициализация отображения стрелочек
@@ -248,8 +252,6 @@ export class GuitarCombatApp {
     
     // Инициализация отображения аккордов
     this.chordDisplay.init('#chordDisplay');
-    console.log('🎵 ChordDisplay инициализирован:', this.chordDisplay.isInitialized());
-    
     // Инициализация навигации по тактам
     this.barNavigation.init();
     
@@ -376,13 +378,10 @@ export class GuitarCombatApp {
    */
   parseInitialChords() {
     if (!this.domElements.chordsInput) {
-      console.warn('⚠️ Поле ввода аккордов не найдено');
       return;
     }
 
     const chordsString = this.domElements.chordsInput.value;
-    console.log('🎵 Парсинг начальных аккордов:', chordsString || '(пустое поле)');
-    
     // Всегда вызываем обработчик, даже для пустой строки
     this.handleChordsInputChange(chordsString || '');
   }
@@ -392,8 +391,6 @@ export class GuitarCombatApp {
    * @param {string} chordsString - Строка с аккордами
    */
   handleChordsInputChange(chordsString) {
-    console.log('🎵 Обновление аккордов:', chordsString);
-    
     // Включаем сохранение состояний стрелочек при изменении аккордов
     if (this.arrowDisplay) {
       this.arrowDisplay.setPreservePlayStatuses(true);
@@ -404,8 +401,6 @@ export class GuitarCombatApp {
     
     // Получаем статистику парсинга
     const stats = this.chordParser.getStats();
-    console.log('📊 Статистика парсинга:', stats);
-    
     // Создаем такты на основе аккордов
     this.createBarsFromChords();
     
@@ -430,9 +425,7 @@ export class GuitarCombatApp {
    */
   handleBeatCountChange(beatCount) {
     if (beatCount > 0 && beatCount <= 16) {
-      console.log('🥁 Изменение количества долей:', beatCount);
       this.settings.beatCount = beatCount;
-      
       // Синхронизируем количество стрелочек
       if (this.domElements.countSelect) {
         this.domElements.countSelect.value = beatCount;
@@ -456,7 +449,6 @@ export class GuitarCombatApp {
    */
   handleBpmChange(bpm) {
     if (bpm > 0 && bpm <= 300) {
-      console.log('🎼 Изменение темпа:', bpm);
       this.settings.bpm = bpm;
       this.saveData();
     }
@@ -467,10 +459,8 @@ export class GuitarCombatApp {
    * @param {number} bpm - Темп в ударах в минуту
    */
   handleTempoChange(bpm) {
-    console.log('🎼 Изменение темпа через TempoManager:', bpm);
     this.settings.bpm = bpm;
     this.saveData();
-    
     // Здесь можно добавить дополнительную логику, например:
     // - Обновление метронома
     // - Пересчет интервалов воспроизведения
@@ -482,7 +472,6 @@ export class GuitarCombatApp {
    */
   updateChordDisplay() {
     if (!this.chordDisplay || !this.chordDisplay.isInitialized()) {
-      console.warn('⚠️ ChordDisplay не инициализирован');
       return;
     }
 
@@ -504,12 +493,7 @@ export class GuitarCombatApp {
     // Получаем текущий такт из навигации
     let currentBar = null;
     const currentBarIndex = this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0;
-    
-    console.log('🎵 Обновление отображения аккордов:', {
-      currentBarIndex,
-      totalBars: this.bars.length
-    });
-    
+
     if (this.bars.length > 0 && currentBarIndex < this.bars.length) {
       currentBar = this.bars[currentBarIndex];
       console.log('🎵 Используем такт:', currentBarIndex, 'с аккордом:', currentBar.getChordForBeat(0));
@@ -530,11 +514,6 @@ export class GuitarCombatApp {
     const displayCurrentChord = allCurrentChords.length > 1 ? allCurrentChords : currentChord;
 
     this.chordDisplay.updateDisplay(displayCurrentChord, nextChord);
-    console.log('🎵 Отображение аккордов из такта:', { 
-      currentChord: displayCurrentChord, 
-      nextChord,
-      barIndex: this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0
-    });
   }
 
   /**
@@ -553,17 +532,10 @@ export class GuitarCombatApp {
     // Получаем следующий аккорд из следующего такта
     let nextChord = null;
     const currentBarIndex = this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0;
-    
-    console.log('🎵 Получение аккордов для такта:', {
-      currentBarIndex,
-      totalBars: this.bars.length,
-      currentBar: bar.barIndex
-    });
-    
+
     if (currentBarIndex + 1 < this.bars.length) {
       const nextBar = this.bars[currentBarIndex + 1];
       nextChord = nextBar.getChordForBeat(0);
-      console.log('🎵 Следующий аккорд из такта:', nextBar.barIndex, '=', nextChord);
     }
 
     return { current: currentChord, next: nextChord };
@@ -593,31 +565,16 @@ export class GuitarCombatApp {
     if (validChords.length === 0) {
       // Создаем один пустой такт
       this.bars = [new Bar(0, this.settings.beatCount)];
-      console.log('📊 Создан пустой такт (нет аккордов)');
     } else {
       // Используем BarSequenceBuilder для создания тактов
       this.barSequenceBuilder.beatCount = this.settings.beatCount;
       const chordNames = validChords.map(chord => chord.name);
       this.bars = this.barSequenceBuilder.buildFromChordArray(chordNames);
-      console.log(`📊 Создано ${this.bars.length} тактов через BarSequenceBuilder:`, chordNames);
-      
-      // Проверяем аккорды в каждом такте
-      this.bars.forEach((bar, index) => {
-        const chord = bar.getChordForBeat(0);
-        console.log(`📊 Такт ${index}: аккорд = ${chord}`);
-      });
     }
-    
+
     // Обновляем навигацию по тактам
-    console.log('🧭 Обновление навигации:', {
-      barsCount: this.bars.length,
-      navigationState: this.barNavigation.getState()
-    });
-    
     this.barNavigation.setTotalBars(this.bars.length);
     this.barNavigation.setCurrentBarIndex(0);
-    
-    console.log('🧭 Навигация обновлена:', this.barNavigation.getState());
   }
 
   /**
@@ -626,8 +583,6 @@ export class GuitarCombatApp {
    * @param {Bar} bar - Объект такта
    */
   handleBarChange(barIndex, bar) {
-    console.log('🔄 Смена такта:', barIndex);
-    
     // Обновляем отображение аккордов при смене такта
     this.updateChordDisplay();
     
@@ -641,17 +596,13 @@ export class GuitarCombatApp {
    * @param {number} barIndex - Индекс нового такта
    */
   handleBarNavigationChange(barIndex) {
-    console.log('🧭 Навигация по тактам:', barIndex);
-    
     // Синхронизируем с BarDisplay если он инициализирован
     if (this.barDisplay && this.domElements.barContainer) {
       this.barDisplay.goToBar(barIndex);
     }
     
     // Принудительно обновляем отображение аккордов
-    console.log('🎵 Принудительное обновление ChordDisplay после смены такта');
     this.updateChordDisplay();
-    
     // Вызываем общий колбэк смены такта
     const currentBar = this.bars[barIndex] || null;
     if (this.callbacks.onBarChange) {
@@ -663,9 +614,7 @@ export class GuitarCombatApp {
    * Обрабатывает начало воспроизведения
    */
   handlePlaybackStart() {
-    console.log('▶️ Начало воспроизведения');
     this.settings.isPlaying = true;
-    
     if (this.callbacks.onPlaybackStart) {
       this.callbacks.onPlaybackStart();
     }
@@ -675,9 +624,7 @@ export class GuitarCombatApp {
    * Обрабатывает остановку воспроизведения
    */
   handlePlaybackStop() {
-    console.log('⏹️ Остановка воспроизведения');
     this.settings.isPlaying = false;
-    
     if (this.callbacks.onPlaybackStop) {
       this.callbacks.onPlaybackStop();
     }
@@ -715,14 +662,6 @@ export class GuitarCombatApp {
    * @param {PlayStatus} playStatus - Новое состояние воспроизведения
    */
   handlePlayStatusChange(index, playStatus) {
-    console.log(`🔄 Изменение состояния воспроизведения для стрелочки ${index + 1}:`, {
-      статус: playStatus.getStatusString(),
-      символ: playStatus.getDisplaySymbol(),
-      играет: playStatus.isPlayed(),
-      приглушен: playStatus.isMuted(),
-      пропущен: playStatus.isSkipped()
-    });
-    
     // Здесь можно добавить логику для обновления тактов или других компонентов
     // Например, обновить текущий такт с новыми состояниями воспроизведения
     if (this.bars && this.bars.length > 0 && this.barNavigation) {
@@ -730,7 +669,6 @@ export class GuitarCombatApp {
       if (currentBarIndex >= 0 && currentBarIndex < this.bars.length) {
         const currentBar = this.bars[currentBarIndex];
         currentBar.setBeatPlayStatus(index, playStatus);
-        console.log(`📝 Обновлен такт ${currentBarIndex + 1}, позиция ${index + 1}`);
       }
     }
   }
@@ -745,14 +683,6 @@ export class GuitarCombatApp {
     const chordDisplayState = this.chordDisplay ? this.chordDisplay.getState() : null;
     const navigationState = this.barNavigation ? this.barNavigation.getState() : null;
     
-    console.log('📈 Статистика:', {
-      аккорды: stats,
-      такты: state,
-      стрелочки: arrowState,
-      отображение_аккордов: chordDisplayState,
-      навигация_по_тактам: navigationState,
-      настройки: this.settings
-    });
   }
 
   /**
@@ -774,7 +704,6 @@ export class GuitarCombatApp {
    * @param {string} message - Сообщение об ошибке
    */
   showError(message) {
-    console.error('❌ Ошибка:', message);
     this.modal.open('Ошибка', `<p class="text-red-400">${message}</p>`);
   }
 
@@ -792,9 +721,7 @@ export class GuitarCombatApp {
       };
       
       localStorage.setItem('guitarCombatData', JSON.stringify(data));
-      console.log('💾 Данные сохранены');
     } catch (error) {
-      console.error('❌ Ошибка сохранения:', error);
     }
   }
 
@@ -845,9 +772,7 @@ export class GuitarCombatApp {
         this.domElements.countSelect.value = this.settings.beatCount;
       }
       
-      console.log('📂 Данные загружены');
     } catch (error) {
-      console.error('❌ Ошибка загрузки:', error);
     }
   }
 
@@ -865,7 +790,6 @@ export class GuitarCombatApp {
     this.updateDisplay();
     this.saveData();
     
-    console.log('🗑️ Все данные очищены');
   }
 
   /**
@@ -941,8 +865,6 @@ export class GuitarCombatApp {
    */
   generateRandomStrum() {
     try {
-      console.log('🎲 Генерация случайного боя...');
-      
       // Отключаем сохранение состояний при генерации случайного боя
       if (this.arrowDisplay) {
         this.arrowDisplay.setPreservePlayStatuses(false);
@@ -964,17 +886,13 @@ export class GuitarCombatApp {
       if (this.arrowDisplay) {
         this.arrowDisplay.setPreservePlayStatuses(true);
       }
-      
-      console.log('✅ Случайный бой сгенерирован:', analysis);
-      
+
       // Показываем краткую информацию пользователю
       this.showNotification(
         `Случайный бой сгенерирован! Играющих долей: ${analysis.playCount}/${analysis.total}`
       );
       
     } catch (error) {
-      console.error('❌ Ошибка генерации случайного боя:', error);
-      
       // Включаем обратно сохранение состояний в случае ошибки
       if (this.arrowDisplay) {
         this.arrowDisplay.setPreservePlayStatuses(true);
@@ -990,8 +908,6 @@ export class GuitarCombatApp {
    */
   showNotification(message) {
     // Простая реализация уведомления
-    console.log('📢', message);
-    
     // Можно расширить для показа в UI
     if (typeof window !== 'undefined' && window.alert) {
       // Для отладки - показываем alert
@@ -1016,8 +932,6 @@ export class GuitarCombatApp {
       const templateId = await this.showTemplateSelectionDialog(templates);
       
       if (templateId) {
-        console.log(`🎯 Применение шаблона: ${templateId}`);
-        
         // Загружаем и применяем шаблон
         const templateData = await this.templateManager.loadTemplate(templateId);
         await this.templateManager.applyTemplate(templateData);
@@ -1026,7 +940,6 @@ export class GuitarCombatApp {
       }
       
     } catch (error) {
-      console.error('❌ Ошибка применения шаблона:', error);
       this.showError(`Ошибка применения шаблона: ${error.message}`);
     }
   }
@@ -1087,23 +1000,20 @@ export class GuitarCombatApp {
       this.showNotification(`Шаблон "${name}" создан`);
       return templateData;
     } catch (error) {
-      console.error('❌ Ошибка сохранения шаблона:', error);
       this.showError(`Ошибка сохранения шаблона: ${error.message}`);
     }
   }
 
   /**
-   * Показывает ошибку пользователю
+   * Показывает ошибку пользователю (дублированный метод - удалить)
    * @param {string} error - Сообщение об ошибке
    */
-  showError(error) {
-    console.error('❌', error);
-    
-    // Можно расширить для показа в UI
-    if (typeof window !== 'undefined' && window.alert) {
-      window.alert(`Ошибка: ${error}`);
-    }
-  }
+  // showError(error) {
+  //   // Можно расширить для показа в UI
+  //   if (typeof window !== 'undefined' && window.alert) {
+  //     window.alert(`Ошибка: ${error}`);
+  //   }
+  // }
 }
 
 // Экспорт для использования в других модулях
