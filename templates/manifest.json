@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "generatedAt": "2025-10-13T18:43:51.544Z",
+  "generatedAt": "2025-10-15T10:06:51.277Z",
   "formats": [
     "v2",
     "legacy"
@@ -38,53 +38,6 @@
       "tags": [
         "basic",
         "strumming"
-      ],
-      "formats": [
-        "v2"
-      ]
-    },
-    {
-      "name": "Пятёрка с глушением",
-      "file": "Пятёрка с глушением.json",
-      "id": "пяте-рка-с-глушением",
-      "category": "advanced",
-      "description": "Пятёрка с глушением паттерн боя",
-      "difficulty": "intermediate",
-      "tags": [
-        "basic",
-        "strumming",
-        "muted"
-      ],
-      "formats": [
-        "v2"
-      ]
-    },
-    {
-      "name": "Шестёрка",
-      "file": "Шестёрка.json",
-      "id": "шесте-рка",
-      "category": "basic",
-      "description": "Шестёрка паттерн боя",
-      "difficulty": "beginner",
-      "tags": [
-        "basic",
-        "strumming"
-      ],
-      "formats": [
-        "v2"
-      ]
-    },
-    {
-      "name": "Шестёрка с глушением",
-      "file": "Шестёрка с глушением.json",
-      "id": "шесте-рка-с-глушением",
-      "category": "advanced",
-      "description": "Шестёрка с глушением паттерн боя",
-      "difficulty": "intermediate",
-      "tags": [
-        "basic",
-        "strumming",
-        "muted"
       ],
       "formats": [
         "v2"

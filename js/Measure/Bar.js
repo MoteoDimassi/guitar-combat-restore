@@ -1,6 +1,7 @@
 import { BeatUnit } from './BeatUnit.js';
 import { ChordChange } from './ChordChange.js';
 import { LyricSyllable } from './LyricSyllable.js';
+import { PlayStatus } from './PlayStatus.js';
 
 /**
  * Класс Bar представляет такт в музыкальной композиции
@@ -30,43 +31,30 @@ export class Bar {
   initializeBeatUnits() {
     this.beatUnits = [];
     for (let i = 0; i < this.beatCount; i++) {
-      this.beatUnits.push(new BeatUnit(i, 0)); // по умолчанию не играть
+      // Создаем BeatUnit с правильным статусом по умолчанию
+      // Первая доля - PLAY, остальные - SKIP
+      const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+      const playStatus = new PlayStatus(status);
+      this.beatUnits.push(new BeatUnit(i, playStatus));
     }
   }
 
-  /**
-   * Устанавливает тип звукоизвлечения для длительности
-   * @param {number} beatIndex - Индекс длительности
-   * @param {number} type - Тип звукоизвлечения (0, 1, 2) - для обратной совместимости
-   */
-  setBeatType(beatIndex, type) {
-    if (beatIndex >= 0 && beatIndex < this.beatCount) {
-      this.beatUnits[beatIndex].setType(type);
-    }
-  }
 
   /**
    * Устанавливает статус воспроизведения для длительности
    * @param {number} beatIndex - Индекс длительности
-   * @param {PlayStatus|number} playStatus - Статус воспроизведения
+   * @param {PlayStatus} playStatus - Статус воспроизведения
    */
   setBeatPlayStatus(beatIndex, playStatus) {
     if (beatIndex >= 0 && beatIndex < this.beatCount) {
+      // Если передано число, создаем объект PlayStatus
+      if (typeof playStatus === 'number') {
+        playStatus = new PlayStatus(playStatus);
+      }
       this.beatUnits[beatIndex].setPlayStatus(playStatus);
     }
   }
 
-  /**
-   * Получает тип звукоизвлечения для длительности
-   * @param {number} beatIndex - Индекс длительности
-   * @returns {number} Тип звукоизвлечения
-   */
-  getBeatType(beatIndex) {
-    if (beatIndex >= 0 && beatIndex < this.beatCount) {
-      return this.beatUnits[beatIndex].getType();
-    }
-    return 0;
-  }
 
   /**
    * Получает статус воспроизведения для длительности
@@ -100,6 +88,9 @@ export class Bar {
     const chordChange = new ChordChange(chordName, startBeat, endBeat);
     this.chordChanges.push(chordChange);
     this.sortChordChanges();
+    
+    // Обновляем связи с BeatUnit
+    this.syncChordLinks(chordChange);
   }
 
   /**
@@ -136,6 +127,9 @@ export class Bar {
     const syllable = new LyricSyllable(text, startBeat, duration);
     this.lyricSyllables.push(syllable);
     this.sortLyricSyllables();
+    
+    // Обновляем связи с BeatUnit
+    this.syncSyllableLinks(syllable);
   }
 
   /**
@@ -174,6 +168,115 @@ export class Bar {
    */
   sortLyricSyllables() {
     this.lyricSyllables.sort((a, b) => a.startBeat - b.startBeat);
+  }
+
+  /**
+   * Синхронизирует связи между аккордами и BeatUnit
+   * @param {ChordChange} chordChange - Аккорд для синхронизации
+   */
+  syncChordLinks(chordChange) {
+    for (let beatIndex = chordChange.startBeat; beatIndex < chordChange.endBeat && beatIndex < this.beatUnits.length; beatIndex++) {
+      this.beatUnits[beatIndex].setChord(chordChange);
+    }
+  }
+
+  /**
+   * Синхронизирует связи между слогами и BeatUnit
+   * @param {LyricSyllable} syllable - Слог для синхронизации
+   */
+  syncSyllableLinks(syllable) {
+    for (let beatIndex = syllable.startBeat; beatIndex < syllable.endBeat && beatIndex < this.beatUnits.length; beatIndex++) {
+      this.beatUnits[beatIndex].setSyllable(syllable);
+    }
+  }
+
+  /**
+   * Обновляет все связи между BeatUnit, аккордами и слогами
+   */
+  syncAllLinks() {
+    // Очищаем существующие связи, но сохраняем статусы
+    this.beatUnits.forEach(beatUnit => {
+      beatUnit.setChord(null);
+      beatUnit.setSyllable(null);
+    });
+
+    // Восстанавливаем связи аккордов
+    this.chordChanges.forEach(chordChange => {
+      this.syncChordLinks(chordChange);
+    });
+
+    // Восстанавливаем связи слогов
+    this.lyricSyllables.forEach(syllable => {
+      this.syncSyllableLinks(syllable);
+    });
+  }
+
+  /**
+   * Получает полную информацию о длительности
+   * @param {number} beatIndex - Индекс длительности
+   * @returns {Object|null} Полная информация о длительности
+   */
+  getBeatFullInfo(beatIndex) {
+    if (beatIndex >= 0 && beatIndex < this.beatUnits.length) {
+      const beatUnit = this.beatUnits[beatIndex];
+      return {
+        barIndex: this.barIndex,
+        beatIndex: beatIndex,
+        beatUnit: beatUnit,
+        playStatus: beatUnit.getPlayStatus(),
+        chord: beatUnit.getChord(),
+        syllable: beatUnit.getSyllable(),
+        fullInfo: beatUnit.getFullInfo()
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Устанавливает BeatUnit для такта (заменяет существующие)
+   * @param {BeatUnit[]} beatUnits - Массив BeatUnit
+   */
+  setBeatUnits(beatUnits) {
+    this.beatUnits = beatUnits || [];
+    this.beatCount = this.beatUnits.length;
+    
+    // Обновляем связи на основе существующих аккордов и слогов
+    this.syncAllLinks();
+  }
+
+  /**
+   * Применяет стандартную настройку для BeatUnit
+   * @param {Object} options - Опции настройки
+   */
+  applyStandardSetup(options = {}) {
+    const {
+      defaultStatus = PlayStatus.STATUS.SKIP, // по умолчанию - не играть (пустой кружок)
+      firstBeatStatus = PlayStatus.STATUS.PLAY, // первая доля - играть (закрашенный круг)
+      chordStatus = PlayStatus.STATUS.PLAY, // при наличии аккорда - играть
+      syllableStatus = PlayStatus.STATUS.PLAY // при наличии слога - играть
+    } = options;
+
+    this.beatUnits.forEach((beatUnit, index) => {
+      let status = defaultStatus;
+      
+      // Первая доля всегда должна быть PLAY (закрашенный круг)
+      if (index === 0) {
+        status = firstBeatStatus;
+      }
+      
+      // Если есть аккорд
+      if (beatUnit.hasChord()) {
+        status = chordStatus;
+      }
+      
+      // Если есть слог
+      if (beatUnit.hasSyllable()) {
+        status = syllableStatus;
+      }
+      
+      // Создаем объект PlayStatus вместо числового значения
+      beatUnit.setPlayStatus(new PlayStatus(status));
+    });
   }
 
   /**
@@ -230,6 +333,7 @@ export class Bar {
    * Очищает все данные такта
    */
   clear() {
+    // Вызываем initializeBeatUnits() для установки правильных статусов
     this.initializeBeatUnits();
     this.chordChanges = [];
     this.lyricSyllables = [];
@@ -268,7 +372,21 @@ export class Bar {
         typeString: beat.getTypeString(),
         displaySymbol: beat.getDisplaySymbol(),
         cssClass: beat.getCSSClass(),
-        playStatus: beat.getPlayStatus()
+        playStatus: beat.getPlayStatus(),
+        chord: beat.getChord() ? {
+          name: beat.getChord().name,
+          startBeat: beat.getChord().startBeat,
+          endBeat: beat.getChord().endBeat
+        } : null,
+        syllable: beat.getSyllable() ? {
+          text: beat.getSyllable().text,
+          startBeat: beat.getSyllable().startBeat,
+          duration: beat.getSyllable().duration,
+          endBeat: beat.getSyllable().endBeat
+        } : null,
+        hasChord: beat.hasChord(),
+        hasSyllable: beat.hasSyllable(),
+        fullInfo: beat.getFullInfo()
       })),
       chordChanges: this.chordChanges.map(chord => ({
         name: chord.name,
@@ -282,7 +400,8 @@ export class Bar {
         duration: syllable.duration,
         endBeat: syllable.endBeat
       })),
-      conflicts: this.checkConflicts()
+      conflicts: this.checkConflicts(),
+      hasLinkedElements: this.beatUnits.some(beat => beat.hasChord() || beat.hasSyllable())
     };
   }
 
@@ -308,9 +427,9 @@ export class Bar {
   static fromJSON(data) {
     const bar = new Bar(data.barIndex, data.beatCount);
     
-    bar.beatUnits = data.beatUnits.map(beatData => BeatUnit.fromJSON(beatData));
-    bar.chordChanges = data.chordChanges.map(chordData => ChordChange.fromJSON(chordData));
-    bar.lyricSyllables = data.lyricSyllables.map(syllableData => LyricSyllable.fromJSON(syllableData));
+    bar.beatUnits = data.beatUnits ? data.beatUnits.map(beatData => BeatUnit.fromJSON(beatData)) : [];
+    bar.chordChanges = data.chordChanges ? data.chordChanges.map(chordData => ChordChange.fromJSON(chordData)) : [];
+    bar.lyricSyllables = data.lyricSyllables ? data.lyricSyllables.map(syllableData => LyricSyllable.fromJSON(syllableData)) : [];
     
     return bar;
   }

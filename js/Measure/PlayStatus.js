@@ -155,7 +155,16 @@ export class PlayStatus {
    * @returns {PlayStatus}
    */
   static fromJSON(data) {
-    return new PlayStatus(data.status);
+    // Проверяем, что data является объектом и имеет свойство status
+    if (data && typeof data === 'object' && typeof data.status === 'number') {
+      return new PlayStatus(data.status);
+    }
+    // Если data - число, используем его напрямую
+    if (typeof data === 'number') {
+      return new PlayStatus(data);
+    }
+    // Иначе создаем статус по умолчанию
+    return new PlayStatus(PlayStatus.STATUS.SKIP);
   }
 
   /**

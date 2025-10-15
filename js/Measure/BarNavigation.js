@@ -88,7 +88,7 @@ export class BarNavigation {
       this.prevButton.replaceWith(this.prevButton.cloneNode(true));
       this.prevButton = document.getElementById('prevLineBtn');
       this.prevButton.addEventListener('click', () => this.goToPreviousBar());
-      // Привязан обработчик к кнопке "Предыдущий такт"
+      console.log('🔗 Привязан обработчик к кнопке "Предыдущий такт"');
     }
 
     if (this.nextButton) {
@@ -96,7 +96,7 @@ export class BarNavigation {
       this.nextButton.replaceWith(this.nextButton.cloneNode(true));
       this.nextButton = document.getElementById('nextLineBtn');
       this.nextButton.addEventListener('click', () => this.goToNextBar());
-      // Привязан обработчик к кнопке "Следующий такт"
+      console.log('🔗 Привязан обработчик к кнопке "Следующий такт"');
     }
   }
 

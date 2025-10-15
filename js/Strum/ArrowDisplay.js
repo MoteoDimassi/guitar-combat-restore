@@ -1,4 +1,5 @@
 import { PlayStatus } from '../Measure/PlayStatus.js';
+import { BeatUnit } from '../Measure/BeatUnit.js';
 
 /**
  * Класс для отображения стрелочек в контейнере
@@ -14,8 +15,10 @@ export class ArrowDisplay {
     this.arrowSize = 50; // размер стрелочки в пикселях (уменьшен для лучшего размещения)
     this.arrowSpacing = 15; // расстояние между стрелочками (уменьшено)
     this.playStatuses = []; // массив состояний воспроизведения для каждой стрелочки
+    this.beatUnits = []; // массив BeatUnit для каждой стрелочки
     this.handleCircleClickBound = null; // привязанный обработчик клика для кружочков
     this.preservePlayStatuses = true; // флаг сохранения состояний при изменении аккордов
+    this.currentBarIndex = 0; // индекс текущего такта
   }
 
   /**
@@ -40,6 +43,9 @@ export class ArrowDisplay {
     
     // Создаем стрелочки
     this.createArrows();
+    
+    // Инициализируем состояния воспроизведения для стрелочек
+    this.initializePlayStatuses();
     
     // Обновляем отображение
     this.updateDisplay();
@@ -87,7 +93,7 @@ export class ArrowDisplay {
    */
   setArrowCount(count, preserveStatuses = null) {
     if (count < 1 || count > 16) {
-      // Количество стрелочек должно быть от 1 до 16
+      console.warn('Количество стрелочек должно быть от 1 до 16');
       return;
     }
 
@@ -101,6 +107,7 @@ export class ArrowDisplay {
     if (shouldPreserve && savedStatuses) {
       this.restorePlayStatuses(savedStatuses);
     } else {
+      // Всегда применяем стандартную настройку: первая стрелочка - PLAY, остальные - SKIP
       this.initializePlayStatuses();
     }
     
@@ -112,12 +119,20 @@ export class ArrowDisplay {
    */
   initializePlayStatuses() {
     this.playStatuses = [];
+    this.beatUnits = [];
+    
     for (let i = 0; i < this.currentCount; i++) {
       // Только первая стрелочка активна по умолчанию, остальные - неактивны
       const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
-      this.playStatuses.push(new PlayStatus(status));
+      const playStatus = new PlayStatus(status);
+      
+      // Создаем BeatUnit с текущим статусом
+      const beatUnit = new BeatUnit(i, playStatus);
+      
+      this.playStatuses.push(playStatus);
+      this.beatUnits.push(beatUnit);
     }
-    // Инициализировано состояний
+    console.log(`🔄 ArrowDisplay: инициализировано ${this.currentCount} BeatUnit (первая - PLAY, остальные - SKIP)`);
   }
 
   /**
@@ -203,7 +218,11 @@ export class ArrowDisplay {
     }
 
     // Получаем состояние воспроизведения для этой стрелочки
-    const playStatus = this.playStatuses[arrow.index] || new PlayStatus(PlayStatus.STATUS.PLAY);
+    let playStatus = this.playStatuses[arrow.index];
+    if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+      // Если playStatus не существует или не является объектом PlayStatus, создаем новый
+      playStatus = new PlayStatus(arrow.index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+    }
     
     arrowDiv.innerHTML = `
       <div class="arrow-icon ${colorClass} transition-colors duration-200 mb-2" style="width: ${this.arrowSize}px; height: ${this.arrowSize}px;">
@@ -301,7 +320,7 @@ export class ArrowDisplay {
       this.arrows[index].isActive = !this.arrows[index].isActive;
       this.updateDisplay();
       
-      // Состояние стрелочки изменено
+      console.log(`Стрелочка ${index + 1} (${this.arrows[index].direction}): ${this.arrows[index].isActive ? 'активна' : 'неактивна'}`);
     }
   }
 
@@ -337,18 +356,112 @@ export class ArrowDisplay {
    */
   handleCircleClick(index) {
     if (index >= 0 && index < this.playStatuses.length) {
+      let playStatus = this.playStatuses[index];
+      if (!playStatus || typeof playStatus.toggleStatus !== 'function') {
+        // Если playStatus не существует или не является объектом PlayStatus, создаем новый
+        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+        this.playStatuses[index] = playStatus;
+      }
+      
       // Переключаем состояние воспроизведения по кругу: ○ → ● → ⊗ → ○
-      this.playStatuses[index].toggleStatus();
+      playStatus.toggleStatus();
       this.updateDisplay();
       
-      const status = this.playStatuses[index];
-      // Состояние кружка изменено
+      console.log(`Кружок ${index + 1}: ${playStatus.getStatusString()} (${playStatus.getDisplaySymbol()})`);
       
-      // Вызываем callback, если он установлен
+      // Получаем полную информацию о длительности
+      const fullInfo = this.getBeatFullInfo(index);
+      
+      // Вызываем callback для изменения статуса (обратная совместимость)
       if (this.onPlayStatusChange) {
-        this.onPlayStatusChange(index, status);
+        this.onPlayStatusChange(index, playStatus);
+      }
+      
+      // Вызываем новый callback с полной информацией
+      if (this.onBeatClick) {
+        this.onBeatClick(fullInfo);
       }
     }
+  }
+
+  /**
+   * Получает полную информацию о длительности по индексу
+   * @param {number} index - Индекс длительности
+   * @returns {Object} Полная информация о длительности
+   */
+  getBeatFullInfo(index) {
+    let playStatus = this.playStatuses[index];
+    if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+      // Если playStatus не существует или не является объектом PlayStatus, создаем новый
+      playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+    }
+    const beatUnit = this.beatUnits[index];
+    
+    return {
+      barIndex: this.currentBarIndex,
+      beatIndex: index,
+      playStatus: playStatus,
+      chord: beatUnit ? beatUnit.getChord() : null,
+      syllable: beatUnit ? beatUnit.getSyllable() : null,
+      isPlayed: playStatus.isPlayed(),
+      isMuted: playStatus.isMuted(),
+      isSkipped: playStatus.isSkipped(),
+      typeString: playStatus.getStatusString(),
+      displaySymbol: playStatus.getDisplaySymbol(),
+      cssClass: playStatus.getCSSClass()
+    };
+  }
+
+  /**
+   * Получает BeatUnit по индексу
+   * @param {number} index - Индекс длительности
+   * @returns {BeatUnit|null} BeatUnit или null
+   */
+  getBeatUnit(index) {
+    if (index >= 0 && index < this.beatUnits.length) {
+      return this.beatUnits[index];
+    }
+    return null;
+  }
+
+  /**
+   * Устанавливает массив BeatUnit для отображения
+   * @param {BeatUnit[]} beatUnits - Массив BeatUnit
+   */
+  setBeatUnits(beatUnits) {
+    this.beatUnits = beatUnits || [];
+    
+    // Обновляем массив состояний воспроизведения из BeatUnit
+    // Используем статусы из BeatUnit, которые должны быть правильно установлены в Bar
+    this.playStatuses = this.beatUnits.map((beatUnit, index) => {
+      let playStatus = beatUnit.getPlayStatus();
+      // Если у BeatUnit нет PlayStatus, создаем новый с правильным статусом по умолчанию
+      if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+      }
+      return playStatus;
+    });
+    
+    // Обновляем количество стрелочек
+    this.currentCount = this.beatUnits.length;
+    this.generateArrows();
+    this.updateDisplay();
+  }
+
+  /**
+   * Устанавливает индекс текущего такта
+   * @param {number} barIndex - Индекс такта
+   */
+  setCurrentBarIndex(barIndex) {
+    this.currentBarIndex = barIndex;
+  }
+
+  /**
+   * Устанавливает callback для клика по длительности с полной информацией
+   * @param {Function} callback - Функция обратного вызова
+   */
+  setOnBeatClick(callback) {
+    this.onBeatClick = callback;
   }
 
   /**
@@ -501,10 +614,11 @@ export class ArrowDisplay {
    */
   setPlayStatus(index, playStatus) {
     if (index >= 0 && index < this.playStatuses.length) {
-      if (playStatus instanceof PlayStatus) {
-        this.playStatuses[index] = playStatus;
-      } else {
+      // Если передано число, создаем объект PlayStatus
+      if (typeof playStatus === 'number') {
         this.playStatuses[index] = new PlayStatus(playStatus);
+      } else {
+        this.playStatuses[index] = playStatus;
       }
       this.updateDisplay();
     }
@@ -517,7 +631,13 @@ export class ArrowDisplay {
    */
   getPlayStatus(index) {
     if (index >= 0 && index < this.playStatuses.length) {
-      return this.playStatuses[index];
+      let playStatus = this.playStatuses[index];
+      // Убеждаемся, что у нас есть корректный объект PlayStatus
+      if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+        this.playStatuses[index] = playStatus;
+      }
+      return playStatus;
     }
     return null;
   }
@@ -536,16 +656,22 @@ export class ArrowDisplay {
    */
   setAllPlayStatuses(playStatuses) {
     if (Array.isArray(playStatuses)) {
-      // Устанавливаем статусы
+      console.log('🎯 ArrowDisplay.setAllPlayStatuses: устанавливаем', playStatuses.length, 'статусов');
       
       this.playStatuses = playStatuses.map((status, index) => {
-        const playStatus = status instanceof PlayStatus ? status : new PlayStatus(status);
-        return playStatus;
+        // Если передано число, создаем объект PlayStatus
+        if (typeof status === 'number') {
+          return new PlayStatus(status);
+        }
+        // Убеждаемся, что у нас есть корректный объект PlayStatus
+        if (!status || typeof status.getStatusString !== 'function') {
+          return new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+        }
+        return status;
       });
-      
       this.updateDisplay();
     } else {
-      // setAllPlayStatuses получил не массив
+      console.warn('⚠️ setAllPlayStatuses получил не массив:', playStatuses);
     }
   }
 
@@ -563,7 +689,7 @@ export class ArrowDisplay {
    */
   setPreservePlayStatuses(preserve) {
     this.preservePlayStatuses = preserve;
-    // Флаг сохранения состояний изменен
+    console.log(`🔄 ArrowDisplay: флаг сохранения состояний установлен в ${preserve}`);
   }
 
   /**
@@ -580,24 +706,42 @@ export class ArrowDisplay {
    */
   restorePlayStatuses(savedStatuses) {
     if (!Array.isArray(savedStatuses)) {
-      // savedStatuses должен быть массивом
+      console.warn('⚠️ savedStatuses должен быть массивом');
       return;
     }
 
-    this.playStatuses = savedStatuses.map(statusData =>
-      PlayStatus.fromJSON(statusData)
-    );
+    this.playStatuses = savedStatuses.map((statusData, index) => {
+      let playStatus;
+      if (typeof statusData === 'object' && statusData !== null) {
+        // Если это объект, пытаемся восстановить из JSON
+        playStatus = PlayStatus.fromJSON(statusData);
+      } else if (typeof statusData === 'number') {
+        // Если это число, создаем новый PlayStatus
+        playStatus = new PlayStatus(statusData);
+      } else {
+        // Иначе создаем PlayStatus по умолчанию
+        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+      }
+      
+      // Убеждаемся, что у нас есть корректный объект PlayStatus
+      if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+      }
+      
+      return playStatus;
+    });
 
     // Если количество изменилось, дополняем или обрезаем массив
     while (this.playStatuses.length < this.currentCount) {
-      this.playStatuses.push(new PlayStatus(PlayStatus.STATUS.SKIP));
+      const newIndex = this.playStatuses.length;
+      this.playStatuses.push(new PlayStatus(newIndex === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP));
     }
     
     if (this.playStatuses.length > this.currentCount) {
       this.playStatuses = this.playStatuses.slice(0, this.currentCount);
     }
 
-    // Состояния восстановлены
+    console.log(`🔄 ArrowDisplay: восстановлено ${this.playStatuses.length} состояний`);
   }
 
   /**
@@ -641,58 +785,28 @@ export class ArrowDisplay {
     }
 
     if (config.playStatuses && Array.isArray(config.playStatuses)) {
-      this.playStatuses = config.playStatuses.map(statusData => 
-        PlayStatus.fromJSON(statusData)
-      );
+      this.playStatuses = config.playStatuses.map((statusData, index) => {
+        let playStatus;
+        if (typeof statusData === 'object' && statusData !== null) {
+          // Если это объект, пытаемся восстановить из JSON
+          playStatus = PlayStatus.fromJSON(statusData);
+        } else if (typeof statusData === 'number') {
+          // Если это число, создаем новый PlayStatus
+          playStatus = new PlayStatus(statusData);
+        } else {
+          // Иначе создаем PlayStatus по умолчанию
+          playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+        }
+        
+        // Убеждаемся, что у нас есть корректный объект PlayStatus
+        if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+          playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+        }
+        
+        return playStatus;
+      });
     }
     
     this.updateDisplay();
-  }
-
-  /**
-   * Подсвечивает текущую воспроизводимую стрелочку
-   * @param {number} beatIndex - Индекс стрелочки
-   */
-  setCurrentBeat(beatIndex) {
-    // Сначала убираем подсветку со всех стрелочек
-    this.clearCurrentBeatHighlight();
-    
-    if (beatIndex >= 0 && beatIndex < this.arrows.length) {
-      const arrowElement = this.container.querySelector(`[data-index="${beatIndex}"]`);
-      if (arrowElement) {
-        // Добавляем класс для подсветки текущей воспроизводимой стрелочки
-        arrowElement.classList.add('playing-now');
-        
-        // Находим иконку стрелочки и делаем её зеленой
-        const arrowIcon = arrowElement.querySelector('.arrow-icon');
-        if (arrowIcon) {
-          arrowIcon.classList.add('text-green-500');
-          arrowIcon.classList.remove('text-gray-300', 'text-[#38e07b]');
-        }
-      }
-    }
-  }
-
-  /**
-   * Очищает подсветку текущей воспроизводимой стрелочки
-   */
-  clearCurrentBeatHighlight() {
-    const playingArrows = this.container.querySelectorAll('.playing-now');
-    playingArrows.forEach(arrow => {
-      arrow.classList.remove('playing-now');
-      
-      // Возвращаем исходный цвет иконки
-      const arrowIcon = arrow.querySelector('.arrow-icon');
-      if (arrowIcon) {
-        arrowIcon.classList.remove('text-green-500');
-        // Восстанавливаем цвет в зависимости от состояния
-        const index = parseInt(arrow.dataset.index);
-        if (this.arrows[index] && this.arrows[index].isActive) {
-          arrowIcon.classList.add('text-[#38e07b]');
-        } else {
-          arrowIcon.classList.add('text-gray-300');
-        }
-      }
-    });
   }
 }

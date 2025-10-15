@@ -1,4 +1,6 @@
 import { PlayStatus } from './PlayStatus.js';
+import { ChordChange } from './ChordChange.js';
+import { LyricSyllable } from './LyricSyllable.js';
 
 /**
  * Класс BeatUnit описывает одну длительность в такте
@@ -7,17 +9,20 @@ export class BeatUnit {
     /**
      * @param {number} index - Индекс длительности в такте
      * @param {PlayStatus|number} playStatus - Объект PlayStatus или число для обратной совместимости
+     * @param {ChordChange|null} chord - Аккорд, связанный с этой длительностью
+     * @param {LyricSyllable|null} syllable - Слог, связанный с этой длительностью
      */
-    constructor(index, playStatus = 0) {
+    constructor(index, playStatus = null, chord = null, syllable = null) {
         this.index = index;
-        
-        // Поддержка как нового PlayStatus, так и старого числового типа для обратной совместимости
-        if (playStatus instanceof PlayStatus) {
-            this.playStatus = playStatus;
-        } else {
-            // Создаем PlayStatus из старого числового типа
+        // Если передано число, создаем объект PlayStatus
+        if (typeof playStatus === 'number') {
             this.playStatus = new PlayStatus(playStatus);
+        } else {
+            // Позволяем устанавливать null, чтобы ArrowDisplay мог управлять статусами
+            this.playStatus = playStatus;
         }
+        this.chord = chord;
+        this.syllable = syllable;
     }
 
     /**
@@ -25,7 +30,7 @@ export class BeatUnit {
      * @returns {boolean}
      */
     isPlayed() {
-        return this.playStatus.isPlayed();
+        return this.playStatus ? this.playStatus.isPlayed() : false;
     }
 
     /**
@@ -33,34 +38,27 @@ export class BeatUnit {
      * @returns {boolean}
      */
     isMuted() {
-        return this.playStatus.isMuted();
+        return this.playStatus ? this.playStatus.isMuted() : false;
     }
 
     /**
-     * Проверяет, пропускается ли данная длительность
+     * Проверяется, пропускается ли данная длительность
      * @returns {boolean}
      */
     isSkipped() {
-        return this.playStatus.isSkipped();
-    }
-
-    /**
-     * Устанавливает тип звукоизвлечения
-     * @param {number} type - Тип звукоизвлечения (для обратной совместимости)
-     */
-    setType(type) {
-        this.playStatus = new PlayStatus(type);
+        return this.playStatus ? this.playStatus.isSkipped() : true;
     }
 
     /**
      * Устанавливает статус воспроизведения
-     * @param {PlayStatus|number} playStatus - Статус воспроизведения
+     * @param {PlayStatus} playStatus - Статус воспроизведения
      */
     setPlayStatus(playStatus) {
-        if (playStatus instanceof PlayStatus) {
-            this.playStatus = playStatus;
-        } else {
+        // Если передано число, создаем объект PlayStatus
+        if (typeof playStatus === 'number') {
             this.playStatus = new PlayStatus(playStatus);
+        } else {
+            this.playStatus = playStatus;
         }
     }
 
@@ -77,7 +75,7 @@ export class BeatUnit {
      * @returns {string}
      */
     getTypeString() {
-        return this.playStatus.getStatusString();
+        return this.playStatus ? this.playStatus.getStatusString() : 'SKIP';
     }
 
     /**
@@ -85,7 +83,7 @@ export class BeatUnit {
      * @returns {string}
      */
     getDisplaySymbol() {
-        return this.playStatus.getDisplaySymbol();
+        return this.playStatus ? this.playStatus.getDisplaySymbol() : '○';
     }
 
     /**
@@ -93,22 +91,87 @@ export class BeatUnit {
      * @returns {string}
      */
     getCSSClass() {
-        return this.playStatus.getCSSClass();
+        return this.playStatus ? this.playStatus.getCSSClass() : 'play-status-skip';
     }
 
     /**
      * Переключает статус воспроизведения
      */
     toggleStatus() {
-        this.playStatus.toggleStatus();
+        if (this.playStatus) {
+            this.playStatus.toggleStatus();
+        } else {
+            // Если статуса нет, создаем новый со статусом PLAY
+            this.playStatus = new PlayStatus(PlayStatus.STATUS.PLAY);
+        }
+    }
+
+
+    /**
+     * Устанавливает аккорд для этой длительности
+     * @param {ChordChange|null} chord - Аккорд или null
+     */
+    setChord(chord) {
+        this.chord = chord;
     }
 
     /**
-     * Получает числовое значение типа (для обратной совместимости)
-     * @returns {number}
+     * Получает аккорд для этой длительности
+     * @returns {ChordChange|null}
      */
-    getType() {
-        return this.playStatus.getStatus();
+    getChord() {
+        return this.chord;
+    }
+
+    /**
+     * Устанавливает слог для этой длительности
+     * @param {LyricSyllable|null} syllable - Слог или null
+     */
+    setSyllable(syllable) {
+        this.syllable = syllable;
+    }
+
+    /**
+     * Получает слог для этой длительности
+     * @returns {LyricSyllable|null}
+     */
+    getSyllable() {
+        return this.syllable;
+    }
+
+    /**
+     * Получает полную информацию о длительности
+     * @returns {Object} Объект с полной информацией
+     */
+    getFullInfo() {
+        return {
+            index: this.index,
+            playStatus: this.playStatus || new PlayStatus(PlayStatus.STATUS.SKIP),
+            chord: this.chord,
+            syllable: this.syllable,
+            isPlayed: this.isPlayed(),
+            isMuted: this.isMuted(),
+            isSkipped: this.isSkipped(),
+            typeString: this.getTypeString(),
+            displaySymbol: this.getDisplaySymbol(),
+            cssClass: this.getCSSClass()
+        };
+    }
+
+    /**
+     * Проверяет, есть ли у этой длительности связанный аккорд
+     * @returns {boolean}
+     */
+    hasChord() {
+        return this.chord !== null;
+    }
+
+    /**
+     * Проверяет, есть ли у этой длительности связанный слог
+     * @returns {boolean}
+     */
+    hasSyllable() {
+        return this.syllable !== null;
     }
 
     /**
@@ -116,7 +179,12 @@ export class BeatUnit {
      * @returns {BeatUnit}
      */
     clone() {
-        return new BeatUnit(this.index, this.playStatus.clone());
+        return new BeatUnit(
+            this.index,
+            this.playStatus ? this.playStatus.clone() : null,
+            this.chord ? this.chord.clone() : null,
+            this.syllable ? this.syllable.clone() : null
+        );
     }
 
     /**
@@ -124,11 +192,21 @@ export class BeatUnit {
      * @returns {Object}
      */
     toJSON() {
-        return {
+        const result = {
             index: this.index,
-            type: this.playStatus.getStatus(), // Для обратной совместимости
-            playStatus: this.playStatus.toJSON()
+            playStatus: this.playStatus ? this.playStatus.toJSON() : new PlayStatus(PlayStatus.STATUS.SKIP).toJSON()
         };
+        
+        // Добавляем информацию об аккорде и слоге, если они есть
+        if (this.chord) {
+            result.chord = this.chord.toJSON();
+        }
+        
+        if (this.syllable) {
+            result.syllable = this.syllable.toJSON();
+        }
+        
+        return result;
     }
 
     /**
@@ -137,11 +215,25 @@ export class BeatUnit {
      * @returns {BeatUnit}
      */
     static fromJSON(data) {
-        // Поддержка как старого формата (type), так и нового (playStatus)
-        if (data.playStatus) {
-            return new BeatUnit(data.index, PlayStatus.fromJSON(data.playStatus));
-        } else {
-            return new BeatUnit(data.index, data.type);
+        const playStatus = PlayStatus.fromJSON(data.playStatus);
+        
+        // Убеждаемся, что у нас есть корректный объект PlayStatus
+        if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+            playStatus = new PlayStatus(PlayStatus.STATUS.SKIP);
         }
+        
+        // Восстанавливаем аккорд, если он есть
+        let chord = null;
+        if (data.chord) {
+            chord = ChordChange.fromJSON(data.chord);
+        }
+        
+        // Восстанавливаем слог, если он есть
+        let syllable = null;
+        if (data.syllable) {
+            syllable = LyricSyllable.fromJSON(data.syllable);
+        }
+        
+        return new BeatUnit(data.index, playStatus, chord, syllable);
     }
 }

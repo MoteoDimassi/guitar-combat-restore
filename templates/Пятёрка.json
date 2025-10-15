@@ -1,19 +1,19 @@
 {
   "version": "2.0",
   "metadata": {
-    "title": "Migrated from current format",
+    "title": "Без названия",
     "artist": "",
-    "tempo": 113,
+    "tempo": 100,
     "timeSignature": "8/4",
-    "createdAt": "2025-10-13T10:25:25.951Z",
+    "createdAt": "2025-10-15T09:28:34.436Z",
     "description": "Создано в Guitar Combat",
-    "totalBars": 1,
-    "totalBeats": 8,
-    "duration": 4
+    "totalBars": 4,
+    "totalBeats": 32,
+    "duration": 19
   },
   "songStructure": {
     "beatCount": 8,
-    "totalBars": 1,
+    "totalBars": 4,
     "currentBar": 0,
     "hasRepeats": false,
     "repeatStructure": []
@@ -143,13 +143,440 @@
           }
         }
       ],
-      "chordChanges": [],
+      "chordChanges": [
+        {
+          "name": "Fm",
+          "startBeat": 0,
+          "endBeat": 8,
+          "duration": 8
+        }
+      ],
       "lyricSyllables": [],
       "metadata": {
         "isActive": true,
-        "hasChords": false,
+        "hasChords": true,
         "hasLyrics": false,
         "playingBeats": 5
+      }
+    },
+    {
+      "index": 1,
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 4,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 5,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 6,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 7,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "Eb",
+          "startBeat": 0,
+          "endBeat": 8,
+          "duration": 8
+        }
+      ],
+      "lyricSyllables": [],
+      "metadata": {
+        "isActive": true,
+        "hasChords": true,
+        "hasLyrics": false,
+        "playingBeats": 8
+      }
+    },
+    {
+      "index": 2,
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 4,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 5,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 6,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 7,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "Bbm",
+          "startBeat": 0,
+          "endBeat": 8,
+          "duration": 8
+        }
+      ],
+      "lyricSyllables": [],
+      "metadata": {
+        "isActive": true,
+        "hasChords": true,
+        "hasLyrics": false,
+        "playingBeats": 8
+      }
+    },
+    {
+      "index": 3,
+      "beatUnits": [
+        {
+          "index": 0,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 1,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 2,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 3,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 4,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 5,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 6,
+          "direction": "down",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        },
+        {
+          "index": 7,
+          "direction": "up",
+          "playStatus": {
+            "status": 1,
+            "statusString": "играть",
+            "displaySymbol": "●"
+          },
+          "metadata": {
+            "isPlayed": true,
+            "isMuted": false,
+            "isSkipped": false,
+            "cssClass": "play-status-play"
+          }
+        }
+      ],
+      "chordChanges": [
+        {
+          "name": "C7",
+          "startBeat": 0,
+          "endBeat": 8,
+          "duration": 8
+        }
+      ],
+      "lyricSyllables": [],
+      "metadata": {
+        "isActive": true,
+        "hasChords": true,
+        "hasLyrics": false,
+        "playingBeats": 8
       }
     }
   ],
@@ -161,7 +588,7 @@
       "dynamics": []
     },
     "generationInfo": {
-      "generatedAt": "2025-10-13T10:25:25.951Z",
+      "generatedAt": "2025-10-15T09:28:34.436Z",
       "source": "Guitar Combat",
       "version": "2.0"
     }
