@@ -1887,3 +1887,17 @@ body {
     margin: 2px 0;
   }
 }
+
+/* Стили для валидации поля ввода аккордов */
+.input-invalid {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3) !important;
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Анимация встряхивания при вводе недопустимых символов */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

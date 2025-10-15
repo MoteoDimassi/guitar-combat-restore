@@ -297,18 +297,116 @@ async initTemplateSetter() {
   bindEvents() {
     // Обработчик изменения поля аккордов (постоянный парсинг)
     if (this.domElements.chordsInput) {
-      // Обработчик для мгновенного обновления при вводе
+      // Обработчик для предотвращения ввода недопустимых символов
+      this.domElements.chordsInput.addEventListener('keydown', (e) => {
+        // Разрешаем специальные клавиши (Backspace, Delete, Tab, Escape, Enter, стрелки)
+        const specialKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+        
+        if (specialKeys.includes(e.key)) {
+          return; // Разрешаем специальные клавиши
+        }
+        
+        // Разрешаем Ctrl/Cmd + A (выделить всё), Ctrl/Cmd + C (копировать), Ctrl/Cmd + V (вставить), Ctrl/Cmd + X (вырезать)
+        if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())) {
+          return; // Разрешаем стандартные комбинации клавиш
+        }
+        
+        // Проверяем, является ли вводимый символ допустимым
+        const validCharPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]$/;
+        if (!validCharPattern.test(e.key)) {
+          e.preventDefault(); // Предотвращаем ввод недопустимого символа
+          // Добавляем визуальную индикацию ошибки
+          this.domElements.chordsInput.classList.add('input-invalid');
+          // Удаляем класс через короткое время
+          setTimeout(() => {
+            this.domElements.chordsInput.classList.remove('input-invalid');
+          }, 300);
+        }
+      });
+      
+      // Обработчик для фильтрации вставляемого текста
+      this.domElements.chordsInput.addEventListener('paste', (e) => {
+        // Получаем вставляемый текст
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+        
+        // Фильтруем недопустимые символы
+        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
+        const filteredText = pastedText.replace(/[^A-Za-z0-9+\-\/#\u0394o\u00D8\s]/g, '');
+        
+        // Если в вставляемом тексте есть недопустимые символы
+        if (pastedText !== filteredText) {
+          e.preventDefault(); // Предотвращаем стандартную вставку
+          
+          // Добавляем визуальную индикацию ошибки
+          this.domElements.chordsInput.classList.add('input-invalid');
+          // Удаляем класс через короткое время
+          setTimeout(() => {
+            this.domElements.chordsInput.classList.remove('input-invalid');
+          }, 300);
+          
+          // Вставляем отфильтрованный текст
+          const input = e.target;
+          const start = input.selectionStart;
+          const end = input.selectionEnd;
+          
+          // Вставляем отфильтрованный текст
+          input.value = input.value.substring(0, start) + filteredText + input.value.substring(end);
+          
+          // Восстанавливаем позицию курсора
+          const newPosition = start + filteredText.length;
+          input.setSelectionRange(newPosition, newPosition);
+          
+          // Вызываем обработчик изменения
+          this.handleChordsInputChange(input.value);
+        }
+      });
+      
+      // Обработчик для валидации ввода (вставка из буфера обмена и т.д.)
       this.domElements.chordsInput.addEventListener('input', (e) => {
+        // Валидация ввода - разрешаем только символы аккордов
+        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
+        const inputValue = e.target.value;
+        
+        if (!validChordPattern.test(inputValue)) {
+          // Добавляем визуальную индикацию ошибки
+          e.target.classList.add('input-invalid');
+          // Удаляем класс через короткое время
+          setTimeout(() => {
+            e.target.classList.remove('input-invalid');
+          }, 300);
+          
+          // Заменяем недопустимые символы на пустую строку
+          e.target.value = inputValue.replace(/[^A-Za-z0-9+\-\/#\u0394o\u00D8\s]/g, '');
+        }
+        
         this.handleChordsInputChange(e.target.value);
       });
       
       // Дополнительный обработчик для изменения (на случай если input не сработает)
       this.domElements.chordsInput.addEventListener('change', (e) => {
+        // Валидация ввода
+        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
+        const inputValue = e.target.value;
+        
+        if (!validChordPattern.test(inputValue)) {
+          // Заменяем недопустимые символы на пустую строку
+          e.target.value = inputValue.replace(/[^A-Za-z0-9+\-\/#\u0394o\u00D8\s]/g, '');
+        }
+        
         this.handleChordsInputChange(e.target.value);
       });
       
       // Обработчик для обновления при потере фокуса
       this.domElements.chordsInput.addEventListener('blur', (e) => {
+        // Валидация ввода
+        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
+        const inputValue = e.target.value;
+        
+        if (!validChordPattern.test(inputValue)) {
+          // Заменяем недопустимые символы на пустую строку
+          e.target.value = inputValue.replace(/[^A-Za-z0-9+\-\/#\u0394o\u00D8\s]/g, '');
+        }
+        
         this.handleChordsInputChange(e.target.value);
       });
     }
