@@ -254,4 +254,36 @@ export class ChordBuilder {
       isValid: true
     };
   }
+
+  /**
+   * Получает названия нот аккорда вместо частот
+   * @param {string} chordName - Название аккорда
+   * @returns {string[]|null} Массив названий нот или null
+   */
+  getChordNoteNames(chordName) {
+    const parsed = this.parseChordName(chordName);
+    if (!parsed) return null;
+
+    const {root, type, bass} = parsed;
+    const intervals = this.chordTypes[type];
+    if (!intervals) return null;
+
+    // Хроматическая шкала для расчета названий нот
+    const chromaticScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    const rootIndex = chromaticScale.indexOf(root);
+    if (rootIndex === -1) return null;
+
+    const notes = intervals.map(interval => {
+      const noteIndex = (rootIndex + interval) % 12;
+      return chromaticScale[noteIndex];
+    });
+
+    // Если есть басовая нота, добавляем её первой
+    if (bass) {
+      notes.unshift(bass);
+    }
+
+    return notes;
+  }
 }

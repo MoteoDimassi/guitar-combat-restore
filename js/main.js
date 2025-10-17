@@ -23,6 +23,12 @@ import { TempoManager } from './Functions/TempoManager.js';
 import { ImportStrumFromJSON } from './Functions/ImportStrumFromJSON.js';
 import { TemplateSetter } from './Strum/TemplateSetter.js';
 import { TemplateManager } from './Functions/TemplateManager.js';
+import { AudioEngine } from './Audio/AudioEngine.js';
+import { ChordPlayer } from './Audio/ChordPlayer.js';
+import { PlaybackAnimator } from './Audio/PlaybackAnimator.js';
+
+// Константы для валидации аккордов
+const VALID_CHORD_PATTERN = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
 
 /**
  * Главный класс приложения Guitar Combat
@@ -43,10 +49,12 @@ export class GuitarCombatApp {
     this.privacyModal = new PrivacyPolicyModal();
     this.termsModal = new TermsOfUseModal();
     this.downloadManager = new DownloadManager();
-this.templateSetter = new TemplateSetter();
+  this.templateSetter = new TemplateSetter();
     this.tempoManager = new TempoManager();
     this.importStrumFromJSON = new ImportStrumFromJSON(this);
     this.templateManager = new TemplateManager();
+    this.audioEngine = new AudioEngine();
+    this.chordPlayer = new ChordPlayer();
     
     // Массив тактов
     this.bars = [];
@@ -68,6 +76,7 @@ this.templateSetter = new TemplateSetter();
       nextLineBtn: null,
       prevLineBtn: null,
       playBtn: null,
+      toggleBtn: null,
       barContainer: null,
       barInfo: null,
       arrowContainer: null
@@ -109,6 +118,9 @@ this.templateSetter = new TemplateSetter();
 
     // Инициализация менеджера шаблонов
     this.templateManager.init();
+
+    // Инициализация ChordPlayer
+    this.initChordPlayer();
       
       // Загрузка сохраненных данных
       this.loadSavedData();
@@ -139,6 +151,7 @@ this.templateSetter = new TemplateSetter();
         nextLineBtn: document.getElementById('nextLineBtn'),
         prevLineBtn: document.getElementById('prevLineBtn'),
         playBtn: document.getElementById('playBtn'),
+        toggleBtn: document.getElementById('toggleBtn'),
         barContainer: document.getElementById('barContainer'),
         barInfo: document.getElementById('barInfo'),
         arrowContainer: document.getElementById('beatRow') // Используем beatRow как контейнер для стрелочек
@@ -153,7 +166,7 @@ this.templateSetter = new TemplateSetter();
       }
 
       // Проверяем наличие опциональных элементов
-      const optionalElements = ['nextLineBtn', 'prevLineBtn', 'playBtn', 'barContainer', 'barInfo', 'beatCountInput', 'bpmInput'];
+      const optionalElements = ['nextLineBtn', 'prevLineBtn', 'playBtn', 'toggleBtn', 'barContainer', 'barInfo', 'beatCountInput', 'bpmInput'];
       const missingOptionalElements = optionalElements.filter(id => !this.domElements[id]);
       
       if (missingOptionalElements.length > 0) {
@@ -194,27 +207,56 @@ this.templateSetter = new TemplateSetter();
       // Инициализируем менеджер темпа
       this.tempoManager.init();
       
-     // Устанавливаем колбэк для изменения темпа
-     this.tempoManager.setOnTempoChange((bpm) => {
-       this.handleTempoChange(bpm);
-     });
+      // Устанавливаем колбэк для изменения темпа
+      this.tempoManager.setOnTempoChange((bpm) => {
+        this.handleTempoChange(bpm);
+      });
 
-   } catch (error) {
-     // Не прерываем инициализацию приложения, если TempoManager не инициализировался
-   }
- }
+    } catch (error) {
+      // Не прерываем инициализацию приложения, если TempoManager не инициализировался
+      console.warn('TempoManager не инициализирован:', error.message);
+    }
+  }
 
 /**
  * Инициализирует TemplateSetter
  */
 async initTemplateSetter() {
-  try {
-    await this.templateSetter.init(this.templateManager, this.arrowDisplay);
-    this.templateSetter.bindTemplateSelect('#templates-select');
-    console.log('✅ TemplateSetter инициализирован');
-  } catch (error) {
-    console.error('❌ Ошибка инициализации TemplateSetter:', error);
-  }
+ try {
+   await this.templateSetter.init(this.templateManager, this.arrowDisplay);
+   this.templateSetter.bindTemplateSelect('#templates-select');
+   console.log('✅ TemplateSetter инициализирован');
+ } catch (error) {
+   console.error('❌ Ошибка инициализации TemplateSetter:', error);
+ }
+}
+
+/**
+ * Инициализирует ChordPlayer
+ */
+initChordPlayer() {
+ try {
+   // Устанавливаем зависимости
+   this.chordPlayer.setAudioEngine(this.audioEngine);
+   this.chordPlayer.setBarNavigation(this.barNavigation);
+
+   // Устанавливаем PlaybackAnimator
+   const playbackAnimator = new PlaybackAnimator(this.arrowDisplay);
+   this.chordPlayer.setPlaybackAnimator(playbackAnimator);
+
+   // Устанавливаем колбэки
+   this.chordPlayer.setOnPlaybackStart(() => {
+     this.handlePlaybackStart();
+   });
+
+   this.chordPlayer.setOnPlaybackStop(() => {
+     this.handlePlaybackStop();
+   });
+
+   console.log('✅ ChordPlayer инициализирован');
+ } catch (error) {
+   console.error('❌ Ошибка инициализации ChordPlayer:', error);
+ }
 }
 
   /**
@@ -312,8 +354,7 @@ async initTemplateSetter() {
         }
         
         // Проверяем, является ли вводимый символ допустимым
-        const validCharPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]$/;
-        if (!validCharPattern.test(e.key)) {
+        if (!VALID_CHORD_PATTERN.test(e.key)) {
           e.preventDefault(); // Предотвращаем ввод недопустимого символа
           // Добавляем визуальную индикацию ошибки
           this.domElements.chordsInput.classList.add('input-invalid');
@@ -330,7 +371,6 @@ async initTemplateSetter() {
         const pastedText = (e.clipboardData || window.clipboardData).getData('text');
         
         // Фильтруем недопустимые символы
-        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
         const filteredText = pastedText.replace(/[^A-Za-z0-9+\-\/#\u0394o\u00D8\s]/g, '');
         
         // Если в вставляемом тексте есть недопустимые символы
@@ -364,10 +404,9 @@ async initTemplateSetter() {
       // Обработчик для валидации ввода (вставка из буфера обмена и т.д.)
       this.domElements.chordsInput.addEventListener('input', (e) => {
         // Валидация ввода - разрешаем только символы аккордов
-        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
         const inputValue = e.target.value;
         
-        if (!validChordPattern.test(inputValue)) {
+        if (!VALID_CHORD_PATTERN.test(inputValue)) {
           // Добавляем визуальную индикацию ошибки
           e.target.classList.add('input-invalid');
           // Удаляем класс через короткое время
@@ -385,10 +424,9 @@ async initTemplateSetter() {
       // Дополнительный обработчик для изменения (на случай если input не сработает)
       this.domElements.chordsInput.addEventListener('change', (e) => {
         // Валидация ввода
-        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
         const inputValue = e.target.value;
         
-        if (!validChordPattern.test(inputValue)) {
+        if (!VALID_CHORD_PATTERN.test(inputValue)) {
           // Заменяем недопустимые символы на пустую строку
           e.target.value = inputValue.replace(/[^A-Za-z0-9+\-\/#\u0394o\u00D8\s]/g, '');
         }
@@ -399,10 +437,9 @@ async initTemplateSetter() {
       // Обработчик для обновления при потере фокуса
       this.domElements.chordsInput.addEventListener('blur', (e) => {
         // Валидация ввода
-        const validChordPattern = /^[A-Za-z0-9+\-\/#\u0394o\u00D8\s]*$/;
         const inputValue = e.target.value;
         
-        if (!validChordPattern.test(inputValue)) {
+        if (!VALID_CHORD_PATTERN.test(inputValue)) {
           // Заменяем недопустимые символы на пустую строку
           e.target.value = inputValue.replace(/[^A-Za-z0-9+\-\/#\u0394o\u00D8\s]/g, '');
         }
@@ -497,6 +534,13 @@ async initTemplateSetter() {
       termsOfUseBtn.addEventListener('click', (e) => {
         e.preventDefault();
         this.showTermsOfUse();
+      });
+    }
+
+    // Обработчик кнопки воспроизведения (toggleBtn)
+    if (this.domElements.toggleBtn) {
+      this.domElements.toggleBtn.addEventListener('click', () => {
+        this.togglePlayback();
       });
     }
   }
@@ -912,6 +956,7 @@ async initTemplateSetter() {
    */
   handlePlaybackStart() {
     this.settings.isPlaying = true;
+    this.updatePlayButton();
     if (this.callbacks.onPlaybackStart) {
       this.callbacks.onPlaybackStart();
     }
@@ -922,6 +967,7 @@ async initTemplateSetter() {
    */
   handlePlaybackStop() {
     this.settings.isPlaying = false;
+    this.updatePlayButton();
     if (this.callbacks.onPlaybackStop) {
       this.callbacks.onPlaybackStop();
     }
@@ -1056,12 +1102,12 @@ async initTemplateSetter() {
    * Обновляет информацию о состоянии
    */
   updateStatusInfo() {
-    const stats = this.chordParser.getStats();
-    const state = this.barDisplay && this.domElements.barContainer ? this.barDisplay.getState() : null;
-    const arrowState = this.arrowDisplay ? this.arrowDisplay.getState() : null;
-    const chordDisplayState = this.chordDisplay ? this.chordDisplay.getState() : null;
-    const navigationState = this.barNavigation ? this.barNavigation.getState() : null;
-    
+    // Метод упрощен - переменные больше не используются
+    // const stats = this.chordParser.getStats();
+    // const state = this.barDisplay && this.domElements.barContainer ? this.barDisplay.getState() : null;
+    // const arrowState = this.arrowDisplay ? this.arrowDisplay.getState() : null;
+    // const chordDisplayState = this.chordDisplay ? this.chordDisplay.getState() : null;
+    // const navigationState = this.barNavigation ? this.barNavigation.getState() : null;
   }
 
   /**
@@ -1144,7 +1190,7 @@ async initTemplateSetter() {
           this.chordParser = new ChordParser();
         }
       }
-      
+
       // Восстанавливаем такты
       if (data.bars && Array.isArray(data.bars)) {
         try {
@@ -1163,7 +1209,7 @@ async initTemplateSetter() {
           this.bars = [new Bar(0, this.settings.beatCount)];
         }
       }
-      
+
       // Восстанавливаем состояние TempoManager
       if (data.tempoManager && this.tempoManager) {
         try {
@@ -1172,24 +1218,24 @@ async initTemplateSetter() {
           console.error('Ошибка восстановления TempoManager:', error);
         }
       }
-      
+
       // Обновляем поля ввода
       if (this.domElements.chordsInput && this.chordParser && this.chordParser.parsedChords && this.chordParser.parsedChords.length > 0) {
         this.domElements.chordsInput.value = this.chordParser.parsedChords.join(' ');
       }
-      
+
       if (this.domElements.beatCountInput) {
         this.domElements.beatCountInput.value = this.settings.beatCount;
       }
-      
+
       if (this.domElements.bpmInput) {
         this.domElements.bpmInput.value = this.settings.bpm;
       }
-      
+
       if (this.domElements.countSelect) {
         this.domElements.countSelect.value = this.settings.beatCount;
       }
-      
+
       // Устанавливаем правильные статусы: первая стрелка - PLAY, остальные - SKIP
       if (this.arrowDisplay) {
         if (this.bars.length === 0) {
@@ -1206,7 +1252,7 @@ async initTemplateSetter() {
           }
         }
       }
-      
+
     } catch (error) {
       console.error('Ошибка загрузки сохраненных данных:', error);
       // Очищаем localStorage если данные повреждены
@@ -1224,19 +1270,19 @@ async initTemplateSetter() {
   clearAllData() {
     this.bars = [];
     this.chordParser.clear();
-    
+
     if (this.domElements.chordsInput) {
       this.domElements.chordsInput.value = '';
     }
-    
+
     // Устанавливаем стандартные статусы: первая стрелка - PLAY, остальные - SKIP
     if (this.arrowDisplay) {
       this.arrowDisplay.initializePlayStatuses();
     }
-    
+
     this.updateDisplay();
     this.saveData();
-    
+
   }
 
   /**
@@ -1284,6 +1330,7 @@ async initTemplateSetter() {
       chordDisplayState: this.chordDisplay ? this.chordDisplay.getState() : null,
       navigationState: this.barNavigation ? this.barNavigation.getState() : null,
       tempoManagerState: this.tempoManager ? this.tempoManager.getState() : null,
+      chordPlayerState: this.chordPlayer ? { isPlaying: this.chordPlayer.getIsPlaying() } : null,
       barsCount: this.bars.length
     };
   }
@@ -1314,13 +1361,13 @@ async initTemplateSetter() {
     try {
       // Получаем текущее количество стрелочек
       const currentCount = this.arrowDisplay.currentCount || 8;
-      
+
       // Генерируем случайный бой
       const randomPlayStatuses = this.randomStrumGenerator.generateRandomStrum(currentCount);
-      
+
       // Устанавливаем новые состояния в ArrowDisplay
       this.arrowDisplay.setAllPlayStatuses(randomPlayStatuses);
-      
+
       // Анализируем сгенерированный бой
       const analysis = this.randomStrumGenerator.analyzeStrum(randomPlayStatuses);
 
@@ -1328,7 +1375,7 @@ async initTemplateSetter() {
       this.showNotification(
         `Случайный бой сгенерирован! Играющих долей: ${analysis.playCount}/${analysis.total}`
       );
-      
+
     } catch (error) {
       this.showError('Ошибка генерации случайного боя');
     }
@@ -1354,23 +1401,23 @@ async initTemplateSetter() {
     try {
       // Показываем список доступных шаблонов
       const templates = this.templateManager.getAllTemplates();
-      
+
       if (templates.length === 0) {
         this.showError('Нет доступных шаблонов');
         return;
       }
-      
+
       // Создаём простое диалоговое окно для выбора шаблона
       const templateId = await this.showTemplateSelectionDialog(templates);
-      
+
       if (templateId) {
         // Загружаем и применяем шаблон
         const templateData = await this.templateManager.loadTemplate(templateId);
         await this.templateManager.applyTemplate(templateData);
-        
+
         this.showNotification(`Шаблон "${templateData.templateInfo?.name || templateId}" применён`);
       }
-      
+
     } catch (error) {
       this.showError(`Ошибка применения шаблона: ${error.message}`);
     }
@@ -1403,7 +1450,7 @@ async initTemplateSetter() {
           </div>
         </div>
       `;
-      
+
       // Добавляем обработчики событий
       modal.addEventListener('click', (e) => {
         if (e.target.classList.contains('template-btn')) {
@@ -1415,7 +1462,7 @@ async initTemplateSetter() {
           resolve(null);
         }
       });
-      
+
       // Добавляем модальное окно на страницу
       document.body.appendChild(modal);
     });
@@ -1437,15 +1484,60 @@ async initTemplateSetter() {
   }
 
   /**
-   * Показывает ошибку пользователю (дублированный метод - удалить)
-   * @param {string} error - Сообщение об ошибке
+   * Переключает воспроизведение аккордов
    */
-  // showError(error) {
-  //   // Можно расширить для показа в UI
-  //   if (typeof window !== 'undefined' && window.alert) {
-  //     window.alert(`Ошибка: ${error}`);
-  //   }
-  // }
+  togglePlayback() {
+    // Обновляем настройки с текущим BPM перед передачей в ChordPlayer
+    this.settings.bpm = this.tempoManager ? this.tempoManager.getTempo() : this.settings.bpm;
+    this.chordPlayer.setSettings(this.settings);
+    this.chordPlayer.setBars(this.bars);
+
+    this.chordPlayer.togglePlayback();
+  }
+
+  /**
+   * Запускает воспроизведение аккордов (устаревший метод, теперь использует ChordPlayer)
+   * @deprecated Используйте togglePlayback()
+   */
+  async startPlayback() {
+    console.warn('startPlayback() устарел, используйте togglePlayback()');
+    this.togglePlayback();
+  }
+
+  /**
+   * Останавливает воспроизведение (устаревший метод, теперь использует ChordPlayer)
+   * @deprecated Используйте togglePlayback()
+   */
+  stopPlayback() {
+    console.warn('stopPlayback() устарел, используйте togglePlayback()');
+    this.togglePlayback();
+  }
+
+  /**
+   * Обновляет состояние кнопки воспроизведения
+   */
+  updatePlayButton() {
+    if (!this.domElements.toggleBtn) return;
+
+    const isPlaying = this.chordPlayer ? this.chordPlayer.getIsPlaying() : this.settings.isPlaying;
+
+    if (isPlaying) {
+      // Меняем иконку на паузу
+      this.domElements.toggleBtn.innerHTML = `
+        <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="4" width="4" height="16"></rect>
+          <rect x="14" y="4" width="4" height="16"></rect>
+        </svg>
+      `;
+    } else {
+      // Меняем иконку на-play
+      this.domElements.toggleBtn.innerHTML = `
+        <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 5v14l11-7z"></path>
+        </svg>
+      `;
+    }
+  }
 }
 
 // Экспорт для использования в других модулях
@@ -1455,7 +1547,7 @@ export default GuitarCombatApp;
 document.addEventListener('DOMContentLoaded', () => {
   const app = GuitarCombatApp.getInstance();
   app.init();
-  
+
   // Делаем приложение доступным глобально для DownloadManager
   window.guitarCombatApp = app;
 });
