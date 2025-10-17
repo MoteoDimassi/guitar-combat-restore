@@ -104,22 +104,30 @@ export class BarNavigation {
    * Переходит к предыдущему такту
    */
   goToPreviousBar() {
+    // Цикличный переход - если на первом такте, переходим к последнему
     if (this.currentBarIndex > 0) {
       this.currentBarIndex--;
-      this.updateNavigationState();
-      this.notifyBarChange();
+    } else {
+      // Переходим к последнему такту для цикличного воспроизведения
+      this.currentBarIndex = Math.max(0, this.totalBars - 1);
     }
+    this.updateNavigationState();
+    this.notifyBarChange();
   }
 
   /**
    * Переходит к следующему такту
    */
   goToNextBar() {
+    // Цикличный переход - если достигли последнего такта, переходим к первому
     if (this.currentBarIndex < this.totalBars - 1) {
       this.currentBarIndex++;
-      this.updateNavigationState();
-      this.notifyBarChange();
+    } else {
+      // Переходим к первому такту для цикличного воспроизведения
+      this.currentBarIndex = 0;
     }
+    this.updateNavigationState();
+    this.notifyBarChange();
   }
 
   /**
@@ -140,21 +148,30 @@ export class BarNavigation {
   updateNavigationState() {
     if (!this.prevButton || !this.nextButton) return;
 
+    // При цикличной навигации кнопки активны всегда, кроме случая с одним тактом
+    const hasMultipleBars = this.totalBars > 1;
+    
     // Обновляем состояние кнопки "Предыдущий"
-    const canGoPrev = this.currentBarIndex > 0;
-    this.prevButton.disabled = !canGoPrev;
-    this.prevButton.classList.toggle('opacity-50', !canGoPrev);
-    this.prevButton.classList.toggle('cursor-not-allowed', !canGoPrev);
+    this.prevButton.disabled = !hasMultipleBars;
+    this.prevButton.classList.toggle('opacity-50', !hasMultipleBars);
+    this.prevButton.classList.toggle('cursor-not-allowed', !hasMultipleBars);
 
     // Обновляем состояние кнопки "Следующий"
-    const canGoNext = this.currentBarIndex < this.totalBars - 1;
-    this.nextButton.disabled = !canGoNext;
-    this.nextButton.classList.toggle('opacity-50', !canGoNext);
-    this.nextButton.classList.toggle('cursor-not-allowed', !canGoNext);
+    this.nextButton.disabled = !hasMultipleBars;
+    this.nextButton.classList.toggle('opacity-50', !hasMultipleBars);
+    this.nextButton.classList.toggle('cursor-not-allowed', !hasMultipleBars);
 
-    // Обновляем заголовки кнопок
-    this.prevButton.title = canGoPrev ? `Такт ${this.currentBarIndex}` : 'Первый такт';
-    this.nextButton.title = canGoNext ? `Такт ${this.currentBarIndex + 2}` : 'Последний такт';
+    // Обновляем заголовки кнопок для цикличной навигации
+    if (hasMultipleBars) {
+      const prevBarIndex = this.currentBarIndex > 0 ? this.currentBarIndex : this.totalBars;
+      const nextBarIndex = this.currentBarIndex < this.totalBars - 1 ? this.currentBarIndex + 2 : 1;
+      
+      this.prevButton.title = `Предыдущий такт (Такт ${prevBarIndex})`;
+      this.nextButton.title = `Следующий такт (Такт ${nextBarIndex})`;
+    } else {
+      this.prevButton.title = 'Только один такт';
+      this.nextButton.title = 'Только один такт';
+    }
 
     // Уведомляем о обновлении навигации
     this.notifyNavigationUpdate();
@@ -216,11 +233,13 @@ export class BarNavigation {
    */
   notifyNavigationUpdate() {
     if (this.onNavigationUpdate) {
+      const hasMultipleBars = this.totalBars > 1;
       this.onNavigationUpdate({
         currentBarIndex: this.currentBarIndex,
         totalBars: this.totalBars,
-        canGoPrev: this.currentBarIndex > 0,
-        canGoNext: this.currentBarIndex < this.totalBars - 1
+        canGoPrev: hasMultipleBars,
+        canGoNext: hasMultipleBars,
+        isCircular: hasMultipleBars
       });
     }
   }
@@ -269,11 +288,13 @@ export class BarNavigation {
    * @returns {Object} Состояние навигации
    */
   getState() {
+    const hasMultipleBars = this.totalBars > 1;
     return {
       currentBarIndex: this.currentBarIndex,
       totalBars: this.totalBars,
-      canGoPrev: this.currentBarIndex > 0,
-      canGoNext: this.currentBarIndex < this.totalBars - 1,
+      canGoPrev: hasMultipleBars,
+      canGoNext: hasMultipleBars,
+      isCircular: hasMultipleBars,
       isInitialized: this.container !== null && this.prevButton !== null && this.nextButton !== null
     };
   }

@@ -168,10 +168,29 @@ export class ChordPlayer {
       // Если достигли конца такта, переходим к следующему такту
       if (beatIndex >= currentBar.beatUnits.length) {
         beatIndex = 0;
-        // Переходим к следующему такту
+        // Переходим к следующему такту используя метод из BarNavigation
         if (this.barNavigation) {
-          const nextBarIndex = (currentBarIndex + 1) % this.currentBars.length;
-          this.barNavigation.setCurrentBarIndex(nextBarIndex);
+          // Проверяем, есть ли несколько тактов
+          const hasMultipleBars = this.currentBars.length > 1;
+          
+          // Используем goToNextBar() для цикличного перехода
+          this.barNavigation.goToNextBar();
+          
+          // Сбрасываем анимацию только если есть несколько тактов
+          // При воспроизведении одного такта избегаем постоянного сброса
+          if (hasMultipleBars) {
+            this.playbackAnimator.resetAnimation();
+          }
+          
+          // Синхронизируем beatCount между компонентами
+          const nextBarIndex = this.barNavigation.getCurrentBarIndex();
+          const nextBar = this.currentBars[nextBarIndex];
+          if (nextBar && nextBar.beatUnits) {
+            this.playbackAnimator.setSettings({
+              bpm: this.settings.bpm,
+              beatCount: nextBar.beatUnits.length
+            });
+          }
         }
       }
 
