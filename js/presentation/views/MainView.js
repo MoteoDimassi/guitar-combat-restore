@@ -1,3 +1,5 @@
+import ArrowDisplay from '../components/ArrowDisplay.js';
+
 class MainView {
   constructor(container, eventBus, serviceContainer) {
     this.container = container;
@@ -15,9 +17,18 @@ class MainView {
   }
 
   initializeComponents() {
-    // Компоненты будут инициализированы при необходимости через ленивую загрузку
-    // Это соответствует принципам новой архитектуры с оптимизацией
-    console.log('Components will be initialized on demand');
+    // Инициализируем компонент отображения стрелок
+    const beatRow = this.container.querySelector('#beatRow');
+    if (beatRow) {
+      this.components.arrowDisplay = new ArrowDisplay(beatRow, this.eventBus);
+      this.components.arrowDisplay.initialize();
+      
+      // Устанавливаем начальные статусы для кругов (первый заполнен, остальные пустые)
+      const initialStatuses = [true, false, false, false, false, false, false, false];
+      this.components.arrowDisplay.updateAllCircleStatuses(initialStatuses);
+    }
+    
+    console.log('Components initialized');
   }
 
   setupEventHandlers() {
@@ -125,6 +136,31 @@ class MainView {
       }
     });
     
+    this.eventBus.on('playback:beat', (data) => {
+      // Обновляем активный бит в компоненте стрелок
+      if (this.components.arrowDisplay) {
+        this.components.arrowDisplay.setCurrentBeat(data.beat);
+      }
+    });
+    
+    this.eventBus.on('generate:strum', () => {
+      // Генерируем случайные направления для стрелок
+      if (this.components.arrowDisplay) {
+        const directions = [];
+        for (let i = 0; i < 8; i++) {
+          directions.push(Math.random() > 0.5 ? 'up' : 'down');
+        }
+        this.components.arrowDisplay.setAllArrowDirections(directions);
+        
+        // Генерируем случайные статусы для кругов
+        const statuses = [];
+        for (let i = 0; i < 8; i++) {
+          statuses.push(Math.random() > 0.3);
+        }
+        this.components.arrowDisplay.updateAllCircleStatuses(statuses);
+      }
+    });
+    
     this.eventBus.on('error:occurred', (data) => {
       this.showError(data.message);
     });
@@ -205,6 +241,11 @@ class MainView {
     
     // Очищаем контейнер
     this.container.innerHTML = '';
+  }
+
+  // Метод для получения компонента стрелок
+  getArrowDisplay() {
+    return this.components.arrowDisplay;
   }
 }
 
