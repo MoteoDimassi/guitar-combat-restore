@@ -1,8 +1,14 @@
 // Импорты ядра архитектуры
 import EventBus from './core/EventBus.js';
-import ServiceContainer from './core/ServiceContainer.js';
+import { ServiceContainer } from './core/ServiceContainer.js';
 import StateManager from './core/StateManager.js';
 import ConfigManager from './core/ConfigManager.js';
+
+// Импорты новой системы зависимостей
+import { ServiceRegistry } from './core/ServiceRegistry.js';
+import { ServiceLoader } from './core/ServiceLoader.js';
+import { OptimizedApplicationService } from './application/OptimizedApplicationService.js';
+import { registerServices } from './application/ServiceDefinitions.js';
 
 // Импорты сервисов приложения
 import ApplicationService from './application/services/ApplicationService.js';
@@ -42,36 +48,31 @@ import { APP_CONFIG } from './shared/constants/Config.js';
 
 class GuitarCombatApp {
   constructor() {
-    this.serviceContainer = new ServiceContainer();
-    this.eventBus = new EventBus();
+    this.optimizedApplicationService = new OptimizedApplicationService();
     this.isInitialized = false;
   }
 
   async initialize() {
     try {
-      console.log('Initializing Guitar Combat App...');
+      console.log('Initializing Guitar Combat App with optimized dependency injection...');
       
-      // Регистрируем основные сервисы
-      this.registerCoreServices();
+      // Инициализируем оптимизированный сервис приложения
+      await this.optimizedApplicationService.initialize({
+        debug: true,
+        autoDiscover: false, // Отключаем автообнаружение для явного контроля
+        modules: {
+          // Здесь можно добавить конфигурацию модулей
+        }
+      });
       
-      // Регистрируем инфраструктуру
-      this.registerInfrastructure();
+      // Регистрируем дополнительные сервисы, которые не были включены в ServiceDefinitions
+      this.registerAdditionalServices();
       
-      // Регистрируем бизнес-логику
-      this.registerDomain();
-      
-      // Регистрируем представление
-      this.registerPresentation();
-      
-      // Регистрируем сервисы приложения
-      this.registerApplicationServices();
-      
-      // Инициализируем приложение
-      const applicationService = this.serviceContainer.get('applicationService');
-      await applicationService.initialize();
+      // Инициализируем все сервисы
+      await this.optimizedApplicationService.container.initialize();
       
       this.isInitialized = true;
-      console.log('Guitar Combat App initialized successfully');
+      console.log('Guitar Combat App initialized successfully with optimized DI');
       
       return true;
     } catch (error) {
@@ -81,108 +82,62 @@ class GuitarCombatApp {
     }
   }
 
-  registerCoreServices() {
-    // Регистрируем ядро архитектуры
-    this.serviceContainer.register('eventBus', () => this.eventBus, { singleton: true });
-    this.serviceContainer.register('serviceContainer', () => this.serviceContainer, { singleton: true });
-    this.serviceContainer.register('stateManager', () => new StateManager(this.eventBus), { singleton: true });
-    this.serviceContainer.register('configManager', () => new ConfigManager(), { singleton: true });
-  }
-
-  registerInfrastructure() {
+  registerAdditionalServices() {
+    const container = this.optimizedApplicationService.container;
+    
     // Регистрируем аудио систему
-    this.serviceContainer.register('audioEngine', () => new AudioEngine(), { singleton: true });
-    this.serviceContainer.register('audioPlayer', (container) => {
+    container.register('audioPlayer', (container) => {
       const audioEngine = container.get('audioEngine');
       return new AudioPlayer(audioEngine);
     }, { singleton: true });
-    this.serviceContainer.register('audioRepository', (container) => {
+    container.register('audioRepository', (container) => {
       const audioPlayer = container.get('audioPlayer');
       return new AudioRepository(audioPlayer);
     }, { singleton: true });
     
-    // Регистрируем хранилище
-    this.serviceContainer.register('localStorageAdapter', () => new LocalStorageAdapter(), { singleton: true });
-    this.serviceContainer.register('fileStorageAdapter', () => new FileStorageAdapter(), { singleton: true });
-    this.serviceContainer.register('storageAdapter', (container) => {
-      return container.get('localStorageAdapter');
-    }, { singleton: true });
+    // Регистрируем файловое хранилище
+    container.register('fileStorageAdapter', () => new FileStorageAdapter(), { singleton: true });
     
     // Регистрируем шаблоны
-    this.serviceContainer.register('templateLoader', () => new TemplateLoader(), { singleton: true });
-    this.serviceContainer.register('templateRepository', (container) => {
-      const storageAdapter = container.get('storageAdapter');
+    container.register('templateLoader', () => new TemplateLoader(), { singleton: true });
+    container.register('templateRepository', (container) => {
+      const storageAdapter = container.get('storageService');
       const templateLoader = container.get('templateLoader');
       return new TemplateRepository(storageAdapter, templateLoader);
     }, { singleton: true });
-  }
-
-  registerDomain() {
-    // Регистрируем репозитории
-    this.serviceContainer.register('chordRepository', (container) => {
-      const storageAdapter = container.get('storageAdapter');
-      return new ChordRepository(storageAdapter);
-    }, { singleton: true });
-    this.serviceContainer.register('barRepository', (container) => {
-      const storageAdapter = container.get('storageAdapter');
-      return new BarRepository(storageAdapter);
-    }, { singleton: true });
     
-    // Регистрируем сервисы бизнес-логики
-    this.serviceContainer.register('chordService', (container) => {
-      const chordRepository = container.get('chordRepository');
-      return new ChordService(chordRepository);
-    }, { singleton: true });
-    this.serviceContainer.register('barService', (container) => {
-      const barRepository = container.get('barRepository');
-      return new BarService(barRepository);
-    }, { singleton: true });
-    this.serviceContainer.register('playbackService', (container) => {
-      const audioEngine = container.get('audioEngine');
-      const barRepository = container.get('barRepository');
-      return new PlaybackService(audioEngine, barRepository);
-    }, { singleton: true });
-    this.serviceContainer.register('templateService', (container) => {
+    // Регистрируем сервисы шаблонов
+    container.register('templateService', (container) => {
       const templateRepository = container.get('templateRepository');
       return new TemplateService(templateRepository);
     }, { singleton: true });
-  }
-
-  registerPresentation() {
+    
     // Регистрируем контроллеры
-    this.serviceContainer.register('mainController', (container) => {
+    container.register('mainController', (container) => {
       const eventBus = container.get('eventBus');
-      const serviceContainer = container.get('serviceContainer');
-      return new MainController(eventBus, serviceContainer);
+      return new MainController(eventBus, container);
     }, { singleton: true });
-    this.serviceContainer.register('chordController', (container) => {
+    container.register('chordController', (container) => {
       const eventBus = container.get('eventBus');
-      const serviceContainer = container.get('serviceContainer');
-      return new ChordController(eventBus, serviceContainer);
+      return new ChordController(eventBus, container);
     }, { singleton: true });
-    this.serviceContainer.register('playbackController', (container) => {
+    container.register('playbackController', (container) => {
       const eventBus = container.get('eventBus');
-      const serviceContainer = container.get('serviceContainer');
-      return new PlaybackController(eventBus, serviceContainer);
+      return new PlaybackController(eventBus, container);
     }, { singleton: true });
-  }
-
-  registerApplicationServices() {
+    
     // Регистрируем сервисы приложения
-    this.serviceContainer.register('applicationService', (container) => {
+    container.register('applicationService', (container) => {
       const eventBus = container.get('eventBus');
-      const serviceContainer = container.get('serviceContainer');
-      return new ApplicationService(eventBus, serviceContainer);
+      return new ApplicationService(eventBus, container);
     }, { singleton: true });
-    this.serviceContainer.register('initializationService', (container) => {
+    container.register('initializationService', (container) => {
       const eventBus = container.get('eventBus');
-      const serviceContainer = container.get('serviceContainer');
-      return new InitializationService(eventBus, serviceContainer);
+      return new InitializationService(eventBus, container);
     }, { singleton: true });
-    this.serviceContainer.register('errorHandlingService', (container) => {
+    container.register('errorHandlingService', (container) => {
       const eventBus = container.get('eventBus');
-      const serviceContainer = container.get('serviceContainer');
-      return new ErrorHandlingService(eventBus, serviceContainer);
+      return new ErrorHandlingService(eventBus, container);
     }, { singleton: true });
   }
 
@@ -196,7 +151,8 @@ class GuitarCombatApp {
 
     try {
       // Создаем главное представление
-      const mainController = this.serviceContainer.get('mainController');
+      const mainController = this.optimizedApplicationService.get('mainController');
+      const eventBus = this.optimizedApplicationService.get('eventBus');
       const appContainer = document.getElementById('app');
       
       if (!appContainer) {
@@ -205,14 +161,14 @@ class GuitarCombatApp {
       
       const mainView = new MainView(
         appContainer,
-        this.eventBus,
-        this.serviceContainer
+        eventBus,
+        this.optimizedApplicationService.container
       );
       
       // Регистрируем представление в контроллере
       mainController.registerComponent('mainView', mainView);
       
-      console.log('Guitar Combat App started successfully');
+      console.log('Guitar Combat App started successfully with optimized DI');
       return true;
     } catch (error) {
       console.error('Failed to start Guitar Combat App:', error);
@@ -255,8 +211,11 @@ class GuitarCombatApp {
     }
 
     try {
-      const applicationService = this.serviceContainer.get('applicationService');
+      const applicationService = this.optimizedApplicationService.get('applicationService');
       await applicationService.shutdown();
+      
+      // Очищаем контейнер сервисов
+      await this.optimizedApplicationService.container.clear();
       
       console.log('Guitar Combat App shutdown successfully');
     } catch (error) {
@@ -265,11 +224,16 @@ class GuitarCombatApp {
   }
 
   getServiceContainer() {
-    return this.serviceContainer;
+    return this.optimizedApplicationService.container;
   }
 
   getEventBus() {
-    return this.eventBus;
+    return this.optimizedApplicationService.get('eventBus');
+  }
+
+  // Метод для получения статистики системы зависимостей
+  getDependencyStats() {
+    return this.optimizedApplicationService.getStats();
   }
 }
 
@@ -284,6 +248,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Failed to start app:', error);
   }
 });
+
+// Экспортируем класс для использования в других модулях
+export { GuitarCombatApp };
 
 // Обрабатываем ошибки загрузки
 window.addEventListener('error', (event) => {

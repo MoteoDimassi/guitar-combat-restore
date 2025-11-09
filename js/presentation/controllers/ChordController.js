@@ -4,7 +4,9 @@ class ChordController {
     this.serviceContainer = serviceContainer;
     this.selectedChord = null;
     this.selectedBar = null;
-    
+  }
+
+  async initialize() {
     this.init();
   }
 

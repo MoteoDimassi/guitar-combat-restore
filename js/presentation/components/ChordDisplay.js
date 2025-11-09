@@ -4,6 +4,13 @@ class ChordDisplay {
     this.eventBus = eventBus;
     this.chords = [];
     this.selectedChord = null;
+  }
+
+  async initialize() {
+    if (!this.container) {
+      console.warn('ChordDisplay: Container not found');
+      return;
+    }
     
     this.init();
     this.subscribeToEvents();

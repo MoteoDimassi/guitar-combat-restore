@@ -9,132 +9,72 @@ class MainView {
   }
 
   init() {
-    this.render();
+    // Не заменяем существующую разметку, а работаем с ней
     this.initializeComponents();
     this.setupEventHandlers();
   }
 
-  render() {
-    this.container.innerHTML = `
-      <div class="main-app">
-        <header class="app-header">
-          <h1>Guitar Combat</h1>
-          <div class="header-controls">
-            <button id="play-btn" class="btn btn-primary">▶ Play</button>
-            <button id="stop-btn" class="btn btn-secondary">■ Stop</button>
-            <button id="settings-btn" class="btn btn-secondary">⚙ Settings</button>
-            <button id="templates-btn" class="btn btn-secondary">📋 Templates</button>
-          </div>
-        </header>
-        
-        <main class="app-main">
-          <div class="left-panel">
-            <div class="arrow-display-container"></div>
-            <div class="playback-controls">
-              <div class="tempo-control">
-                <label for="tempo-slider">Tempo: <span id="tempo-value">120</span> BPM</label>
-                <input type="range" id="tempo-slider" min="40" max="200" value="120">
-              </div>
-            </div>
-          </div>
-          
-          <div class="center-panel">
-            <div class="bar-display-container"></div>
-          </div>
-          
-          <div class="right-panel">
-            <div class="chord-display-container"></div>
-          </div>
-        </main>
-        
-        <footer class="app-footer">
-          <div class="footer-controls">
-            <button id="export-btn" class="btn btn-secondary">📤 Export</button>
-            <button id="import-btn" class="btn btn-secondary">📥 Import</button>
-          </div>
-        </footer>
-      </div>
-      
-      <!-- Модальное окно будет добавлено отдельно -->
-      <div class="modal-container"></div>
-    `;
-  }
-
   initializeComponents() {
-    // Инициализируем компоненты
-    const ArrowDisplay = require('../components/ArrowDisplay').default;
-    const BarDisplay = require('../components/BarDisplay').default;
-    const ChordDisplay = require('../components/ChordDisplay').default;
-    const Modal = require('../components/Modal').default;
-    
-    // Создаем экземпляры компонентов
-    this.components.arrowDisplay = new ArrowDisplay(
-      this.container.querySelector('.arrow-display-container'),
-      this.eventBus
-    );
-    
-    this.components.barDisplay = new BarDisplay(
-      this.container.querySelector('.bar-display-container'),
-      this.eventBus
-    );
-    
-    this.components.chordDisplay = new ChordDisplay(
-      this.container.querySelector('.chord-display-container'),
-      this.eventBus
-    );
-    
-    this.components.modal = new Modal(
-      this.container.querySelector('.modal-container'),
-      this.eventBus
-    );
+    // Компоненты будут инициализированы при необходимости через ленивую загрузку
+    // Это соответствует принципам новой архитектуры с оптимизацией
+    console.log('Components will be initialized on demand');
   }
 
   setupEventHandlers() {
-    // Кнопки управления воспроизведением
-    const playBtn = this.container.querySelector('#play-btn');
-    const stopBtn = this.container.querySelector('#stop-btn');
+    // Кнопки управления воспроизведением (используем существующие ID из HTML)
+    const toggleBtn = this.container.querySelector('#toggleBtn');
     
-    playBtn.addEventListener('click', () => {
-      this.eventBus.emit('playback:toggle');
-    });
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        this.eventBus.emit('playback:toggle');
+      });
+    }
     
-    stopBtn.addEventListener('click', () => {
-      this.eventBus.emit('playback:stop');
-    });
+    // Кнопки настроек
+    const settingsBtn = this.container.querySelector('#settingsBtn');
     
-    // Кнопки настроек и шаблонов
-    const settingsBtn = this.container.querySelector('#settings-btn');
-    const templatesBtn = this.container.querySelector('#templates-btn');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        this.eventBus.emit('modal:open', { type: 'settings' });
+      });
+    }
     
-    settingsBtn.addEventListener('click', () => {
-      this.eventBus.emit('modal:open', { type: 'settings' });
-    });
+    // Кнопки навигации по тактам
+    const prevLineBtn = this.container.querySelector('#prevLineBtn');
+    const nextLineBtn = this.container.querySelector('#nextLineBtn');
     
-    templatesBtn.addEventListener('click', () => {
-      this.eventBus.emit('modal:open', { type: 'templates' });
-    });
+    if (prevLineBtn) {
+      prevLineBtn.addEventListener('click', () => {
+        this.eventBus.emit('navigation:previousBar');
+      });
+    }
     
-    // Кнопки экспорта и импорта
-    const exportBtn = this.container.querySelector('#export-btn');
-    const importBtn = this.container.querySelector('#import-btn');
+    if (nextLineBtn) {
+      nextLineBtn.addEventListener('click', () => {
+        this.eventBus.emit('navigation:nextBar');
+      });
+    }
     
-    exportBtn.addEventListener('click', () => {
-      this.eventBus.emit('modal:open', { type: 'export' });
-    });
+    // Слайдер темпа (используем существующий ID из HTML)
+    const bpmSlider = this.container.querySelector('#bpm');
+    const bpmLabel = this.container.querySelector('#bpmLabel');
     
-    importBtn.addEventListener('click', () => {
-      this.eventBus.emit('modal:open', { type: 'import' });
-    });
+    if (bpmSlider && bpmLabel) {
+      bpmSlider.addEventListener('input', (e) => {
+        const tempo = parseInt(e.target.value);
+        bpmLabel.textContent = tempo;
+        this.eventBus.emit('playback:set-tempo', { tempo });
+      });
+    }
     
-    // Слайдер темпа
-    const tempoSlider = this.container.querySelector('#tempo-slider');
-    const tempoValue = this.container.querySelector('#tempo-value');
+    // Кнопка генерации
+    const generateBtn = this.container.querySelector('#generateBtn');
     
-    tempoSlider.addEventListener('input', (e) => {
-      const tempo = parseInt(e.target.value);
-      tempoValue.textContent = tempo;
-      this.eventBus.emit('playback:set-tempo', { tempo });
-    });
+    if (generateBtn) {
+      generateBtn.addEventListener('click', () => {
+        this.eventBus.emit('generate:strum', {});
+      });
+    }
     
     // Подписываемся на события для обновления UI
     this.subscribeToEvents();
@@ -142,26 +82,47 @@ class MainView {
 
   subscribeToEvents() {
     this.eventBus.on('playback:started', () => {
-      const playBtn = this.container.querySelector('#play-btn');
-      playBtn.textContent = '⏸ Pause';
+      const toggleBtn = this.container.querySelector('#toggleBtn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = `
+          <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        `;
+      }
     });
     
     this.eventBus.on('playback:paused', () => {
-      const playBtn = this.container.querySelector('#play-btn');
-      playBtn.textContent = '▶ Play';
+      const toggleBtn = this.container.querySelector('#toggleBtn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = `
+          <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        `;
+      }
     });
     
     this.eventBus.on('playback:stopped', () => {
-      const playBtn = this.container.querySelector('#play-btn');
-      playBtn.textContent = '▶ Play';
+      const toggleBtn = this.container.querySelector('#toggleBtn');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = `
+          <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        `;
+      }
     });
     
     this.eventBus.on('playback:tempo-changed', (data) => {
-      const tempoSlider = this.container.querySelector('#tempo-slider');
-      const tempoValue = this.container.querySelector('#tempo-value');
+      const bpmSlider = this.container.querySelector('#bpm');
+      const bpmLabel = this.container.querySelector('#bpmLabel');
       
-      tempoSlider.value = data.tempo;
-      tempoValue.textContent = data.tempo;
+      if (bpmSlider && bpmLabel) {
+        bpmSlider.value = data.tempo;
+        bpmLabel.textContent = data.tempo;
+      }
     });
     
     this.eventBus.on('error:occurred', (data) => {
@@ -198,16 +159,33 @@ class MainView {
   }
 
   updatePlayButton(isPlaying) {
-    const playBtn = this.container.querySelector('#play-btn');
-    playBtn.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+    const toggleBtn = this.container.querySelector('#toggleBtn');
+    if (toggleBtn) {
+      if (isPlaying) {
+        toggleBtn.innerHTML = `
+          <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        `;
+      } else {
+        toggleBtn.innerHTML = `
+          <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        `;
+      }
+    }
   }
 
   updateTempoDisplay(tempo) {
-    const tempoSlider = this.container.querySelector('#tempo-slider');
-    const tempoValue = this.container.querySelector('#tempo-value');
+    const bpmSlider = this.container.querySelector('#bpm');
+    const bpmLabel = this.container.querySelector('#bpmLabel');
     
-    tempoSlider.value = tempo;
-    tempoValue.textContent = tempo;
+    if (bpmSlider && bpmLabel) {
+      bpmSlider.value = tempo;
+      bpmLabel.textContent = tempo;
+    }
   }
 
   destroy() {

@@ -23,6 +23,10 @@ class PlaybackService {
     // В реальном приложении это будет включать таймеры и вызовы audioEngine
   }
 
+  async start() {
+    return this.play();
+  }
+
   pause() {
     this.isPlaying = false;
   }

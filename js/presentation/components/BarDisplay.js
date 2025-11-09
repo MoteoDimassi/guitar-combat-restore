@@ -5,6 +5,13 @@ class BarDisplay {
     this.bars = [];
     this.selectedBar = null;
     this.timeSignature = { beats: 4, beatUnit: 4 };
+  }
+
+  async initialize() {
+    if (!this.container) {
+      console.warn('BarDisplay: Container not found');
+      return;
+    }
     
     this.init();
     this.subscribeToEvents();

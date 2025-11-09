@@ -7,7 +7,9 @@ class PlaybackController {
     this.currentBeat = 0;
     this.tempo = 120;
     this.intervalId = null;
-    
+  }
+
+  async initialize() {
     this.init();
   }
 

@@ -104,6 +104,27 @@ class LocalStorageAdapter {
       return false;
     }
   }
+
+  async load(key) {
+    try {
+      const value = localStorage.getItem(this.prefix + key);
+      return value ? JSON.parse(value) : null;
+    } catch (error) {
+      console.error(`Failed to load data for key ${key}:`, error);
+      return null;
+    }
+  }
+
+  async save(key, data) {
+    try {
+      const value = JSON.stringify(data);
+      localStorage.setItem(this.prefix + key, value);
+      return true;
+    } catch (error) {
+      console.error(`Failed to save data for key ${key}:`, error);
+      return false;
+    }
+  }
 }
 
 export default LocalStorageAdapter;

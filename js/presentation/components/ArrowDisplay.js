@@ -5,6 +5,13 @@ class ArrowDisplay {
     this.arrows = [];
     this.currentBeat = 0;
     this.isPlaying = false;
+  }
+
+  async initialize() {
+    if (!this.container) {
+      console.warn('ArrowDisplay: Container not found');
+      return;
+    }
     
     this.init();
     this.subscribeToEvents();

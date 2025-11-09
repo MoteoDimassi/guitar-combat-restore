@@ -1,246 +1,386 @@
-class MainController {
-  constructor(eventBus, serviceContainer) {
+export class MainController {
+  constructor(eventBus, container) {
+    this.container = container;
     this.eventBus = eventBus;
-    this.serviceContainer = serviceContainer;
+    this.stateManager = container.get("stateManager");
+    this.domElements = {};
     this.components = {};
-    
-    this.init();
+    this.isInitialized = false;
   }
 
-  init() {
-    this.subscribeToEvents();
-    this.setupGlobalEventHandlers();
-  }
+  /**
+   * Инициализация контроллера
+   */
+  async initialize() {
+    try {
+      console.log("🎮 Initializing MainController...");
 
-  subscribeToEvents() {
-    this.eventBus.on('app:initialized', () => {
-      this.onAppInitialized();
-    });
+      // Инициализация DOM элементов
+      this.initializeDOMElements();
 
-    this.eventBus.on('chord:selected', (data) => {
-      this.onChordSelected(data);
-    });
+      // Привязка событий
+      this.bindEvents();
 
-    this.eventBus.on('bar:selected', (data) => {
-      this.onBarSelected(data);
-    });
+      // Настройка подписок
+      this.setupSubscriptions();
 
-    this.eventBus.on('playback:started', () => {
-      this.onPlaybackStarted();
-    });
+      // Синхронизация с состоянием
+      this.syncWithState();
 
-    this.eventBus.on('playback:stopped', () => {
-      this.onPlaybackStopped();
-    });
-
-    this.eventBus.on('settings:saved', (data) => {
-      this.onSettingsSaved(data);
-    });
-
-    this.eventBus.on('template:selected', (data) => {
-      this.onTemplateSelected(data);
-    });
-  }
-
-  setupGlobalEventHandlers() {
-    // Глобальные обработчики клавиатуры
-    document.addEventListener('keydown', (e) => {
-      this.handleKeyPress(e);
-    });
-
-    // Глобальные обработчики изменений размера окна
-    window.addEventListener('resize', () => {
-      this.handleResize();
-    });
-  }
-
-  onAppInitialized() {
-    console.log('MainController: App initialized');
-    this.loadInitialData();
-  }
-
-  onChordSelected(data) {
-    console.log('MainController: Chord selected', data);
-    // Здесь может быть логика для обработки выбора аккорда
-  }
-
-  onBarSelected(data) {
-    console.log('MainController: Bar selected', data);
-    // Здесь может быть логика для обработки выбора такта
-  }
-
-  onPlaybackStarted() {
-    console.log('MainController: Playback started');
-    // Обновляем UI для состояния воспроизведения
-  }
-
-  onPlaybackStopped() {
-    console.log('MainController: Playback stopped');
-    // Обновляем UI для состояния остановки
-  }
-
-  onSettingsSaved(data) {
-    console.log('MainController: Settings saved', data);
-    // Применяем новые настройки
-    this.applySettings(data);
-  }
-
-  onTemplateSelected(data) {
-    console.log('MainController: Template selected', data);
-    // Применяем выбранный шаблон
-    this.applyTemplate(data.templateId);
-  }
-
-  handleKeyPress(e) {
-    // Обработка горячих клавиш
-    switch (e.key) {
-      case ' ':
-        e.preventDefault();
-        this.togglePlayback();
-        break;
-      case 'Escape':
-        this.eventBus.emit('modal:close');
-        break;
-      case 's':
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-          this.saveProject();
-        }
-        break;
-      case 'o':
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-          this.openProject();
-        }
-        break;
+      this.isInitialized = true;
+      console.log("✅ MainController initialized successfully");
+    } catch (error) {
+      console.error("❌ MainController initialization failed:", error);
+      throw error;
     }
   }
 
-  handleResize() {
-    // Обработка изменения размера окна
-    this.eventBus.emit('window:resized', {
-      width: window.innerWidth,
-      height: window.innerHeight
-    });
+  /**
+   * Инициализация DOM элементов
+   */
+  initializeDOMElements() {
+    this.domElements = {
+      chordsInput: document.getElementById("chordsInput"),
+      beatCountSelect: document.getElementById("countSelect"),
+      bpmInput: document.getElementById("bpm"),
+      bpmSlider: document.getElementById("bpm"),
+      bpmLabel: document.getElementById("bpmLabel"),
+      playBtn: document.getElementById("toggleBtn"),
+      generateBtn: document.getElementById("generateBtn"),
+      nextLineBtn: document.getElementById("nextLineBtn"),
+      prevLineBtn: document.getElementById("prevLineBtn"),
+      settingsBtn: document.getElementById("settingsBtn"),
+      settingsMenu: document.getElementById("settingsMenu"),
+      strumVolume: document.getElementById("strumVolume"),
+      strumVolumeLabel: document.getElementById("strumVolumeLabel"),
+      metronomeVolume: document.getElementById("metronomeVolume"),
+      metronomeVolumeLabel: document.getElementById("metronomeVolumeLabel"),
+    };
+
+    // Проверяем критически важные элементы
+    const criticalElements = ["chordsInput", "beatCountSelect"];
+    const missingElements = criticalElements.filter(
+      (id) => !this.domElements[id]
+    );
+
+    if (missingElements.length > 0) {
+      throw new Error(
+        `Missing critical DOM elements: ${missingElements.join(", ")}`
+      );
+    }
   }
 
-  async loadInitialData() {
-    try {
-      // Загружаем начальные данные
-      const chordService = this.serviceContainer.get('chordService');
-      const barService = this.serviceContainer.get('barService');
-      
-      const chords = await chordService.getAllChords();
-      const bars = await barService.getAllBars();
-      
-      this.eventBus.emit('chords:loaded', { chords });
-      this.eventBus.emit('bars:loaded', { bars });
-    } catch (error) {
-      console.error('Failed to load initial data:', error);
-      this.eventBus.emit('error:occurred', { 
-        message: 'Не удалось загрузить данные',
-        error 
+  /**
+   * Привязка событий
+   */
+  bindEvents() {
+    // События ввода аккордов
+    if (this.domElements.chordsInput) {
+      this.domElements.chordsInput.addEventListener("input", (e) => {
+        this.handleChordsInput(e.target.value);
+      });
+
+      this.domElements.chordsInput.addEventListener("change", (e) => {
+        this.handleChordsInput(e.target.value);
+      });
+    }
+
+    // События изменения количества долей
+    if (this.domElements.beatCountSelect) {
+      this.domElements.beatCountSelect.addEventListener("change", (e) => {
+        this.handleBeatCountChange(parseInt(e.target.value));
+      });
+    }
+
+    // События изменения темпа
+    if (this.domElements.bpmSlider) {
+      this.domElements.bpmSlider.addEventListener("input", (e) => {
+        this.handleBpmChange(parseInt(e.target.value));
+      });
+    }
+
+    if (this.domElements.bpmInput) {
+      this.domElements.bpmInput.addEventListener("change", (e) => {
+        this.handleBpmChange(parseInt(e.target.value));
+      });
+    }
+
+    // События кнопок
+    if (this.domElements.playBtn) {
+      this.domElements.playBtn.addEventListener("click", () => {
+        this.handlePlayButtonClick();
+      });
+    }
+
+    if (this.domElements.generateBtn) {
+      this.domElements.generateBtn.addEventListener("click", () => {
+        this.handleGenerateButtonClick();
+      });
+    }
+
+    if (this.domElements.nextLineBtn) {
+      this.domElements.nextLineBtn.addEventListener("click", () => {
+        this.eventBus.emit("navigation:nextBar");
+      });
+    }
+
+    if (this.domElements.prevLineBtn) {
+      this.domElements.prevLineBtn.addEventListener("click", () => {
+        this.eventBus.emit("navigation:previousBar");
+      });
+    }
+
+    // События настроек
+    if (this.domElements.settingsBtn) {
+      this.domElements.settingsBtn.addEventListener("click", () => {
+        this.handleSettingsToggle();
+      });
+    }
+
+    // События громкости
+    if (this.domElements.strumVolume) {
+      this.domElements.strumVolume.addEventListener("input", (e) => {
+        this.handleVolumeChange("strum", parseInt(e.target.value));
+      });
+    }
+
+    if (this.domElements.metronomeVolume) {
+      this.domElements.metronomeVolume.addEventListener("input", (e) => {
+        this.handleVolumeChange("metronome", parseInt(e.target.value));
       });
     }
   }
 
-  togglePlayback() {
-    const playbackService = this.serviceContainer.get('playbackService');
-    if (playbackService.isCurrentlyPlaying()) {
-      playbackService.pause();
-      this.eventBus.emit('playback:paused');
-    } else {
-      playbackService.play();
-      this.eventBus.emit('playback:started');
+  /**
+   * Настройка подписок на события
+   */
+  setupSubscriptions() {
+    // Подписка на изменения состояния
+    this.stateManager.subscribe("settings.bpm", (bpm) => {
+      this.updateBpmDisplay(bpm);
+    });
+
+    this.stateManager.subscribe("settings.beatCount", (beatCount) => {
+      this.updateBeatCountDisplay(beatCount);
+    });
+
+    this.stateManager.subscribe("playback.isPlaying", (isPlaying) => {
+      this.updatePlayButton(isPlaying);
+    });
+
+    this.stateManager.subscribe("settings.volume.strum", (volume) => {
+      this.updateVolumeDisplay("strum", volume);
+    });
+
+    this.stateManager.subscribe("settings.volume.metronome", (volume) => {
+      this.updateVolumeDisplay("metronome", volume);
+    });
+
+    // Подписка на события
+    this.eventBus.on("chords:parsed", (event) => {
+      this.handleChordsParsed(event.data);
+    });
+
+    this.eventBus.on("bars:updated", (event) => {
+      this.handleBarsUpdated(event.data);
+    });
+
+    this.eventBus.on("error:occurred", (event) => {
+      this.handleError(event.data);
+    });
+  }
+
+  /**
+   * Синхронизация с состоянием
+   */
+  syncWithState() {
+    // Синхронизируем UI с текущим состоянием
+    const state = this.stateManager.getState();
+
+    this.updateBpmDisplay(state.settings.bpm);
+    this.updateBeatCountDisplay(state.settings.beatCount);
+    this.updatePlayButton(state.playback.isPlaying);
+    this.updateVolumeDisplay("strum", state.settings.volume.strum);
+    this.updateVolumeDisplay("metronome", state.settings.volume.metronome);
+
+    // Устанавливаем значения в DOM элементы
+    if (this.domElements.chordsInput) {
+      this.domElements.chordsInput.value = state.chords.inputString;
+    }
+
+    if (this.domElements.beatCountSelect) {
+      this.domElements.beatCountSelect.value = state.settings.beatCount;
     }
   }
 
-  async saveProject() {
-    try {
-      // Здесь будет логика сохранения проекта
-      this.eventBus.emit('project:saved');
-    } catch (error) {
-      console.error('Failed to save project:', error);
-      this.eventBus.emit('error:occurred', { 
-        message: 'Не удалось сохранить проект',
-        error 
-      });
+  /**
+   * Обработчики событий
+   */
+  handleChordsInput(chordsString) {
+    this.eventBus.emit("chords:input", { chordsString });
+  }
+
+  handleBeatCountChange(beatCount) {
+    this.eventBus.emit("settings:beatCountChanged", { beatCount });
+  }
+
+  handleBpmChange(bpm) {
+    this.eventBus.emit("settings:bpmChanged", { bpm });
+  }
+
+  handlePlayButtonClick() {
+    this.eventBus.emit("playback:toggle");
+  }
+
+  handleGenerateButtonClick() {
+    this.eventBus.emit("generate:strum", {});
+  }
+
+  handleSettingsToggle() {
+    this.eventBus.emit("ui:toggleSettings");
+  }
+
+  handleVolumeChange(type, value) {
+    this.eventBus.emit("ui:updateVolume", { type, value });
+  }
+
+  handleChordsParsed(data) {
+    const { validChords, invalidChords } = data;
+    console.log(
+      `Chords parsed: ${validChords.length} valid, ${invalidChords.length} invalid`
+    );
+  }
+
+  handleBarsUpdated(data) {
+    const { bars } = data;
+    console.log(`Bars updated: ${bars.length} bars`);
+  }
+
+  handleError(data) {
+    const { error, context } = data;
+    console.error(`Error in ${context}:`, error);
+
+    // Показываем уведомление об ошибке
+    this.showErrorMessage(error.message);
+  }
+
+  /**
+   * Методы обновления UI
+   */
+  updateBpmDisplay(bpm) {
+    if (this.domElements.bpmSlider) {
+      this.domElements.bpmSlider.value = bpm;
+    }
+
+    if (this.domElements.bpmInput) {
+      this.domElements.bpmInput.value = bpm;
+    }
+
+    if (this.domElements.bpmLabel) {
+      this.domElements.bpmLabel.textContent = bpm;
     }
   }
 
-  async openProject() {
-    try {
-      // Здесь будет логика открытия проекта
-      this.eventBus.emit('project:opened');
-    } catch (error) {
-      console.error('Failed to open project:', error);
-      this.eventBus.emit('error:occurred', { 
-        message: 'Не удалось открыть проект',
-        error 
-      });
+  updateBeatCountDisplay(beatCount) {
+    if (this.domElements.beatCountSelect) {
+      this.domElements.beatCountSelect.value = beatCount;
     }
   }
 
-  applySettings(settings) {
-    // Применяем настройки к различным сервисам
-    const playbackService = this.serviceContainer.get('playbackService');
-    const audioRepository = this.serviceContainer.get('audioRepository');
-    
-    if (settings.tempo) {
-      playbackService.setTempo(settings.tempo);
-    }
-    
-    if (settings.volume !== undefined) {
-      audioRepository.setVolume(settings.volume);
-    }
-    
-    // Сохраняем настройки
-    const configManager = this.serviceContainer.get('configManager');
-    configManager.set('audio', settings);
-  }
-
-  async applyTemplate(templateId) {
-    try {
-      const templateService = this.serviceContainer.get('templateService');
-      const bars = await templateService.applyTemplate(templateId);
-      
-      if (bars) {
-        this.eventBus.emit('template:applied', { bars });
+  updatePlayButton(isPlaying) {
+    if (this.domElements.playBtn) {
+      if (isPlaying) {
+        this.domElements.playBtn.innerHTML = `
+          <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        `;
+      } else {
+        this.domElements.playBtn.innerHTML = `
+          <svg class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        `;
       }
-    } catch (error) {
-      console.error('Failed to apply template:', error);
-      this.eventBus.emit('error:occurred', { 
-        message: 'Не удалось применить шаблон',
-        error 
-      });
     }
   }
 
+  updateVolumeDisplay(type, volume) {
+    if (type === "strum") {
+      if (this.domElements.strumVolume) {
+        this.domElements.strumVolume.value = volume;
+      }
+      if (this.domElements.strumVolumeLabel) {
+        this.domElements.strumVolumeLabel.textContent = `${volume}%`;
+      }
+    } else if (type === "metronome") {
+      if (this.domElements.metronomeVolume) {
+        this.domElements.metronomeVolume.value = volume;
+      }
+      if (this.domElements.metronomeVolumeLabel) {
+        this.domElements.metronomeVolumeLabel.textContent = `${volume}%`;
+      }
+    }
+  }
+
+  /**
+   * Показ сообщения об ошибке
+   */
+  showErrorMessage(message) {
+    // Создаем элемент уведомления
+    const notification = document.createElement("div");
+    notification.className =
+      "fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm";
+    notification.innerHTML = `
+      <div class="flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+        </svg>
+        <span>${message}</span>
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Автоматически удаляем через 3 секунды
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 3000);
+  }
+
+  /**
+   * Регистрация компонента
+   */
   registerComponent(name, component) {
     this.components[name] = component;
+    console.log(`Component registered: ${name}`);
   }
 
+  /**
+   * Получение компонента
+   */
   getComponent(name) {
     return this.components[name];
   }
 
+  /**
+   * Уничтожение контроллера
+   */
   destroy() {
-    this.eventBus.off('app:initialized');
-    this.eventBus.off('chord:selected');
-    this.eventBus.off('bar:selected');
-    this.eventBus.off('playback:started');
-    this.eventBus.off('playback:stopped');
-    this.eventBus.off('settings:saved');
-    this.eventBus.off('template:selected');
-    
-    // Уничтожаем все компоненты
-    Object.values(this.components).forEach(component => {
-      if (component.destroy) {
-        component.destroy();
+    // Удаляем обработчики событий
+    Object.values(this.domElements).forEach((element) => {
+      if (element && element.removeEventListener) {
+        // В реальном приложении нужно сохранять ссылки на обработчики
+        // для корректного удаления
       }
     });
-    
+
+    this.domElements = {};
     this.components = {};
+    this.isInitialized = false;
   }
 }
 
