@@ -527,6 +527,39 @@ export class AudioEngine {
   }
 
   /**
+   * Установка частоты дискретизации
+   */
+  setSampleRate(sampleRate) {
+    // В Web Audio API частота дискретизации не может быть изменена после создания AudioContext
+    // Этот метод оставлен для совместимости, но не будет изменять sampleRate
+    console.warn(`AudioEngine: setSampleRate(${sampleRate}) called - sampleRate cannot be changed after AudioContext creation`);
+    console.warn(`Current sampleRate: ${this.audioContext ? this.audioContext.sampleRate : 'N/A'}`);
+    
+    // Сохраняем в конфигурации для возможного использования при пересоздании AudioContext
+    this.config.sampleRate = sampleRate;
+  }
+
+  /**
+   * Установка размера буфера
+   */
+  setBufferSize(bufferSize) {
+    // В Web Audio API размер буфера не может быть изменен после создания AudioContext
+    // Этот метод оставлен для совместимости, но не будет изменять bufferSize
+    console.warn(`AudioEngine: setBufferSize(${bufferSize}) called - bufferSize cannot be changed after AudioContext creation`);
+    
+    // Сохраняем в конфигурации для возможного использования при пересоздании AudioContext
+    this.config.bufferSize = bufferSize;
+  }
+
+  /**
+   * Установка максимального количества одновременно воспроизводимых звуков
+   */
+  setMaxConcurrentSounds(maxSounds) {
+    this.config.maxConcurrentSounds = maxSounds;
+    console.log(`AudioEngine: maxConcurrentSounds set to ${maxSounds}`);
+  }
+
+  /**
    * Получение текущей громкости
    */
   getVolume() {

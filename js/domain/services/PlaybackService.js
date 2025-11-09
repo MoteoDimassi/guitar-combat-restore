@@ -58,12 +58,28 @@ class PlaybackService {
       if (!this.isPlaying) return;
       
       const currentBar = bars[this.currentBar];
-      if (!currentBar || !currentBar.beatUnits) {
+      if (!currentBar) {
         this.nextBar(bars);
         return;
       }
       
-      const beatUnit = currentBar.beatUnits[this.currentBeat];
+      // Проверяем, есть ли у текущего такта beatUnits
+      let beatUnit = null;
+      if (currentBar.beatUnits && currentBar.beatUnits.length > 0) {
+        beatUnit = currentBar.beatUnits[this.currentBeat];
+      } else {
+        // Если beatUnits нет, используем старую логику с chords
+        const chordsOnBeat = currentBar.chords ? currentBar.chords.filter(chord => chord.position === this.currentBeat) : [];
+        if (chordsOnBeat.length > 0) {
+          // Создаем временный BeatUnit для совместимости
+          beatUnit = {
+            isPlayed: () => true,
+            isMuted: () => false,
+            getChord: () => chordsOnBeat[0]
+          };
+        }
+      }
+      
       if (beatUnit && beatUnit.isPlayed()) {
         // Воспроизводим ноту
         const note = beatUnit.isMuted() ? "Mute" : "C";
@@ -84,7 +100,14 @@ class PlaybackService {
       this.currentBeat++;
       
       // Переходим к следующему такту если нужно
-      if (this.currentBeat >= currentBar.beatUnits.length) {
+      let beatCount = 4; // Значение по умолчанию
+      if (currentBar.beatUnits && currentBar.beatUnits.length > 0) {
+        beatCount = currentBar.beatUnits.length;
+      } else if (currentBar.beats) {
+        beatCount = currentBar.beats;
+      }
+      
+      if (this.currentBeat >= beatCount) {
         this.nextBar(bars);
       }
       

@@ -5,12 +5,21 @@ export class AudioService {
     this.eventBus = eventBus;
     this.stateManager = stateManager;
     this.audioEngine = audioEngine;
+    this.configService = null;
 
     this.activePlayback = null;
     this.metronomeEnabled = false;
     this.currentPattern = null;
 
     this.setupEventSubscriptions();
+  }
+
+  /**
+   * Установка ConfigService
+   */
+  setConfigService(configService) {
+    this.configService = configService;
+    this.setupConfigSubscriptions();
   }
 
   /**
@@ -22,6 +31,9 @@ export class AudioService {
 
       // Подписываемся на изменения состояния
       this.setupStateSubscriptions();
+
+      // Применяем конфигурацию аудио
+      this.applyAudioConfig();
 
       console.log("✅ AudioService initialized");
     } catch (error) {
@@ -53,6 +65,16 @@ export class AudioService {
       this.handleVolumeChange(event.data);
     });
 
+    // Изменение громкости из конфигурации
+    this.eventBus.on("audio:volume:changed", (event) => {
+      this.handleConfigVolumeChange(event.data.volume);
+    });
+
+    // Изменение конфигурации аудио
+    this.eventBus.on("audio:config:changed", (event) => {
+      this.handleAudioConfigChange(event.data);
+    });
+
     // Генерация случайного боя
     this.eventBus.on("generate:strum", () => {
       this.generateRandomStrum();
@@ -77,6 +99,70 @@ export class AudioService {
     this.stateManager.subscribe("bars", (bars) => {
       this.updateBars(bars);
     });
+  }
+
+  /**
+   * Настройка подписок на конфигурацию
+   */
+  setupConfigSubscriptions() {
+    if (!this.configService) return;
+
+    // Подписка на изменения аудио конфигурации
+    this.configService.watch("audio.volume", (volume) => {
+      this.audioEngine.setVolume(volume);
+    });
+
+    this.configService.watch("audio.sampleRate", (sampleRate) => {
+      this.audioEngine.setSampleRate(sampleRate);
+    });
+
+    this.configService.watch("audio.bufferSize", (bufferSize) => {
+      this.audioEngine.setBufferSize(bufferSize);
+    });
+
+    this.configService.watch("audio.maxConcurrentSounds", (maxSounds) => {
+      this.audioEngine.setMaxConcurrentSounds(maxSounds);
+    });
+
+    this.configService.watch("audio.enableMetronome", (enabled) => {
+      this.metronomeEnabled = enabled;
+    });
+
+    this.configService.watch("audio.metronomeVolume", (volume) => {
+      this.updateMetronomeVolume(volume);
+    });
+  }
+
+  /**
+   * Обработка изменений громкости из конфигурации
+   */
+  handleConfigVolumeChange(volume) {
+    this.audioEngine.setVolume(volume);
+  }
+
+  /**
+   * Обработка изменений конфигурации аудио
+   */
+  handleAudioConfigChange(audioConfig) {
+    // Применяем все аудио настройки
+    if (audioConfig.volume !== undefined) {
+      this.audioEngine.setVolume(audioConfig.volume);
+    }
+    if (audioConfig.sampleRate !== undefined) {
+      this.audioEngine.setSampleRate(audioConfig.sampleRate);
+    }
+    if (audioConfig.bufferSize !== undefined) {
+      this.audioEngine.setBufferSize(audioConfig.bufferSize);
+    }
+    if (audioConfig.maxConcurrentSounds !== undefined) {
+      this.audioEngine.setMaxConcurrentSounds(audioConfig.maxConcurrentSounds);
+    }
+    if (audioConfig.enableMetronome !== undefined) {
+      this.metronomeEnabled = audioConfig.enableMetronome;
+    }
+    if (audioConfig.metronomeVolume !== undefined) {
+      this.updateMetronomeVolume(audioConfig.metronomeVolume);
+    }
   }
 
   /**
@@ -109,8 +195,12 @@ export class AudioService {
    */
   async playStrumPattern(pattern, options = {}) {
     try {
+      // Получаем темп из конфигурации или из состояния
+      const defaultTempo = this.configService ?
+        this.configService.get("playback.defaultTempo", 120) : 120;
+      
       const {
-        tempo = this.stateManager.getState("settings.bpm"),
+        tempo = this.stateManager.getState("settings.bpm") || defaultTempo,
         loop = false,
         chord = null,
       } = options;
@@ -386,6 +476,18 @@ export class AudioService {
   updateMetronomeVolume(volume) {
     // Реализация управления громкостью метронома
     this.metronomeVolume = volume;
+  }
+
+  /**
+   * Применение аудио конфигурации при инициализации
+   */
+  applyAudioConfig() {
+    if (!this.configService) return;
+
+    const audioConfig = this.configService.get("audio");
+    if (audioConfig) {
+      this.handleAudioConfigChange(audioConfig);
+    }
   }
 
   /**

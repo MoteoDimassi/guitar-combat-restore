@@ -214,7 +214,11 @@ export class ApplicationService {
 
     // UI компоненты
     this.serviceContainer.register('arrowDisplay', (container) => {
-      return new ArrowDisplay(document.getElementById('arrowDisplay'), container.get('eventBus'));
+      return new ArrowDisplay(
+        document.getElementById('arrowDisplay'),
+        container.get('eventBus'),
+        container.get('stateManager')
+      );
     }, { singleton: true });
 
     this.serviceContainer.register('chordDisplay', (container) => {

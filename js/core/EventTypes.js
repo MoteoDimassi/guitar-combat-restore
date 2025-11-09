@@ -85,6 +85,16 @@ export const EventTypes = {
 
   // События EventBus
   EVENTBUS_ERROR: "eventbus:error",
+
+  // События конфигурации
+  CONFIG_CHANGED: "config:changed",
+  CONFIG_BATCH_CHANGED: "config:batch:changed",
+  CONFIG_RESET: "config:reset",
+  CONFIG_LOADED: "config:loaded",
+  CONFIG_SAVED: "config:saved",
+  CONFIG_IMPORTED: "config:imported",
+  CONFIG_EXPORTED: "config:exported",
+  CONFIG_VALIDATION_FAILED: "config:validation:failed",
 };
 
 export default EventTypes;

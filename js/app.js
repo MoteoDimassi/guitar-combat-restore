@@ -2,7 +2,6 @@
 import EventBus from './core/EventBus.js';
 import { ServiceContainer } from './core/ServiceContainer.js';
 import StateManager from './core/StateManager.js';
-import ConfigManager from './core/ConfigManager.js';
 
 // Импорты новой системы зависимостей
 import { ServiceRegistry } from './core/ServiceRegistry.js';
@@ -87,6 +86,9 @@ class GuitarCombatApp {
     
     // Аудио система теперь регистрируется в ServiceDefinitions
     // AudioPlayer больше не нужен, так как функциональность перенесена в AudioService и AudioEngine
+    
+    // Инициализация ConfigService при старте
+    container.get('configService').initialize();
     
     // Инициализация аудио движка при старте
     container.get('audioEngine').initialize(container.get('eventBus'));

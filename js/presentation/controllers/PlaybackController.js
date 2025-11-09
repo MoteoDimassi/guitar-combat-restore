@@ -183,8 +183,23 @@ class PlaybackController {
       }
       
       // Воспроизводим аккорды на текущей доле
-      const chordsOnBeat = currentBarData.chords.filter(chord => chord.position === this.currentBeat);
-      chordsOnBeat.forEach(chord => {
+      let chordsToPlay = [];
+      
+      // Проверяем, есть ли у текущего такта beatUnits
+      if (currentBarData.beatUnits && currentBarData.beatUnits.length > 0) {
+        const beatUnit = currentBarData.beatUnits[this.currentBeat];
+        if (beatUnit && beatUnit.isPlayed()) {
+          const chord = beatUnit.getChord();
+          if (chord) {
+            chordsToPlay.push(chord);
+          }
+        }
+      } else {
+        // Если beatUnits нет, используем старую логику с chords
+        chordsToPlay = currentBarData.chords ? currentBarData.chords.filter(chord => chord.position === this.currentBeat) : [];
+      }
+      
+      chordsToPlay.forEach(chord => {
         // Преобразуем имя аккорда в ноты для воспроизведения
         const notes = this.getNotesForChord(chord.name);
         audioRepository.playChord(notes);
@@ -200,7 +215,14 @@ class PlaybackController {
       this.currentBeat++;
       
       // Если достигли конца такта, переходим к следующему
-      if (this.currentBeat >= currentBarData.beats) {
+      let beatCount = 4; // Значение по умолчанию
+      if (currentBarData.beatUnits && currentBarData.beatUnits.length > 0) {
+        beatCount = currentBarData.beatUnits.length;
+      } else if (currentBarData.beats) {
+        beatCount = currentBarData.beats;
+      }
+      
+      if (this.currentBeat >= beatCount) {
         this.currentBeat = 0;
         this.currentBar++;
         

@@ -2,6 +2,7 @@ import ChordService from "../domain/services/ChordService.js";
 import BarService from "../domain/services/BarService.js";
 import PlaybackService from "../domain/services/PlaybackService.js";
 import AudioService from "../domain/services/AudioService.js";
+import { ConfigService } from "./services/ConfigService.js";
 import AudioEngine from "../infrastructure/audio/AudioEngine.js";
 import AudioRepository from "../infrastructure/audio/AudioRepository.js";
 import LocalStorageAdapter from "../infrastructure/storage/LocalStorageAdapter.js";
@@ -95,18 +96,41 @@ export function registerServices(container, registry) {
   registry.register(
     "audioService",
     (container) => {
-      return new AudioService(
+      const audioService = new AudioService(
         container.get("eventBus"),
         container.get("stateManager"),
         container.get("audioEngine")
       );
+      
+      // Передаем ConfigService в AudioService после его создания
+      const configService = container.get("configService");
+      audioService.setConfigService(configService);
+      
+      return audioService;
     },
     {
       description: "Service for managing audio playback",
       category: "domain",
       tags: ["audio", "playback", "service"],
       singleton: true,
-      dependencies: ["eventBus", "stateManager", "audioEngine"],
+      dependencies: ["eventBus", "stateManager", "audioEngine", "configService"],
+    }
+  );
+
+  // Регистрация сервисов приложения
+  registry.register(
+    "configService",
+    (container) => {
+      return new ConfigService(
+        container.get("eventBus")
+      );
+    },
+    {
+      description: "Service for managing application configuration",
+      category: "application",
+      tags: ["config", "settings", "service"],
+      singleton: true,
+      dependencies: ["eventBus"],
     }
   );
 

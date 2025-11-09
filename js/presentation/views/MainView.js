@@ -20,11 +20,15 @@ class MainView {
     // Инициализируем компонент отображения стрелок
     const beatRow = this.container.querySelector('#beatRow');
     if (beatRow) {
-      this.components.arrowDisplay = new ArrowDisplay(beatRow, this.eventBus);
+      this.components.arrowDisplay = new ArrowDisplay(
+        beatRow,
+        this.eventBus,
+        this.serviceContainer.get('stateManager')
+      );
       this.components.arrowDisplay.initialize();
       
       // Устанавливаем начальные статусы для кругов (первый заполнен, остальные пустые)
-      const initialStatuses = [true, false, false, false, false, false, false, false];
+      const initialStatuses = ['played', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'];
       this.components.arrowDisplay.updateAllCircleStatuses(initialStatuses);
     }
     
@@ -155,10 +159,30 @@ class MainView {
         // Генерируем случайные статусы для кругов
         const statuses = [];
         for (let i = 0; i < 8; i++) {
-          statuses.push(Math.random() > 0.3);
+          const random = Math.random();
+          if (random > 0.7) {
+            statuses.push('played');
+          } else if (random > 0.3) {
+            statuses.push('muted');
+          } else {
+            statuses.push('empty');
+          }
         }
         this.components.arrowDisplay.updateAllCircleStatuses(statuses);
       }
+    });
+    
+    // Обработчики событий от ArrowDisplay
+    this.eventBus.on('beat:statusChanged', (data) => {
+      console.log(`Beat ${data.beatIndex} status changed to: ${data.status}`);
+    });
+    
+    this.eventBus.on('arrow:chordAssigned', (data) => {
+      console.log(`Chord assigned to arrow ${data.beatIndex}:`, data.chord);
+    });
+    
+    this.eventBus.on('arrow:syllableAssigned', (data) => {
+      console.log(`Syllable assigned to arrow ${data.beatIndex}: ${data.syllable}`);
     });
     
     this.eventBus.on('error:occurred', (data) => {
