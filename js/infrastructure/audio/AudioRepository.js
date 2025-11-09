@@ -1,6 +1,10 @@
-class AudioRepository {
-  constructor(audioPlayer) {
-    this.audioPlayer = audioPlayer;
+export class AudioRepository {
+  constructor(audioEngine) {
+    this.audioEngine = audioEngine;
+    this.audioCache = new Map();
+    this.metadataCache = new Map();
+    
+    // Соответствие нот и аудио файлов
     this.audioFiles = {
       'C1': 'audio/NotesMP3/C1.mp3',
       'C#1': 'audio/NotesMP3/C#1.mp3',
@@ -35,50 +39,231 @@ class AudioRepository {
     };
   }
 
-  async loadAllSounds() {
-    const loadPromises = Object.entries(this.audioFiles).map(async ([note, path]) => {
-      try {
-        await this.audioPlayer.loadSound(note, path);
-        return { note, success: true };
-      } catch (error) {
-        console.error(`Failed to load ${note}:`, error);
-        return { note, success: false, error };
-      }
-    });
+  /**
+   * Получение аудио буфера
+   */
+  async getAudioBuffer(note, octave = 1) {
+    const key = `${note}${octave}`;
 
-    const results = await Promise.all(loadPromises);
-    const failed = results.filter(result => !result.success);
-    
-    if (failed.length > 0) {
-      console.warn(`Failed to load ${failed.length} sounds:`, failed);
+    if (this.audioCache.has(key)) {
+      return this.audioCache.get(key);
     }
-    
-    return results;
+
+    const audioBuffer = await this.audioEngine.loadSound(note, octave);
+    this.audioCache.set(key, audioBuffer);
+
+    return audioBuffer;
   }
 
-  async loadSound(note) {
-    const path = this.audioFiles[note];
-    if (!path) {
-      throw new Error(`Audio file for note ${note} not found`);
+  /**
+   * Получение метаданных аудио
+   */
+  async getAudioMetadata(note, octave = 1) {
+    const key = `${note}${octave}`;
+
+    if (this.metadataCache.has(key)) {
+      return this.metadataCache.get(key);
     }
+
+    const audioBuffer = await this.getAudioBuffer(note, octave);
+    const metadata = {
+      duration: audioBuffer.duration,
+      sampleRate: audioBuffer.sampleRate,
+      length: audioBuffer.length,
+      numberOfChannels: audioBuffer.numberOfChannels,
+    };
+
+    this.metadataCache.set(key, metadata);
+    return metadata;
+  }
+
+  /**
+   * Предзагрузка аудио
+   */
+  async preloadAudio(notes, octave = 1) {
+    const promises = notes.map((note) => this.getAudioBuffer(note, octave));
+    return Promise.all(promises);
+  }
+
+  /**
+   * Предзагрузка всех звуков
+   */
+  async preloadAllSounds() {
+    const allNotes = Object.keys(this.audioFiles);
+    console.log("📦 Preloading all audio files...");
     
-    return await this.audioPlayer.loadSound(note, path);
+    const startTime = performance.now();
+    
+    try {
+      const results = await this.preloadAudio(allNotes);
+      const loadTime = performance.now() - startTime;
+      
+      console.log(`✅ Preloaded ${results.length} sounds in ${loadTime.toFixed(2)}ms`);
+      return results;
+    } catch (error) {
+      console.error("❌ Failed to preload all sounds:", error);
+      throw error;
+    }
   }
 
-  playNote(note, volume = 1.0, when = 0) {
-    return this.audioPlayer.playSound(note, volume, when);
+  /**
+   * Воспроизведение ноты
+   */
+  async playNote(note, octave = 1, options = {}) {
+    try {
+      const soundId = await this.audioEngine.playNote(note, octave, options);
+      return soundId;
+    } catch (error) {
+      console.error(`Failed to play note ${note}${octave}:`, error);
+      throw error;
+    }
   }
 
-  playChord(notes, volume = 1.0, when = 0) {
-    return this.audioPlayer.playChord(notes, volume, when);
+  /**
+   * Воспроизведение аккорда
+   */
+  async playChord(notes, octave = 1, options = {}) {
+    try {
+      const soundIds = await this.audioEngine.playChord(notes, octave, options);
+      return soundIds;
+    } catch (error) {
+      console.error(`Failed to play chord ${notes.join("+")}:`, error);
+      throw error;
+    }
   }
 
+  /**
+   * Воспроизведение паттерна
+   */
+  async playPattern(pattern, options = {}) {
+    try {
+      const soundIds = await this.audioEngine.playWithPattern(pattern, options);
+      return soundIds;
+    } catch (error) {
+      console.error("Failed to play pattern:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Получение доступных нот
+   */
   getAvailableNotes() {
     return Object.keys(this.audioFiles);
   }
 
+  /**
+   * Проверка наличия ноты
+   */
   hasNote(note) {
     return note in this.audioFiles;
+  }
+
+  /**
+   * Получение пути к аудио файлу
+   */
+  getAudioPath(note, octave = 1) {
+    const key = `${note}${octave}`;
+    return this.audioFiles[key] || null;
+  }
+
+  /**
+   * Остановка всех звуков
+   */
+  stopAll(options = {}) {
+    return this.audioEngine.stopAll(options);
+  }
+
+  /**
+   * Установка громкости
+   */
+  setVolume(volume, options = {}) {
+    return this.audioEngine.setVolume(volume, options);
+  }
+
+  /**
+   * Получение текущей громкости
+   */
+  getVolume() {
+    return this.audioEngine.getVolume();
+  }
+
+  /**
+   * Получение аудио данных для визуализации
+   */
+  getAudioData(options = {}) {
+    return this.audioEngine.getAudioData(options);
+  }
+
+  /**
+   * Получение статистики
+   */
+  getStats() {
+    return {
+      ...this.audioEngine.getStats(),
+      cachedSounds: this.audioCache.size,
+      cachedMetadata: this.metadataCache.size,
+    };
+  }
+
+  /**
+   * Очистка кеша
+   */
+  clearCache() {
+    this.audioCache.clear();
+    this.metadataCache.clear();
+    console.log("🗑️ Audio cache cleared");
+  }
+
+  /**
+   * Очистка кеша аудио буферов
+   */
+  clearAudioCache() {
+    this.audioCache.clear();
+    console.log("🗑️ Audio buffer cache cleared");
+  }
+
+  /**
+   * Очистка кеша метаданных
+   */
+  clearMetadataCache() {
+    this.metadataCache.clear();
+    console.log("🗑️ Metadata cache cleared");
+  }
+
+  /**
+   * Получение информации о кеше
+   */
+  getCacheInfo() {
+    return {
+      audioBuffers: this.audioCache.size,
+      metadata: this.metadataCache.size,
+      totalFiles: Object.keys(this.audioFiles).length,
+    };
+  }
+
+  /**
+   * Уничтожение репозитория
+   */
+  async destroy() {
+    console.log("💥 Destroying AudioRepository...");
+    
+    // Очищаем кеши
+    this.clearCache();
+    
+    console.log("✅ AudioRepository destroyed");
+  }
+
+  // Совместимость с существующим кодом
+  async loadSound(note) {
+    const octave = note.match(/\d+$/) ? parseInt(note.match(/\d+$/)[0]) : 1;
+    const noteName = note.replace(/\d+$/, '');
+    
+    return await this.getAudioBuffer(noteName, octave);
+  }
+
+  async loadAllSounds() {
+    return await this.preloadAllSounds();
   }
 }
 

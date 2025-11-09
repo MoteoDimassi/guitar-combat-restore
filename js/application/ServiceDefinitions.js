@@ -1,7 +1,9 @@
 import ChordService from "../domain/services/ChordService.js";
 import BarService from "../domain/services/BarService.js";
 import PlaybackService from "../domain/services/PlaybackService.js";
+import AudioService from "../domain/services/AudioService.js";
 import AudioEngine from "../infrastructure/audio/AudioEngine.js";
+import AudioRepository from "../infrastructure/audio/AudioRepository.js";
 import LocalStorageAdapter from "../infrastructure/storage/LocalStorageAdapter.js";
 import ChordRepository from "../domain/repositories/ChordRepository.js";
 import BarRepository from "../domain/repositories/BarRepository.js";
@@ -77,7 +79,8 @@ export function registerServices(container, registry) {
     (container) => {
       return new PlaybackService(
         container.get("audioEngine"),
-        container.get("barRepository")
+        container.get("barRepository"),
+        container.get("eventBus")
       );
     },
     {
@@ -85,7 +88,25 @@ export function registerServices(container, registry) {
       category: "domain",
       tags: ["playback", "audio"],
       singleton: true,
-      dependencies: ["audioEngine", "barRepository"],
+      dependencies: ["audioEngine", "barRepository", "eventBus"],
+    }
+  );
+
+  registry.register(
+    "audioService",
+    (container) => {
+      return new AudioService(
+        container.get("eventBus"),
+        container.get("stateManager"),
+        container.get("audioEngine")
+      );
+    },
+    {
+      description: "Service for managing audio playback",
+      category: "domain",
+      tags: ["audio", "playback", "service"],
+      singleton: true,
+      dependencies: ["eventBus", "stateManager", "audioEngine"],
     }
   );
 
@@ -101,6 +122,22 @@ export function registerServices(container, registry) {
       tags: ["audio", "engine"],
       singleton: true,
       dependencies: [],
+    }
+  );
+
+  registry.register(
+    "audioRepository",
+    (container) => {
+      return new AudioRepository(
+        container.get("audioEngine")
+      );
+    },
+    {
+      description: "Repository for managing audio files",
+      category: "infrastructure",
+      tags: ["audio", "repository"],
+      singleton: true,
+      dependencies: ["audioEngine"],
     }
   );
 

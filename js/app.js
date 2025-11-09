@@ -85,15 +85,14 @@ class GuitarCombatApp {
   registerAdditionalServices() {
     const container = this.optimizedApplicationService.container;
     
-    // Регистрируем аудио систему
-    container.register('audioPlayer', (container) => {
-      const audioEngine = container.get('audioEngine');
-      return new AudioPlayer(audioEngine);
-    }, { singleton: true });
-    container.register('audioRepository', (container) => {
-      const audioPlayer = container.get('audioPlayer');
-      return new AudioRepository(audioPlayer);
-    }, { singleton: true });
+    // Аудио система теперь регистрируется в ServiceDefinitions
+    // AudioPlayer больше не нужен, так как функциональность перенесена в AudioService и AudioEngine
+    
+    // Инициализация аудио движка при старте
+    container.get('audioEngine').initialize(container.get('eventBus'));
+    
+    // Инициализация аудио сервиса
+    container.get('audioService').initialize();
     
     // Регистрируем файловое хранилище
     container.register('fileStorageAdapter', () => new FileStorageAdapter(), { singleton: true });

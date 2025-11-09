@@ -58,6 +58,14 @@ export const EventTypes = {
   AUDIO_PLAY_STOPPED: "audio:play:stopped",
   AUDIO_NOTE_PLAYED: "audio:note:played",
   AUDIO_CHORD_PLAYED: "audio:chord:played",
+  AUDIO_PATTERN_PLAYED: "audio:pattern:played",
+  AUDIO_VOLUME_CHANGED: "audio:volume:changed",
+  AUDIO_SOUND_LOADED: "audio:sound:loaded",
+  AUDIO_SOUND_FAILED: "audio:sound:failed",
+  AUDIO_ALL_SOUNDS_LOADED: "audio:all:sounds:loaded",
+  AUDIO_CONTEXT_RESUMED: "audio:context:resumed",
+  AUDIO_CONTEXT_SUSPENDED: "audio:context:suspended",
+  AUDIO_ERROR: "audio:error",
 
   // События стрелочек
   ARROW_CLICKED: "arrow:clicked",
