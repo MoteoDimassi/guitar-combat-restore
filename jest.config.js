@@ -28,7 +28,7 @@ module.exports = {
   ],
 
   // Псевдонимы для модулей
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@core/(.*)$': '<rootDir>/js/core/$1',
     '^@domain/(.*)$': '<rootDir>/js/domain/$1',

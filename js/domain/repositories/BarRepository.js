@@ -1,5 +1,8 @@
 class BarRepository {
   constructor(storageAdapter) {
+    if (!storageAdapter) {
+      throw new Error('Storage adapter is required');
+    }
     this.storageAdapter = storageAdapter;
     this.collection = 'bars';
   }

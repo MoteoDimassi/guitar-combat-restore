@@ -413,4 +413,356 @@ describe('StateActions', () => {
       });
     });
   });
+
+  describe('Граничные случаи и обработка ошибок', () => {
+    test('должен обрабатывать null в updateChordsInput', () => {
+      stateActions.updateChordsInput(null);
+      
+      expect(stateManager.getState('chords.inputString')).toBeNull();
+      expect(eventBus.getEvents()).toContainEqual({
+        eventName: 'chords:input:changed',
+        data: { chordsString: null }
+      });
+    });
+
+    test('должен обрабатывать undefined в updateChordsInput', () => {
+      stateActions.updateChordsInput(undefined);
+      
+      expect(stateManager.getState('chords.inputString')).toBeUndefined();
+      expect(eventBus.getEvents()).toContainEqual({
+        eventName: 'chords:input:changed',
+        data: { chordsString: undefined }
+      });
+    });
+
+    test('должен обрабатывать пустые массивы в updateParsedChords', () => {
+      stateActions.updateParsedChords([], []);
+      
+      expect(stateManager.getState('chords.validChords')).toEqual([]);
+      expect(stateManager.getState('chords.invalidChords')).toEqual([]);
+      expect(eventBus.getEvents()).toContainEqual({
+        eventName: 'chords:parsed',
+        data: { validChords: [], invalidChords: [] }
+      });
+    });
+
+    test('должен обрабатывать null в updateBars', () => {
+      stateActions.updateBars(null);
+      
+      expect(stateManager.getState('bars')).toBeNull();
+      expect(eventBus.getEvents()).toContainEqual({
+        eventName: 'bars:updated',
+        data: { bars: null }
+      });
+    });
+
+    test('должен обрабатывать пустой массив в updateBars', () => {
+      stateActions.updateBars([]);
+      
+      expect(stateManager.getState('bars')).toEqual([]);
+      expect(eventBus.getEvents()).toContainEqual({
+        eventName: 'bars:updated',
+        data: { bars: [] }
+      });
+    });
+
+    test('должен корректно работать с граничными значениями в updateTempo', () => {
+      // Минимальное валидное значение
+      stateActions.updateTempo(40);
+      expect(stateManager.getState('settings.bpm')).toBe(40);
+      expect(stateManager.getState('playback.tempo')).toBe(40);
+      
+      // Максимальное валидное значение
+      stateActions.updateTempo(300);
+      expect(stateManager.getState('settings.bpm')).toBe(300);
+      expect(stateManager.getState('playback.tempo')).toBe(300);
+    });
+
+    test('должен корректно работать с граничными значениями в updateBeatCount', () => {
+      // Минимальное валидное значение
+      stateActions.updateBeatCount(1);
+      expect(stateManager.getState('settings.beatCount')).toBe(1);
+      expect(stateManager.getState('ui.arrowsCount')).toBe(1);
+      
+      // Максимальное валидное значение
+      stateActions.updateBeatCount(16);
+      expect(stateManager.getState('settings.beatCount')).toBe(16);
+      expect(stateManager.getState('ui.arrowsCount')).toBe(16);
+    });
+
+    test('должен корректно работать с граничными значениями в updateVolume', () => {
+      // Минимальное валидное значение
+      stateActions.updateVolume('strum', 0);
+      expect(stateManager.getState('settings.volume.strum')).toBe(0);
+      
+      // Максимальное валидное значение
+      stateActions.updateVolume('strum', 100);
+      expect(stateManager.getState('settings.volume.strum')).toBe(100);
+      
+      // То же самое для metronome
+      stateActions.updateVolume('metronome', 0);
+      expect(stateManager.getState('settings.volume.metronome')).toBe(0);
+      
+      stateActions.updateVolume('metronome', 100);
+      expect(stateManager.getState('settings.volume.metronome')).toBe(100);
+    });
+
+    test('должен обрабатывать некорректные типы в updateVolume', () => {
+      const originalStrum = stateManager.getState('settings.volume.strum');
+      
+      stateActions.updateVolume('strum', 'invalid');
+      stateActions.updateVolume('strum', null);
+      stateActions.updateVolume('strum', undefined);
+      
+      // Состояние не должно измениться при невалидных значениях
+      expect(stateManager.getState('settings.volume.strum')).toBe(originalStrum);
+    });
+
+    test('должен обрабатывать некорректные типы в updateTempo', () => {
+      const originalBpm = stateManager.getState('settings.bpm');
+      
+      stateActions.updateTempo('invalid');
+      stateActions.updateTempo(null);
+      stateActions.updateTempo(undefined);
+      
+      // Состояние не должно измениться при невалидных значениях
+      expect(stateManager.getState('settings.bpm')).toBe(originalBpm);
+    });
+
+    test('должен обрабатывать некорректные типы в updateBeatCount', () => {
+      const originalBeatCount = stateManager.getState('settings.beatCount');
+      
+      stateActions.updateBeatCount('invalid');
+      stateActions.updateBeatCount(null);
+      stateActions.updateBeatCount(undefined);
+      
+      // Состояние не должно измениться при невалидных значениях
+      expect(stateManager.getState('settings.beatCount')).toBe(originalBeatCount);
+    });
+  });
+
+  describe('Интеграция между методами', () => {
+    test('должен синхронизировать состояние воспроизведения', () => {
+      // Начинаем воспроизведение
+      stateActions.startPlayback();
+      expect(stateManager.getState('playback.isPlaying')).toBe(true);
+      expect(stateManager.getState('settings.isPlaying')).toBe(true);
+      
+      // Переключаем
+      stateActions.togglePlayback();
+      expect(stateManager.getState('playback.isPlaying')).toBe(false);
+      expect(stateManager.getState('settings.isPlaying')).toBe(false);
+      
+      // Останавливаем
+      stateActions.stopPlayback();
+      expect(stateManager.getState('playback.isPlaying')).toBe(false);
+      expect(stateManager.getState('settings.isPlaying')).toBe(false);
+      expect(stateManager.getState('playback.currentBar')).toBe(0);
+      expect(stateManager.getState('playback.currentBeat')).toBe(0);
+    });
+
+    test('должен корректно обновлять темп в обоих местах', () => {
+      stateActions.updateTempo(140);
+      
+      expect(stateManager.getState('settings.bpm')).toBe(140);
+      expect(stateManager.getState('playback.tempo')).toBe(140);
+    });
+
+    test('должен корректно обновлять количество долей в обоих местах', () => {
+      stateActions.updateBeatCount(6);
+      
+      expect(stateManager.getState('settings.beatCount')).toBe(6);
+      expect(stateManager.getState('ui.arrowsCount')).toBe(6);
+    });
+
+    test('должен корректно обрабатывать навигацию по тактам', () => {
+      // Устанавливаем несколько тактов
+      stateManager.setState('bars', [
+        { chords: ['Am'], duration: 4 },
+        { chords: ['F'], duration: 4 },
+        { chords: ['C'], duration: 4 }
+      ]);
+      
+      // Переходим к конкретному такту
+      stateActions.goToBar(1);
+      expect(stateManager.getState('currentBarIndex')).toBe(1);
+      
+      // Следующий такт
+      stateActions.nextBar();
+      expect(stateManager.getState('currentBarIndex')).toBe(2);
+      
+      // Предыдущий такт
+      stateActions.previousBar();
+      expect(stateManager.getState('currentBarIndex')).toBe(1);
+      
+      // Попытка перейти за пределы
+      stateActions.goToBar(10);
+      expect(stateManager.getState('currentBarIndex')).toBe(2); // Должен быть ограничен
+      
+      stateActions.goToBar(-1);
+      expect(stateManager.getState('currentBarIndex')).toBe(0); // Должен быть ограничен
+    });
+  });
+
+  describe('Производительность', () => {
+    test('должен эффективно обрабатывать множественные вызовы', () => {
+      const startTime = performance.now();
+      
+      // Выполняем 1000 операций
+      for (let i = 0; i < 1000; i++) {
+        stateActions.updateChordsInput(`test chord ${i}`);
+        stateActions.updateTempo(120 + i % 100);
+        stateActions.updateVolume('strum', 50 + i % 50);
+      }
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
+      // Операции должны выполняться быстро (менее 100ms)
+      expect(duration).toBeLessThan(100);
+    });
+
+    test('должен эффективно обрабатывать сложные объекты', () => {
+      const complexBars = [];
+      for (let i = 0; i < 100; i++) {
+        complexBars.push({
+          chords: [`Chord${i}`, `Chord${i + 1}`],
+          duration: 4,
+          metadata: {
+            id: i,
+            timestamp: Date.now(),
+            complex: {
+              nested: {
+                value: i,
+                array: [1, 2, 3, 4, 5]
+              }
+            }
+          }
+        });
+      }
+      
+      const startTime = performance.now();
+      stateActions.updateBars(complexBars);
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
+      expect(stateManager.getState('bars')).toEqual(complexBars);
+      expect(duration).toBeLessThan(50); // Должно выполняться быстро
+    });
+  });
+
+  describe('События', () => {
+    test('должен генерировать события с корректными данными', () => {
+      const testCases = [
+        {
+          method: 'updateChordsInput',
+          args: ['C G Am F'],
+          expectedEvent: 'chords:input:changed',
+          expectedData: { chordsString: 'C G Am F' }
+        },
+        {
+          method: 'updateParsedChords',
+          args: [['C', 'G'], ['X']],
+          expectedEvent: 'chords:parsed',
+          expectedData: { validChords: ['C', 'G'], invalidChords: ['X'] }
+        },
+        {
+          method: 'updateBars',
+          args: [[{ chords: ['C'] }]],
+          expectedEvent: 'bars:updated',
+          expectedData: { bars: [{ chords: ['C'] }] }
+        },
+        {
+          method: 'nextBar',
+          args: [],
+          expectedEvent: 'navigation:next',
+          expectedData: {}
+        },
+        {
+          method: 'previousBar',
+          args: [],
+          expectedEvent: 'navigation:previous',
+          expectedData: {}
+        },
+        {
+          method: 'goToBar',
+          args: [2],
+          expectedEvent: 'navigation:goto',
+          expectedData: { barIndex: 2 }
+        },
+        {
+          method: 'updateTempo',
+          args: [140],
+          expectedEvent: 'tempo:changed',
+          expectedData: { bpm: 140 }
+        },
+        {
+          method: 'updateBeatCount',
+          args: [6],
+          expectedEvent: 'beatCount:changed',
+          expectedData: { beatCount: 6 }
+        },
+        {
+          method: 'togglePlayback',
+          args: [],
+          expectedEvent: 'playback:toggled',
+          expectedData: { isPlaying: expect.any(Boolean) }
+        },
+        {
+          method: 'startPlayback',
+          args: [],
+          expectedEvent: 'playback:started',
+          expectedData: {}
+        },
+        {
+          method: 'stopPlayback',
+          args: [],
+          expectedEvent: 'playback:stopped',
+          expectedData: {}
+        },
+        {
+          method: 'updatePlaybackPosition',
+          args: [2, 3],
+          expectedEvent: 'playback:position:changed',
+          expectedData: { barIndex: 2, beatIndex: 3 }
+        },
+        {
+          method: 'selectTemplate',
+          args: ['test-template'],
+          expectedEvent: 'template:selected',
+          expectedData: { templateId: 'test-template' }
+        },
+        {
+          method: 'updateVolume',
+          args: ['strum', 80],
+          expectedEvent: 'volume:changed',
+          expectedData: { type: 'strum', value: 80 }
+        },
+        {
+          method: 'toggleSettings',
+          args: [],
+          expectedEvent: 'ui:settings:toggled',
+          expectedData: { visible: expect.any(Boolean) }
+        },
+        {
+          method: 'updateSongText',
+          args: ['Test song text'],
+          expectedEvent: 'songText:updated',
+          expectedData: { content: 'Test song text' }
+        }
+      ];
+
+      testCases.forEach(({ method, args, expectedEvent, expectedData }) => {
+        eventBus.clearEvents();
+        stateActions[method](...args);
+        
+        const events = eventBus.getEvents();
+        expect(events).toHaveLength(1);
+        expect(events[0]).toEqual({
+          eventName: expectedEvent,
+          data: expectedData
+        });
+      });
+    });
+  });
 });

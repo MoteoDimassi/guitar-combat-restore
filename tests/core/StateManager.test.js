@@ -1,6 +1,6 @@
 import StateManager from '../../js/core/StateManager.js';
 import StateHooks from '../../js/core/StateHooks.js';
-import CommonMiddleware from '../../js/core/StateMiddleware.js';
+import { CommonMiddleware } from '../../js/core/StateMiddleware.js';
 
 // Мок EventBus для тестов
 class MockEventBus {
@@ -71,27 +71,27 @@ describe('StateManager', () => {
       expect(stateManager.getState('chords.inputString')).toBe('');
     });
 
-    test('должен устанавливать состояние по пути', () => {
-      stateManager.setState('settings.bpm', 140);
+    test('должен устанавливать состояние по пути', async () => {
+      await stateManager.setState('settings.bpm', 140);
       expect(stateManager.getState('settings.bpm')).toBe(140);
 
-      stateManager.setState('chords.inputString', 'C G Am F');
+      await stateManager.setState('chords.inputString', 'C G Am F');
       expect(stateManager.getState('chords.inputString')).toBe('C G Am F');
     });
 
-    test('должен обновлять состояние через функцию', () => {
-      stateManager.updateState('settings.volume.strum', volume => volume + 10);
+    test('должен обновлять состояние через функцию', async () => {
+      await stateManager.updateState('settings.volume.strum', volume => volume + 10);
       expect(stateManager.getState('settings.volume.strum')).toBe(90);
 
-      stateManager.updateState('bars', bars => [...bars, { id: 1, chords: ['C', 'G'] }]);
+      await stateManager.updateState('bars', bars => [...bars, { id: 1, chords: ['C', 'G'] }]);
       expect(stateManager.getState('bars')).toEqual([{ id: 1, chords: ['C', 'G'] }]);
     });
 
-    test('должен генерировать событие при изменении состояния', () => {
+    test('должен генерировать событие при изменении состояния', async () => {
       const callback = jest.fn();
       eventBus.on('state:changed', callback);
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(callback).toHaveBeenCalledWith({
         path: 'settings.bpm',
@@ -103,70 +103,82 @@ describe('StateManager', () => {
   });
 
   describe('Подписки', () => {
-    test('должен подписываться на изменения состояния', () => {
+    test('должен подписываться на изменения состояния', async () => {
       const callback = jest.fn();
       const unsubscribe = stateManager.subscribe('settings.bpm', callback);
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(callback).toHaveBeenCalledWith(140, 120, 'settings.bpm');
 
       unsubscribe();
-      stateManager.setState('settings.bpm', 150);
+      await stateManager.setState('settings.bpm', 150);
 
       // Callback не должен быть вызван после отписки
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
-    test('должен подписываться на несколько путей', () => {
+    test('должен подписываться на несколько путей', async () => {
       const callback = jest.fn();
       const unsubscribe = stateManager.subscribeMultiple(
         ['settings.bpm', 'settings.beatCount'],
         callback
       );
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
       expect(callback).toHaveBeenCalledWith(140, 120, 'settings.bpm');
 
-      stateManager.setState('settings.beatCount', 3);
+      await stateManager.setState('settings.beatCount', 3);
       expect(callback).toHaveBeenCalledWith(3, 4, 'settings.beatCount');
 
       unsubscribe();
     });
 
-    test('должен уведомлять подписчиков родительских путей', () => {
+    test('должен уведомлять подписчиков родительских путей', async () => {
       const callback = jest.fn();
       stateManager.subscribe('settings', callback);
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(callback).toHaveBeenCalledWith(
-        expect.objectContaining({ bpm: 140 }),
-        expect.objectContaining({ bpm: 120 }),
+        expect.objectContaining({
+          bpm: 140,
+          beatCount: 4,
+          isPlaying: false,
+          volume: { metronome: 100, strum: 80 },
+          chordChanges: {}
+        }),
+        expect.objectContaining({
+          bpm: 120,
+          beatCount: 4,
+          isPlaying: false,
+          volume: { metronome: 100, strum: 80 },
+          chordChanges: {}
+        }),
         'settings.bpm'
       );
     });
   });
 
   describe('История изменений', () => {
-    test('должен сохранять изменения в историю', () => {
-      stateManager.setState('settings.bpm', 140);
-      stateManager.setState('settings.beatCount', 3);
+    test('должен сохранять изменения в историю', async () => {
+      await stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.beatCount', 3);
 
       expect(stateManager.canUndo()).toBe(true);
       expect(stateManager.canRedo()).toBe(false);
     });
 
-    test('должен отменять изменения', () => {
-      stateManager.setState('settings.bpm', 140);
+    test('должен отменять изменения', async () => {
+      await stateManager.setState('settings.bpm', 140);
       expect(stateManager.getState('settings.bpm')).toBe(140);
 
       stateManager.undo();
       expect(stateManager.getState('settings.bpm')).toBe(120);
     });
 
-    test('должен повторять изменения', () => {
-      stateManager.setState('settings.bpm', 140);
+    test('должен повторять изменения', async () => {
+      await stateManager.setState('settings.bpm', 140);
       stateManager.undo();
       expect(stateManager.getState('settings.bpm')).toBe(120);
 
@@ -174,14 +186,14 @@ describe('StateManager', () => {
       expect(stateManager.getState('settings.bpm')).toBe(140);
     });
 
-    test('должен ограничивать размер истории', () => {
+    test('должен ограничивать размер истории', async () => {
       // Устанавливаем маленький размер истории для теста
       stateManager.maxHistorySize = 3;
 
-      stateManager.setState('settings.bpm', 130);
-      stateManager.setState('settings.beatCount', 3);
-      stateManager.setState('settings.volume.strum', 90);
-      stateManager.setState('chords.inputString', 'C G Am F');
+      await stateManager.setState('settings.bpm', 130);
+      await stateManager.setState('settings.beatCount', 3);
+      await stateManager.setState('settings.volume.strum', 90);
+      await stateManager.setState('chords.inputString', 'C G Am F');
 
       // Первое изменение должно быть удалено из истории
       expect(stateManager.getHistorySize()).toBe(3);
@@ -198,47 +210,47 @@ describe('StateManager', () => {
   });
 
   describe('Валидация', () => {
-    test('должен валидировать BPM', () => {
+    test('должен валидировать BPM', async () => {
       // Валидные значения
-      expect(stateManager.setState('settings.bpm', 40)).toBe(true);
-      expect(stateManager.setState('settings.bpm', 300)).toBe(true);
-      expect(stateManager.setState('settings.bpm', 120)).toBe(true);
+      await expect(stateManager.setState('settings.bpm', 40)).resolves.toBe(true);
+      await expect(stateManager.setState('settings.bpm', 300)).resolves.toBe(true);
+      await expect(stateManager.setState('settings.bpm', 120)).resolves.toBe(true);
 
       // Невалидные значения
-      expect(stateManager.setState('settings.bpm', 39)).toBe(false);
-      expect(stateManager.setState('settings.bpm', 301)).toBe(false);
-      expect(stateManager.setState('settings.bpm', 'invalid')).toBe(false);
+      await expect(stateManager.setState('settings.bpm', 39)).resolves.toBe(false);
+      await expect(stateManager.setState('settings.bpm', 301)).resolves.toBe(false);
+      await expect(stateManager.setState('settings.bpm', 'invalid')).resolves.toBe(false);
     });
 
-    test('должен валидировать количество долей', () => {
+    test('должен валидировать количество долей', async () => {
       // Валидные значения
-      expect(stateManager.setState('settings.beatCount', 1)).toBe(true);
-      expect(stateManager.setState('settings.beatCount', 16)).toBe(true);
-      expect(stateManager.setState('settings.beatCount', 4)).toBe(true);
+      await expect(stateManager.setState('settings.beatCount', 1)).resolves.toBe(true);
+      await expect(stateManager.setState('settings.beatCount', 16)).resolves.toBe(true);
+      await expect(stateManager.setState('settings.beatCount', 4)).resolves.toBe(true);
 
       // Невалидные значения
-      expect(stateManager.setState('settings.beatCount', 0)).toBe(false);
-      expect(stateManager.setState('settings.beatCount', 17)).toBe(false);
-      expect(stateManager.setState('settings.beatCount', 'invalid')).toBe(false);
+      await expect(stateManager.setState('settings.beatCount', 0)).resolves.toBe(false);
+      await expect(stateManager.setState('settings.beatCount', 17)).resolves.toBe(false);
+      await expect(stateManager.setState('settings.beatCount', 'invalid')).resolves.toBe(false);
     });
 
-    test('должен валидировать громкость', () => {
+    test('должен валидировать громкость', async () => {
       // Валидные значения
-      expect(stateManager.setState('settings.volume.strum', 0)).toBe(true);
-      expect(stateManager.setState('settings.volume.strum', 100)).toBe(true);
-      expect(stateManager.setState('settings.volume.strum', 80)).toBe(true);
+      await expect(stateManager.setState('settings.volume.strum', 0)).resolves.toBe(true);
+      await expect(stateManager.setState('settings.volume.strum', 100)).resolves.toBe(true);
+      await expect(stateManager.setState('settings.volume.strum', 80)).resolves.toBe(true);
 
       // Невалидные значения
-      expect(stateManager.setState('settings.volume.strum', -1)).toBe(false);
-      expect(stateManager.setState('settings.volume.strum', 101)).toBe(false);
-      expect(stateManager.setState('settings.volume.strum', 'invalid')).toBe(false);
+      await expect(stateManager.setState('settings.volume.strum', -1)).resolves.toBe(false);
+      await expect(stateManager.setState('settings.volume.strum', 101)).resolves.toBe(false);
+      await expect(stateManager.setState('settings.volume.strum', 'invalid')).resolves.toBe(false);
     });
   });
 
   describe('Сериализация', () => {
-    test('должен сериализовать состояние в JSON', () => {
-      stateManager.setState('settings.bpm', 140);
-      stateManager.setState('chords.inputString', 'C G Am F');
+    test('должен сериализовать состояние в JSON', async () => {
+      await stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('chords.inputString', 'C G Am F');
 
       const json = stateManager.toJSON();
       
@@ -278,9 +290,9 @@ describe('StateManager', () => {
   });
 
   describe('Сброс состояния', () => {
-    test('должен сбрасывать все состояние', () => {
-      stateManager.setState('settings.bpm', 140);
-      stateManager.setState('chords.inputString', 'C G Am F');
+    test('должен сбрасывать все состояние', async () => {
+      await stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('chords.inputString', 'C G Am F');
 
       stateManager.reset();
 
@@ -288,9 +300,9 @@ describe('StateManager', () => {
       expect(stateManager.getState('chords.inputString')).toBe('');
     });
 
-    test('должен сбрасывать только указанный путь', () => {
-      stateManager.setState('settings.bpm', 140);
-      stateManager.setState('chords.inputString', 'C G Am F');
+    test('должен сбрасывать только указанный путь', async () => {
+      await stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('chords.inputString', 'C G Am F');
 
       stateManager.reset('settings');
 
@@ -311,43 +323,43 @@ describe('StateManager', () => {
   });
 
   describe('Middleware', () => {
-    test('должен добавлять middleware', () => {
-      const middleware = jest.fn();
+    test('должен добавлять middleware', async () => {
+      const middleware = jest.fn((ctx, next) => next());
       const remove = stateManager.use(middleware);
 
       expect(typeof remove).toBe('function');
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
       expect(middleware).toHaveBeenCalled();
     });
 
-    test('должен удалять middleware', () => {
-      const middleware = jest.fn();
+    test('должен удалять middleware', async () => {
+      const middleware = jest.fn((ctx, next) => next());
       const remove = stateManager.use(middleware);
 
       remove();
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(middleware).not.toHaveBeenCalled();
     });
 
-    test('должен выполнять middleware в порядке добавления', () => {
+    test('должен выполнять middleware в порядке добавления', async () => {
       const middleware1 = jest.fn((ctx, next) => next());
       const middleware2 = jest.fn((ctx, next) => next());
 
       stateManager.use(middleware1);
       stateManager.use(middleware2);
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(middleware1).toHaveBeenCalledBefore(middleware2);
     });
 
-    test('должен передавать контекст в middleware', () => {
+    test('должен передавать контекст в middleware', async () => {
       const middleware = jest.fn((ctx, next) => next());
       stateManager.use(middleware);
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(middleware).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -389,24 +401,24 @@ describe('StateHooks', () => {
       expect(typeof unsubscribe).toBe('function');
     });
 
-    test('должен обновлять значение через setValue', () => {
+    test('должен обновлять значение через setValue', async () => {
       const [, setValue] = stateHooks.useState('settings.bpm');
 
-      setValue(140);
+      await setValue(140);
       expect(stateManager.getState('settings.bpm')).toBe(140);
     });
 
-    test('должен вызывать callback при изменении', () => {
+    test('должен вызывать callback при изменении', async () => {
       const callback = jest.fn();
       const [, setValue] = stateHooks.useState('settings.bpm', callback);
 
-      setValue(140);
+      await setValue(140);
       expect(callback).toHaveBeenCalledWith(140, 120);
     });
   });
 
   describe('useForm', () => {
-    test('должен работать с формой', () => {
+    test('должен работать с формой', async () => {
       const form = stateHooks.useForm('testForm', {
         name: '',
         type: 'major',
@@ -415,10 +427,10 @@ describe('StateHooks', () => {
       expect(form.getValue('name')).toBe('');
       expect(form.getValue('type')).toBe('major');
 
-      form.setValue('name', 'C');
+      await form.setValue('name', 'C');
       expect(form.getValue('name')).toBe('C');
 
-      form.setValues({ name: 'D', type: 'minor' });
+      await form.setValues({ name: 'D', type: 'minor' });
       expect(form.getValue('name')).toBe('D');
       expect(form.getValue('type')).toBe('minor');
 
@@ -430,13 +442,13 @@ describe('StateHooks', () => {
       expect(form.getValue('type')).toBe('major');
     });
 
-    test('должен валидировать форму', () => {
+    test('должен валидировать форму', async () => {
       const form = stateHooks.useForm('testForm', {
         name: '',
         type: 'major',
       });
 
-      form.setValue('name', '');
+      await form.setValue('name', '');
 
       const isValid = form.validate({
         name: (value) => value.length > 0 || 'Name is required',
@@ -446,7 +458,7 @@ describe('StateHooks', () => {
       expect(isValid).toBe(false);
       expect(stateManager.getState('testForm.errors.name')).toBe('Name is required');
 
-      form.setValue('name', 'C');
+      await form.setValue('name', 'C');
       const isValid2 = form.validate({
         name: (value) => value.length > 0 || 'Name is required',
         type: (value) => ['major', 'minor'].includes(value) || 'Invalid type',
@@ -458,36 +470,36 @@ describe('StateHooks', () => {
   });
 
   describe('useArray', () => {
-    test('должен работать с массивом', () => {
+    test('должен работать с массивом', async () => {
       const array = stateHooks.useArray('testArray');
 
       expect(array.getArray()).toEqual([]);
 
-      array.addItem({ id: 1, value: 'first' });
+      await array.addItem({ id: 1, value: 'first' });
       expect(array.getArray()).toEqual([{ id: 1, value: 'first' }]);
 
-      array.addItem({ id: 2, value: 'second' }, 0);
+      await array.addItem({ id: 2, value: 'second' }, 0);
       expect(array.getArray()).toEqual([
         { id: 2, value: 'second' },
         { id: 1, value: 'first' },
       ]);
 
-      array.updateItem(0, { id: 2, value: 'updated' });
+      await array.updateItem(0, { id: 2, value: 'updated' });
       expect(array.getArray()).toEqual([
         { id: 2, value: 'updated' },
         { id: 1, value: 'first' },
       ]);
 
-      array.moveItem(0, 1);
+      await array.moveItem(0, 1);
       expect(array.getArray()).toEqual([
         { id: 1, value: 'first' },
         { id: 2, value: 'updated' },
       ]);
 
-      array.removeItem(0);
+      await array.removeItem(0);
       expect(array.getArray()).toEqual([{ id: 2, value: 'updated' }]);
 
-      array.clear();
+      await array.clear();
       expect(array.getArray()).toEqual([]);
     });
   });
@@ -533,14 +545,14 @@ describe('StateHooks', () => {
   });
 
   describe('useHistory', () => {
-    test('должен работать с историей', () => {
+    test('должен работать с историей', async () => {
       const history = stateHooks.useHistory();
 
       expect(history.canUndo()).toBe(false);
       expect(history.canRedo()).toBe(false);
       expect(history.size()).toBe(0);
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(history.canUndo()).toBe(true);
       expect(history.canRedo()).toBe(false);
@@ -579,12 +591,12 @@ describe('CommonMiddleware', () => {
   });
 
   describe('logger', () => {
-    test('должен логировать изменения состояния', () => {
+    test('должен логировать изменения состояния', async () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       stateManager.use(CommonMiddleware.logger());
 
-      stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('settings.bpm', 140);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         'State changed:',
@@ -599,15 +611,15 @@ describe('CommonMiddleware', () => {
       consoleSpy.mockRestore();
     });
 
-    test('должен фильтровать логирование', () => {
+    test('должен фильтровать логирование', async () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       stateManager.use(CommonMiddleware.logger({
         filter: (path) => path.startsWith('settings'),
       }));
 
-      stateManager.setState('settings.bpm', 140);
-      stateManager.setState('chords.inputString', 'C G Am F');
+      await stateManager.setState('settings.bpm', 140);
+      await stateManager.setState('chords.inputString', 'C G Am F');
 
       expect(consoleSpy).toHaveBeenCalledTimes(1);
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -622,7 +634,7 @@ describe('CommonMiddleware', () => {
   });
 
   describe('validator', () => {
-    test('должен валидировать изменения', () => {
+    test('должен валидировать изменения', async () => {
       stateManager.use(CommonMiddleware.validator({
         schema: {
           'settings.bpm': (value) => value >= 60 && value <= 180,
@@ -631,15 +643,15 @@ describe('CommonMiddleware', () => {
       }));
 
       // Валидное значение
-      expect(() => stateManager.setState('settings.bpm', 120)).not.toThrow();
+      await expect(stateManager.setState('settings.bpm', 120)).resolves.toBe(true);
 
       // Невалидное значение
-      expect(() => stateManager.setState('settings.bpm', 200)).toThrow(
+      await expect(stateManager.setState('settings.bpm', 200)).rejects.toThrow(
         'Validation failed for path: settings.bpm'
       );
     });
 
-    test('должен работать в нестрогом режиме', () => {
+    test('должен работать в нестрогом режиме', async () => {
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       stateManager.use(CommonMiddleware.validator({
@@ -650,7 +662,7 @@ describe('CommonMiddleware', () => {
       }));
 
       // Невалидное значение в нестрогом режиме
-      expect(() => stateManager.setState('settings.bpm', 200)).not.toThrow();
+      await expect(stateManager.setState('settings.bpm', 200)).resolves.toBe(true);
       expect(consoleSpy).toHaveBeenCalledWith('Validation failed for path: settings.bpm');
 
       consoleSpy.mockRestore();
@@ -658,23 +670,23 @@ describe('CommonMiddleware', () => {
   });
 
   describe('immutable', () => {
-    test('должен замораживать объекты', () => {
+    test('должен замораживать объекты', async () => {
       stateManager.use(CommonMiddleware.immutable());
 
-      stateManager.setState('testObject', { nested: { value: 42 } });
+      await stateManager.setState('testObject', { nested: { value: 42 } });
 
       const obj = stateManager.getState('testObject');
       expect(Object.isFrozen(obj)).toBe(true);
       expect(Object.isFrozen(obj.nested)).toBe(true);
     });
 
-    test('должен применять только к указанным путям', () => {
+    test('должен применять только к указанным путям', async () => {
       stateManager.use(CommonMiddleware.immutable({
         paths: ['settings'],
       }));
 
-      stateManager.setState('settings.test', { value: 42 });
-      stateManager.setState('chords.test', { value: 42 });
+      await stateManager.setState('settings.test', { value: 42 });
+      await stateManager.setState('chords.test', { value: 42 });
 
       const settingsObj = stateManager.getState('settings.test');
       const chordsObj = stateManager.getState('chords.test');

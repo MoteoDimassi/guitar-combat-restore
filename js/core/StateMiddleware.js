@@ -68,38 +68,56 @@ export class StateMiddleware {
    */
   async execute(context, next) {
     let index = 0;
+    let isExecuting = false;
 
     const dispatch = async (i) => {
-      if (i <= index) {
+      // Проверяем, что мы не в процессе выполнения и не вызываем next() многократно
+      if (isExecuting && i <= index) {
         throw new Error('next() called multiple times');
       }
 
+      if (i < index) {
+        throw new Error('next() called with backward index');
+      }
+
+      isExecuting = true;
       index = i;
 
-      if (i >= this.middlewares.length) {
-        return next();
-      }
-
-      const middlewareEntry = this.middlewares[i];
-      
-      if (!middlewareEntry.enabled) {
-        return dispatch(i + 1);
-      }
-
-      const { middleware, options } = middlewareEntry;
-      
       try {
-        await middleware(context, () => dispatch(i + 1), options);
-      } catch (error) {
-        console.error(`Middleware error: ${error.message}`, error);
-        
-        // Если опция ignoreErrors не установлена, прерываем цепочку
-        if (!options.ignoreErrors) {
-          throw error;
+        if (i >= this.middlewares.length) {
+          isExecuting = false;
+          return next();
         }
+
+        const middlewareEntry = this.middlewares[i];
         
-        // Иначе продолжаем выполнение
-        return dispatch(i + 1);
+        if (!middlewareEntry.enabled) {
+          isExecuting = false;
+          return dispatch(i + 1);
+        }
+
+        const { middleware, options } = middlewareEntry;
+        
+        try {
+          await middleware(context, () => {
+            isExecuting = false;
+            return dispatch(i + 1);
+          }, options);
+        } catch (error) {
+          console.error(`Middleware error: ${error.message}`, error);
+          
+          // Если опция ignoreErrors не установлена, прерываем цепочку
+          if (!options.ignoreErrors) {
+            isExecuting = false;
+            throw error;
+          }
+          
+          // Иначе продолжаем выполнение
+          isExecuting = false;
+          return dispatch(i + 1);
+        }
+      } finally {
+        isExecuting = false;
       }
     };
 

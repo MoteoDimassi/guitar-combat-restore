@@ -1,5 +1,12 @@
 class PlaybackService {
   constructor(audioEngine, barRepository) {
+    if (!audioEngine) {
+      throw new Error('AudioEngine is required');
+    }
+    if (!barRepository) {
+      throw new Error('BarRepository is required');
+    }
+    
     this.audioEngine = audioEngine;
     this.barRepository = barRepository;
     this.isPlaying = false;
@@ -14,7 +21,7 @@ class PlaybackService {
     this.isPlaying = true;
     const bars = await this.barRepository.findAll();
     
-    if (bars.length === 0) {
+    if (!bars || bars.length === 0) {
       this.stop();
       return;
     }

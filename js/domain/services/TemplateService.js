@@ -1,5 +1,8 @@
 class TemplateService {
   constructor(templateRepository) {
+    if (!templateRepository) {
+      throw new Error('TemplateRepository is required');
+    }
     this.templateRepository = templateRepository;
   }
 

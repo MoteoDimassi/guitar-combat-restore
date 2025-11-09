@@ -109,7 +109,7 @@ export class StateManager {
     };
 
     // Выполняем middleware перед изменением состояния
-    return this.middleware.execute(context, () => {
+    return this.middleware.execute(context, async () => {
       // Сохраняем в историю если нужно
       if (options.saveToHistory !== false) {
         this.saveToHistory(path, oldValue);
@@ -131,6 +131,16 @@ export class StateManager {
 
       return true;
     });
+  }
+
+  /**
+   * Добавление middleware
+   * @param {Function} middleware - Функция middleware
+   * @param {Object} options - Опции middleware
+   * @returns {Function} Функция для удаления middleware
+   */
+  use(middleware, options = {}) {
+    return this.middleware.use(middleware, options);
   }
 
   /**
@@ -232,7 +242,7 @@ export class StateManager {
   undo() {
     if (this.historyIndex >= 0) {
       const entry = this.history[this.historyIndex];
-      this.setState(entry.path, entry.oldValue, { saveToHistory: false });
+      this.state = this.setNestedValue(this.state, entry.path, entry.oldValue);
       this.historyIndex--;
       return true;
     }
@@ -246,7 +256,7 @@ export class StateManager {
     if (this.historyIndex < this.history.length - 1) {
       this.historyIndex++;
       const entry = this.history[this.historyIndex];
-      this.setState(entry.path, entry.newValue, { saveToHistory: false });
+      this.state = this.setNestedValue(this.state, entry.path, entry.newValue);
       return true;
     }
     return false;

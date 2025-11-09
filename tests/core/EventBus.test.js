@@ -361,6 +361,264 @@ describe('EventBus', () => {
       expect(eventNames).toHaveLength(2);
     });
   });
+
+  describe('Продвинутая функциональность', () => {
+    test('должен обрабатывать preventDefault', () => {
+      const mockCallback = jest.fn((event) => {
+        event.preventDefault();
+      });
+      const mockCallback2 = jest.fn();
+      
+      eventBus.on('test:event', mockCallback);
+      eventBus.on('test:event', mockCallback2);
+      
+      eventBus.emit('test:event', { data: 'test' });
+      
+      expect(mockCallback).toHaveBeenCalled();
+      expect(mockCallback2).toHaveBeenCalled();
+    });
+
+    test('должен обрабатывать stopPropagation', () => {
+      const mockCallback = jest.fn((event) => {
+        event.stopPropagation();
+      });
+      const mockCallback2 = jest.fn();
+      
+      eventBus.on('test:event', mockCallback);
+      eventBus.on('test:event', mockCallback2);
+      
+      eventBus.emit('test:event', { data: 'test' });
+      
+      expect(mockCallback).toHaveBeenCalled();
+      expect(mockCallback2).not.toHaveBeenCalled();
+    });
+
+    test('должен генерировать уникальные ID для обработчиков', () => {
+      const mockCallback1 = jest.fn();
+      const mockCallback2 = jest.fn();
+      
+      const unsubscribe1 = eventBus.on('test:event', mockCallback1);
+      const unsubscribe2 = eventBus.on('test:event', mockCallback2);
+      
+      const listeners = eventBus.getListeners('test:event');
+      expect(listeners[0].id).not.toBe(listeners[1].id);
+      expect(typeof listeners[0].id).toBe('string');
+      expect(typeof listeners[1].id).toBe('string');
+    });
+
+    test('должен обрабатывать события с null данными', () => {
+      const mockCallback = jest.fn();
+      
+      eventBus.on('test:event', mockCallback);
+      eventBus.emit('test:event', null);
+      
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'test:event',
+          data: null
+        })
+      );
+    });
+
+    test('должен обрабатывать события с undefined данными', () => {
+      const mockCallback = jest.fn();
+      
+      eventBus.on('test:event', mockCallback);
+      eventBus.emit('test:event', undefined);
+      
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'test:event',
+          data: undefined
+        })
+      );
+    });
+
+    test('должен обрабатывать сложные объекты в данных', () => {
+      const complexData = {
+        nested: {
+          array: [1, 2, 3],
+          object: { key: 'value' }
+        },
+        function: () => 'test',
+        date: new Date(),
+        regex: /test/g
+      };
+      
+      const mockCallback = jest.fn();
+      
+      eventBus.on('test:event', mockCallback);
+      eventBus.emit('test:event', complexData);
+      
+      expect(mockCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'test:event',
+          data: complexData
+        })
+      );
+    });
+  });
+
+  describe('Обработка ошибок', () => {
+    test('должен обрабатывать ошибки в синхронных обработчиках', () => {
+      const errorCallback = jest.fn();
+      const throwingHandler = jest.fn(() => {
+        throw new Error('Handler error');
+      });
+      const normalHandler = jest.fn();
+      
+      eventBus.on('eventbus:error', errorCallback);
+      eventBus.on('test:event', throwingHandler);
+      eventBus.on('test:event', normalHandler);
+      
+      eventBus.emit('test:event');
+      
+      expect(throwingHandler).toHaveBeenCalled();
+      expect(normalHandler).toHaveBeenCalled();
+      expect(errorCallback).toHaveBeenCalled();
+    });
+
+    test('должен обрабатывать ошибки в middleware', () => {
+      const errorCallback = jest.fn();
+      const errorMiddleware = jest.fn(() => {
+        throw new Error('Middleware error');
+      });
+      const mockCallback = jest.fn();
+      
+      eventBus.on('eventbus:error', errorCallback);
+      eventBus.use(errorMiddleware);
+      eventBus.on('test:event', mockCallback);
+      
+      eventBus.emit('test:event');
+      
+      expect(errorMiddleware).toHaveBeenCalled();
+      expect(mockCallback).toHaveBeenCalled();
+      expect(errorCallback).toHaveBeenCalled();
+    });
+
+    test('должен продолжать работу после ошибки в обработчике', () => {
+      const throwingHandler = jest.fn(() => {
+        throw new Error('Handler error');
+      });
+      const normalHandler = jest.fn();
+      
+      eventBus.on('test:event', throwingHandler);
+      eventBus.on('test:event', normalHandler);
+      
+      expect(() => {
+        eventBus.emit('test:event');
+      }).not.toThrow();
+      
+      expect(normalHandler).toHaveBeenCalled();
+    });
+  });
+
+  describe('Производительность', () => {
+    test('должен эффективно обрабатывать большое количество событий', () => {
+      const startTime = performance.now();
+      const callbackCount = 1000;
+      const mockCallback = jest.fn();
+      
+      eventBus.on('test:event', mockCallback);
+      
+      for (let i = 0; i < callbackCount; i++) {
+        eventBus.emit('test:event', { data: i });
+      }
+      
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
+      expect(mockCallback).toHaveBeenCalledTimes(callbackCount);
+      expect(duration).toBeLessThan(100); // Должно выполняться быстро
+    });
+
+    test('должен эффективно обрабатывать большое количество обработчиков', () => {
+      const handlerCount = 100;
+      const handlers = [];
+      
+      for (let i = 0; i < handlerCount; i++) {
+        const handler = jest.fn();
+        handlers.push(handler);
+        eventBus.on('test:event', handler);
+      }
+      
+      const startTime = performance.now();
+      eventBus.emit('test:event');
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      
+      handlers.forEach(handler => {
+        expect(handler).toHaveBeenCalledTimes(1);
+      });
+      
+      expect(duration).toBeLessThan(50); // Должно выполняться быстро
+    });
+  });
+
+  describe('Память и очистка', () => {
+    test('должен корректно очищать память при отписке', () => {
+      const mockCallback = jest.fn();
+      const unsubscribe = eventBus.on('test:event', mockCallback);
+      
+      unsubscribe();
+      
+      expect(eventBus.getListeners('test:event')).toHaveLength(0);
+      expect(eventBus.getEventNames()).not.toContain('test:event');
+    });
+
+    test('должен корректно очищать все события', () => {
+      eventBus.on('event1', jest.fn());
+      eventBus.on('event2', jest.fn());
+      eventBus.on('event3', jest.fn());
+      
+      eventBus.clear();
+      
+      expect(eventBus.getEventNames()).toHaveLength(0);
+      expect(eventBus.getHistory()).toHaveLength(0);
+      
+      const stats = eventBus.getStats();
+      expect(stats.eventsCount).toBe(0);
+      expect(stats.listenersCount).toBe(0);
+      expect(stats.emitted).toBe(0);
+      expect(stats.handled).toBe(0);
+      expect(stats.errors).toBe(0);
+    });
+  });
+
+  describe('Отладка', () => {
+    test('должен логировать в режиме отладки', () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const debugEventBus = new EventBus({ debug: true });
+      
+      debugEventBus.on('test:event', jest.fn());
+      debugEventBus.emit('test:event', { data: 'test' });
+      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[EventBus] Event subscribed: test:event'),
+        expect.any(Object)
+      );
+      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[EventBus] Event emitted: test:event'),
+        expect.any(Object)
+      );
+      
+      consoleSpy.mockRestore();
+    });
+
+    test('должен не логировать в обычном режиме', () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      eventBus.on('test:event', jest.fn());
+      eventBus.emit('test:event', { data: 'test' });
+      
+      expect(consoleSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('[EventBus]')
+      );
+      
+      consoleSpy.mockRestore();
+    });
+  });
 });
 
 describe('EventMiddleware', () => {
