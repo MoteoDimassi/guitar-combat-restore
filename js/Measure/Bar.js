@@ -21,24 +21,102 @@ export class Bar {
     // Массив слогов в такте
     this.lyricSyllables = [];
     
+    // Механизм событий для уведомления об изменениях статуса BeatUnit
+    this.statusChangeListeners = new Set();
+    
     // Инициализируем длительности
     this.initializeBeatUnits();
   }
 
   /**
-   * Инициализирует массив длительностей для такта
+   * Обработчик события изменения статуса BeatUnit
+   * @param {BeatUnit} beatUnit - BeatUnit, изменивший статус
+   * @param {PlayStatus|null} oldStatus - Предыдущий статус
+   * @param {PlayStatus|null} newStatus - Новый статус
    */
-  initializeBeatUnits() {
-    this.beatUnits = [];
-    for (let i = 0; i < this.beatCount; i++) {
-      // Создаем BeatUnit с правильным статусом по умолчанию
-      // Первая доля - PLAY, остальные - SKIP
-      const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
-      const playStatus = new PlayStatus(status);
-      this.beatUnits.push(new BeatUnit(i, playStatus));
+  onBeatStatusChange(beatUnit, oldStatus, newStatus) {
+    const beatIndex = beatUnit.index;
+    console.log(`📊 Bar(${this.barIndex}): получено событие изменения статуса BeatUnit(${beatIndex}): "${oldStatus ? oldStatus.getStatusString() : 'null'}" -> "${newStatus ? newStatus.getStatusString() : 'null'}"`);
+    
+    // Здесь можно добавить дополнительную логику обработки изменений статуса
+    // Например, обновление UI, синхронизация с другими компонентами и т.д.
+    
+    // Уведомляем внешние слушатели об изменении статуса в такте
+    if (this.statusChangeListeners && this.statusChangeListeners.size > 0) {
+      console.log(`📢 Bar(${this.barIndex}): уведомление ${this.statusChangeListeners.size} внешних слушателей об изменении статуса BeatUnit(${beatIndex})`);
+      this.statusChangeListeners.forEach(listener => {
+        try {
+          listener(this, beatIndex, oldStatus, newStatus);
+        } catch (error) {
+          console.error(`❌ Bar(${this.barIndex}): ошибка при вызове внешнего слушателя:`, error);
+        }
+      });
     }
   }
 
+  /**
+   * Добавляет слушателя изменений статуса BeatUnit в такте
+   * @param {Function} listener - Функция-слушатель, принимающая (bar, beatIndex, oldStatus, newStatus)
+   */
+  addStatusChangeListener(listener) {
+    if (typeof listener === 'function') {
+      this.statusChangeListeners.add(listener);
+      console.log(`📢 Bar(${this.barIndex}): добавлен слушатель изменений статуса. Всего слушателей: ${this.statusChangeListeners.size}`);
+    }
+  }
+
+  /**
+   * Удаляет слушателя изменений статуса BeatUnit в такте
+   * @param {Function} listener - Функция-слушатель для удаления
+   */
+  removeStatusChangeListener(listener) {
+    const removed = this.statusChangeListeners.delete(listener);
+    if (removed) {
+      console.log(`📢 Bar(${this.barIndex}): удален слушатель изменений статуса. Всего слушателей: ${this.statusChangeListeners.size}`);
+    }
+    return removed;
+  }
+
+  /**
+   * Инициализирует массив длительностей для такта
+   */
+  initializeBeatUnits(preserveStatuses = false) {
+    console.log(`🔄 Bar(${this.barIndex}): инициализация BeatUnit (preserveStatuses=${preserveStatuses})`);
+    
+    // Сохраняем существующие BeatUnit во временный массив перед очисткой
+    const existingBeatUnits = [...this.beatUnits];
+    
+    // Очищаем основной массив
+    this.beatUnits = [];
+    
+    for (let i = 0; i < this.beatCount; i++) {
+      // Проверяем, нужно ли сохранять существующий статус
+      if (preserveStatuses && existingBeatUnits[i] && existingBeatUnits[i].getPlayStatus()) {
+        // Сохраняем существующий BeatUnit с его статусом
+        this.beatUnits.push(existingBeatUnits[i]);
+        // Устанавливаем связь с родительским Bar
+        existingBeatUnits[i].setParentBar(this);
+        // Подписываемся на события изменения статуса
+        existingBeatUnits[i].addStatusChangeListener(this.onBeatStatusChange.bind(this));
+        console.log(`🔗 Bar(${this.barIndex}): подписан на события BeatUnit(${i}) (существующий)`);
+      } else {
+        // Создаем BeatUnit с правильным статусом по умолчанию
+        // Первая доля - PLAY, остальные - SKIP
+        const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+        const playStatus = PlayStatus.getInstance(status);
+        console.log(`🔧 Bar.initializeBeatUnits[${i}]: ИСПОЛЬЗУЕТСЯ СТАТИЧЕСКИЙ PlayStatus со статусом ${status}, ID: ${playStatus.constructor.name}_${playStatus.status} (в initializeBeatUnits)`);
+        const beatUnit = new BeatUnit(i, playStatus);
+        // Устанавливаем связь с родительским Bar
+        beatUnit.setParentBar(this);
+        // Подписываемся на события изменения статуса
+        beatUnit.addStatusChangeListener(this.onBeatStatusChange.bind(this));
+        this.beatUnits.push(beatUnit);
+        console.log(`🔗 Bar(${this.barIndex}): создан и подписан на события BeatUnit(${i})`);
+      }
+    }
+    
+    console.log(`🔄 Bar(${this.barIndex}): инициализация завершена, создано ${this.beatUnits.length} BeatUnit`);
+  }
 
   /**
    * Устанавливает статус воспроизведения для длительности
@@ -47,9 +125,19 @@ export class Bar {
    */
   setBeatPlayStatus(beatIndex, playStatus) {
     if (beatIndex >= 0 && beatIndex < this.beatCount) {
-      // Если передано число, создаем объект PlayStatus
+      const oldStatus = this.beatUnits[beatIndex].getPlayStatus();
+      console.log(`🔄 Bar.setBeatPlayStatus(${beatIndex}): "${oldStatus ? oldStatus.getStatusString() : 'null'}" -> "${typeof playStatus === 'number' ? PlayStatus.fromJSON({status: playStatus}).getStatusString() : playStatus.getStatusString()}"`);
+      
+      // Убеждаемся, что мы подписаны на события BeatUnit
+      if (!this.beatUnits[beatIndex].statusChangeListeners.has(this.onBeatStatusChange.bind(this))) {
+        this.beatUnits[beatIndex].addStatusChangeListener(this.onBeatStatusChange.bind(this));
+        console.log(`🔗 Bar(${this.barIndex}): подписан на события BeatUnit(${beatIndex}) в setBeatPlayStatus`);
+      }
+      
+      // Если передано число, получаем статический экземпляр PlayStatus
       if (typeof playStatus === 'number') {
-        playStatus = new PlayStatus(playStatus);
+          playStatus = PlayStatus.getInstance(playStatus);
+          console.log(`🔧 Bar.setBeatPlayStatus[${beatIndex}]: ИСПОЛЬЗУЕТСЯ СТАТИЧЕСКИЙ PlayStatus из числа ${playStatus.status}, ID: ${playStatus.constructor.name}_${playStatus.status} (в setBeatPlayStatus)`);
       }
       this.beatUnits[beatIndex].setPlayStatus(playStatus);
     }
@@ -63,7 +151,9 @@ export class Bar {
    */
   getBeatPlayStatus(beatIndex) {
     if (beatIndex >= 0 && beatIndex < this.beatCount) {
-      return this.beatUnits[beatIndex].getPlayStatus();
+      const playStatus = this.beatUnits[beatIndex].getPlayStatus();
+      console.log(`🔄 Bar.getBeatPlayStatus(${beatIndex}): "${playStatus ? playStatus.getStatusString() : 'null'}" [${playStatus ? playStatus.status : 'null'}]`);
+      return playStatus;
     }
     return null;
   }
@@ -74,6 +164,12 @@ export class Bar {
    */
   toggleBeatStatus(beatIndex) {
     if (beatIndex >= 0 && beatIndex < this.beatCount) {
+      // Убеждаемся, что мы подписаны на события BeatUnit
+      if (!this.beatUnits[beatIndex].statusChangeListeners.has(this.onBeatStatusChange.bind(this))) {
+        this.beatUnits[beatIndex].addStatusChangeListener(this.onBeatStatusChange.bind(this));
+        console.log(`🔗 Bar(${this.barIndex}): подписан на события BeatUnit(${beatIndex}) в toggleBeatStatus`);
+      }
+      
       this.beatUnits[beatIndex].toggleStatus();
     }
   }
@@ -177,6 +273,13 @@ export class Bar {
   syncChordLinks(chordChange) {
     for (let beatIndex = chordChange.startBeat; beatIndex < chordChange.endBeat && beatIndex < this.beatUnits.length; beatIndex++) {
       this.beatUnits[beatIndex].setChord(chordChange);
+      // Убеждаемся, что связь с родительским Bar установлена
+      this.beatUnits[beatIndex].setParentBar(this);
+      // Убеждаемся, что мы подписаны на события BeatUnit
+      if (!this.beatUnits[beatIndex].statusChangeListeners.has(this.onBeatStatusChange.bind(this))) {
+        this.beatUnits[beatIndex].addStatusChangeListener(this.onBeatStatusChange.bind(this));
+        console.log(`🔗 Bar(${this.barIndex}): подписан на события BeatUnit(${beatIndex}) в syncChordLinks`);
+      }
     }
   }
 
@@ -187,6 +290,13 @@ export class Bar {
   syncSyllableLinks(syllable) {
     for (let beatIndex = syllable.startBeat; beatIndex < syllable.endBeat && beatIndex < this.beatUnits.length; beatIndex++) {
       this.beatUnits[beatIndex].setSyllable(syllable);
+      // Убеждаемся, что связь с родительским Bar установлена
+      this.beatUnits[beatIndex].setParentBar(this);
+      // Убеждаемся, что мы подписаны на события BeatUnit
+      if (!this.beatUnits[beatIndex].statusChangeListeners.has(this.onBeatStatusChange.bind(this))) {
+        this.beatUnits[beatIndex].addStatusChangeListener(this.onBeatStatusChange.bind(this));
+        console.log(`🔗 Bar(${this.barIndex}): подписан на события BeatUnit(${beatIndex}) в syncSyllableLinks`);
+      }
     }
   }
 
@@ -237,11 +347,23 @@ export class Bar {
    * @param {BeatUnit[]} beatUnits - Массив BeatUnit
    */
   setBeatUnits(beatUnits) {
+    console.log(`🔄 Bar(${this.barIndex}): установка ${beatUnits ? beatUnits.length : 0} BeatUnit`);
+    
     this.beatUnits = beatUnits || [];
     this.beatCount = this.beatUnits.length;
     
+    // Устанавливаем связь с родительским Bar для всех BeatUnit
+    // и подписываемся на события изменения статуса
+    this.beatUnits.forEach((beatUnit, index) => {
+      beatUnit.setParentBar(this);
+      beatUnit.addStatusChangeListener(this.onBeatStatusChange.bind(this));
+      console.log(`🔗 Bar(${this.barIndex}): подписан на события BeatUnit(${index}) в setBeatUnits`);
+    });
+    
     // Обновляем связи на основе существующих аккордов и слогов
     this.syncAllLinks();
+    
+    console.log(`🔄 Bar(${this.barIndex}): установка BeatUnit завершена`);
   }
 
   /**
@@ -274,8 +396,10 @@ export class Bar {
         status = syllableStatus;
       }
       
-      // Создаем объект PlayStatus вместо числового значения
-      beatUnit.setPlayStatus(new PlayStatus(status));
+      // Получаем статический экземпляр PlayStatus вместо создания нового
+      const newPlayStatus = PlayStatus.getInstance(status);
+      console.log(`🔧 Bar.applyStandardSetup[${index}]: ИСПОЛЬЗУЕТСЯ СТАТИЧЕСКИЙ PlayStatus со статусом ${status}, ID: ${newPlayStatus.constructor.name}_${newPlayStatus.status} (в applyStandardSetup)`);
+      beatUnit.setPlayStatus(newPlayStatus);
     });
   }
 
@@ -355,6 +479,13 @@ export class Bar {
     // Копируем слоги
     clonedBar.lyricSyllables = this.lyricSyllables.map(syllable => syllable.clone());
     
+    // Устанавливаем связь с родительским Bar для всех BeatUnit и подписываемся на события
+    clonedBar.beatUnits.forEach((beatUnit, index) => {
+      beatUnit.setParentBar(clonedBar);
+      beatUnit.addStatusChangeListener(clonedBar.onBeatStatusChange.bind(clonedBar));
+      console.log(`🔗 Bar(${clonedBar.barIndex}): подписан на события BeatUnit(${index}) в clone`);
+    });
+    
     return clonedBar;
   }
 
@@ -430,6 +561,13 @@ export class Bar {
     bar.beatUnits = data.beatUnits ? data.beatUnits.map(beatData => BeatUnit.fromJSON(beatData)) : [];
     bar.chordChanges = data.chordChanges ? data.chordChanges.map(chordData => ChordChange.fromJSON(chordData)) : [];
     bar.lyricSyllables = data.lyricSyllables ? data.lyricSyllables.map(syllableData => LyricSyllable.fromJSON(syllableData)) : [];
+    
+    // Устанавливаем связь с родительским Bar для всех BeatUnit и подписываемся на события
+    bar.beatUnits.forEach((beatUnit, index) => {
+      beatUnit.setParentBar(bar);
+      beatUnit.addStatusChangeListener(bar.onBeatStatusChange.bind(bar));
+      console.log(`🔗 Bar(${bar.barIndex}): подписан на события BeatUnit(${index}) в fromJSON`);
+    });
     
     return bar;
   }

@@ -8,6 +8,7 @@ export class PlayStatus {
    */
   constructor(status = 0) {
     this.status = status;
+    console.log(`🆕 PlayStatus.constructor(${status}): СОЗДАН НОВЫЙ ЭКЗЕМПЛЯР, ID: ${this.constructor.name}_${this.status}`);
   }
 
   /**
@@ -18,6 +19,37 @@ export class PlayStatus {
     PLAY: 1,      // Закрашенный кружок - играть
     MUTED: 2      // Кружок с крестиком - приглушенный звук
   };
+
+  /**
+   * Статические экземпляры для базовых состояний
+   */
+  static INSTANCES = {
+    SKIP: new PlayStatus(PlayStatus.STATUS.SKIP),
+    PLAY: new PlayStatus(PlayStatus.STATUS.PLAY),
+    MUTED: new PlayStatus(PlayStatus.STATUS.MUTED)
+  };
+
+  /**
+   * Получает экземпляр PlayStatus по значению статуса
+   * @param {number} status - Статус воспроизведения
+   * @returns {PlayStatus}
+   */
+  static getInstance(status) {
+    switch(status) {
+      case PlayStatus.STATUS.SKIP:
+        console.log(`🔍 PlayStatus.getInstance(${status}): ВОЗВРАЩАЕМ СТАТИЧЕСКИЙ SKIP, ID: ${PlayStatus.INSTANCES.SKIP.constructor.name}_${PlayStatus.INSTANCES.SKIP.status}`);
+        return PlayStatus.INSTANCES.SKIP;
+      case PlayStatus.STATUS.PLAY:
+        console.log(`🔍 PlayStatus.getInstance(${status}): ВОЗВРАЩАЕМ СТАТИЧЕСКИЙ PLAY, ID: ${PlayStatus.INSTANCES.PLAY.constructor.name}_${PlayStatus.INSTANCES.PLAY.status}`);
+        return PlayStatus.INSTANCES.PLAY;
+      case PlayStatus.STATUS.MUTED:
+        console.log(`🔍 PlayStatus.getInstance(${status}): ВОЗВРАЩАЕМ СТАТИЧЕСКИЙ MUTED, ID: ${PlayStatus.INSTANCES.MUTED.constructor.name}_${PlayStatus.INSTANCES.MUTED.status}`);
+        return PlayStatus.INSTANCES.MUTED;
+      default:
+        console.log(`🆕 PlayStatus.getInstance(${status}): СОЗДАЕМ НОВЫЙ ЭКЗЕМПЛЯР`);
+        return new PlayStatus(status);
+    }
+  }
 
   /**
    * Проверяет, играется ли данная длительность
@@ -127,6 +159,7 @@ export class PlayStatus {
    * @returns {PlayStatus}
    */
   clone() {
+    console.log(`🔄 PlayStatus.clone(${this.status}): СОЗДАЕМ КОПИЮ, ID: ${this.constructor.name}_${this.status}`);
     return new PlayStatus(this.status);
   }
 
@@ -157,14 +190,21 @@ export class PlayStatus {
   static fromJSON(data) {
     // Проверяем, что data является объектом и имеет свойство status
     if (data && typeof data === 'object' && typeof data.status === 'number') {
-      return new PlayStatus(data.status);
+      console.log(`🔄 PlayStatus.fromJSON(): ЗАПРАШИВАЕМ СТАТИЧЕСКИЙ PlayStatus из JSON со статусом ${data.status}`);
+      const result = PlayStatus.getInstance(data.status);
+      console.log(`🔄 PlayStatus.fromJSON(): ПОЛУЧЕН СТАТИЧЕСКИЙ PlayStatus из JSON, ID: ${result.constructor.name}_${result.status}`);
+      return result;
     }
     // Если data - число, используем его напрямую
     if (typeof data === 'number') {
-      return new PlayStatus(data);
+      console.log(`🔄 PlayStatus.fromJSON(): ЗАПРАШИВАЕМ СТАТИЧЕСКИЙ PlayStatus из числа ${data}`);
+      const result = PlayStatus.getInstance(data);
+      console.log(`🔄 PlayStatus.fromJSON(): ПОЛУЧЕН СТАТИЧЕСКИЙ PlayStatus из числа, ID: ${result.constructor.name}_${result.status}`);
+      return result;
     }
     // Иначе создаем статус по умолчанию
-    return new PlayStatus(PlayStatus.STATUS.SKIP);
+    console.log(`🔄 PlayStatus.fromJSON(): ИСПОЛЬЗУЕМ СТАТИЧЕСКИЙ PlayStatus.SKIP по умолчанию, ID: ${PlayStatus.INSTANCES.SKIP.constructor.name}_${PlayStatus.INSTANCES.SKIP.status}`);
+    return PlayStatus.INSTANCES.SKIP;
   }
 
   /**
@@ -177,17 +217,21 @@ export class PlayStatus {
       case 'skip':
       case 'не играть':
       case '○':
-        return new PlayStatus(PlayStatus.STATUS.SKIP);
+        console.log(`🔄 PlayStatus.fromString("${statusString}"): ВОЗВРАЩАЕМ СТАТИЧЕСКИЙ PlayStatus.SKIP, ID: ${PlayStatus.INSTANCES.SKIP.constructor.name}_${PlayStatus.INSTANCES.SKIP.status}`);
+        return PlayStatus.INSTANCES.SKIP;
       case 'play':
       case 'играть':
       case '●':
-        return new PlayStatus(PlayStatus.STATUS.PLAY);
+        console.log(`🔄 PlayStatus.fromString("${statusString}"): ВОЗВРАЩАЕМ СТАТИЧЕСКИЙ PlayStatus.PLAY, ID: ${PlayStatus.INSTANCES.PLAY.constructor.name}_${PlayStatus.INSTANCES.PLAY.status}`);
+        return PlayStatus.INSTANCES.PLAY;
       case 'muted':
       case 'с приглушиванием':
       case '⊗':
-        return new PlayStatus(PlayStatus.STATUS.MUTED);
+        console.log(`🔄 PlayStatus.fromString("${statusString}"): ВОЗВРАЩАЕМ СТАТИЧЕСКИЙ PlayStatus.MUTED, ID: ${PlayStatus.INSTANCES.MUTED.constructor.name}_${PlayStatus.INSTANCES.MUTED.status}`);
+        return PlayStatus.INSTANCES.MUTED;
       default:
-        return new PlayStatus(PlayStatus.STATUS.SKIP);
+        console.log(`🔄 PlayStatus.fromString("${statusString}"): НЕИЗВЕСТНАЯ СТРОКА, ВОЗВРАЩАЕМ СТАТИЧЕСКИЙ PlayStatus.SKIP, ID: ${PlayStatus.INSTANCES.SKIP.constructor.name}_${PlayStatus.INSTANCES.SKIP.status}`);
+        return PlayStatus.INSTANCES.SKIP;
     }
   }
 
@@ -197,6 +241,12 @@ export class PlayStatus {
    * @returns {PlayStatus[]}
    */
   static fromArray(statusArray) {
-    return statusArray.map(status => new PlayStatus(status));
+    console.log(`🔄 PlayStatus.fromArray(): ОБРАБАТЫВАЕМ МАССИВ ИЗ ${statusArray.length} СТАТУСОВ`);
+    return statusArray.map((status, index) => {
+      console.log(`🔄 PlayStatus.fromArray[${index}]: ЗАПРАШИВАЕМ СТАТИЧЕСКИЙ PlayStatus для статуса ${status}`);
+      const result = PlayStatus.getInstance(status);
+      console.log(`🔄 PlayStatus.fromArray[${index}]: ПОЛУЧЕН СТАТИЧЕСКИЙ PlayStatus, ID: ${result.constructor.name}_${result.status}`);
+      return result;
+    });
   }
 }

@@ -86,7 +86,7 @@ export class BarSequenceBuilder {
         bar.setBeatPlayStatus(i, playStatuses[i]);
       } else {
         // По умолчанию все длительности в такте имеют статус "играть"
-        bar.setBeatPlayStatus(i, new PlayStatus(PlayStatus.STATUS.PLAY));
+        bar.setBeatPlayStatus(i, PlayStatus.INSTANCES.PLAY);
       }
     }
 

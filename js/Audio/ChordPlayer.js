@@ -88,6 +88,8 @@ export class ChordPlayer {
      try {
        this.isPlaying = true;
 
+       console.log('🎶 Запуск воспроизведения аккордов');
+
        // Синхронизируем настройки с PlaybackAnimator
        this.playbackAnimator.setSettings(this.settings);
 
@@ -115,6 +117,8 @@ export class ChordPlayer {
     if (!this.isPlaying) return;
 
     this.isPlaying = false;
+
+    console.log('🛑 Остановка воспроизведения аккордов');
 
     // Останавливаем анимацию стрелок
     this.playbackAnimator.stopAnimation();
@@ -208,13 +212,28 @@ export class ChordPlayer {
     const beatUnit = bar.beatUnits[beatIndex];
     const playStatus = beatUnit.getPlayStatus();
 
+    // Выводим информацию о состоянии стрелочки перед воспроизведением
+    if (playStatus && typeof playStatus.getStatusString === 'function') {
+      console.log(`🎵 ChordPlayer.playCurrentBeat(${beatIndex}): "${playStatus.getStatusString()}" [${playStatus.status}]`);
+      console.log(`🎵 ChordBeat ${beatIndex + 1}: PlayStatus object ID: ${playStatus.constructor.name}_${playStatus.status}`);
+    }
+
     // Переходим к следующей стрелке в анимации
     this.playbackAnimator.nextArrow();
 
     // Получаем аккорд для текущей стрелочки
     const chordName = beatUnit.getChord() || bar.getChordForBeat(beatIndex);
 
-    if (playStatus && playStatus.isPlayed()) {
+    if (!playStatus) {
+      console.warn(`playStatus is null or undefined for beat ${beatIndex}`);
+      return;
+    }
+
+    if (playStatus.isSkipped()) {
+      // Явно пропускаем воспроизведение для SKIP
+      return;
+    } else if (playStatus.isPlayed()) {
+      // Воспроизводим звук для статуса PLAY
       // Состояние "играть" - останавливаем предыдущий звук и воспроизводим новый аккорд
       this.audioEngine.stopAll();
 
@@ -231,14 +250,14 @@ export class ChordPlayer {
           console.warn(`Не удалось получить ноты для аккорда ${chordName}`);
         }
       }
-    } else if (playStatus && playStatus.isMuted()) {
+    } else if (playStatus.isMuted()) {
+      // Воспроизводим звук глушения для статуса MUTED
       // Состояние "mute" - заглушаем предыдущий аккорд и воспроизводим звук mute
       this.audioEngine.stopAll();
       // Устанавливаем громкость на 40% от оригинала
       this.audioEngine.setVolume(0.4);
       await this.audioEngine.playNote('Mute', null, { volume: 1.0 });
     }
-    // Для SKIP состояния - ничего не делаем со звуком, просто переходим к следующей стрелочке
   }
 
   /**

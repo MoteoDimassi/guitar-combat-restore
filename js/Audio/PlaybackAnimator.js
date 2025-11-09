@@ -54,6 +54,8 @@ export class PlaybackAnimator {
       this.isAnimating = true;
       this.currentArrowIndex = -1; // Начнем с первой стрелки
 
+      console.log('🎬 Запуск воспроизведения - начало анимации стрелочек');
+
       // Вызываем колбэк начала анимации
       if (this.onAnimationStart) {
         this.onAnimationStart();
@@ -75,6 +77,8 @@ export class PlaybackAnimator {
     if (!this.isAnimating) return;
 
     this.isAnimating = false;
+
+    console.log('⏹️ Остановка воспроизведения - завершение анимации стрелочек');
 
     // Снимаем активность со всех стрелок
     this.clearAllActiveArrows();
@@ -98,6 +102,8 @@ export class PlaybackAnimator {
    */
   nextArrow() {
     if (!this.isAnimating || !this.arrowDisplay) return;
+
+    console.log(`🔄 PlaybackAnimator.nextArrow(): текущий индекс ${this.currentArrowIndex}, переход к ${this.currentArrowIndex + 1}`);
 
     // Снимаем активность с текущей стрелки
     if (this.currentArrowIndex >= 0) {
@@ -129,7 +135,14 @@ export class PlaybackAnimator {
     this.currentArrowIndex = index;
     this.arrowDisplay.setArrowActive(index, true);
 
-    console.log(`🎯 Активная стрелка: ${index + 1}`);
+    // Получаем состояние стрелочки и выводим в консоль
+    const playStatus = this.arrowDisplay.getPlayStatus(index);
+    if (playStatus && typeof playStatus.getStatusString === 'function') {
+      console.log(`🎯 PlaybackAnimator.setActiveArrow(${index}): "${playStatus.getStatusString()}" [${playStatus.status}]`);
+      console.log(`🎯 PlaybackArrow ${index + 1}: PlayStatus object ID: ${playStatus.constructor.name}_${playStatus.status}`);
+    } else {
+      console.log(`🎯 Активная стрелка: ${index + 1}`);
+    }
   }
 
   /**
@@ -169,7 +182,7 @@ export class PlaybackAnimator {
     // чтобы избежать дублирования при вызове из nextArrow()
     // Активация первой стрелки произойдет при следующем вызове nextArrow()
     
-    console.log('🔄 Анимация сброшена для цикличного воспроизведения');
+    console.log('🔄 Сброс анимации для цикличного воспроизведения - переход к первой стрелочке');
   }
 
   /**

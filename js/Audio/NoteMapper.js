@@ -59,9 +59,12 @@ class NoteMapper {
         const fileName = `${normalizedNote}${octave}.mp3`;
         const fullPath = this.audioBasePath + fileName;
 
+        // Кодируем URL для специальных символов (особенно #)
+        const encodedPath = fullPath.replace(/#/g, '%23');
+
         // Проверяем существование файла (в браузере это может быть асинхронно,
         // но для синхронного интерфейса возвращаем путь, а проверку делаем отдельно)
-        return fullPath;
+        return encodedPath;
     }
 
     /**

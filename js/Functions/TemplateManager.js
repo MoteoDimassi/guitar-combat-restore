@@ -261,7 +261,7 @@ export class TemplateManager {
       const firstBar = bars[0];
       if (firstBar.beatUnits && Array.isArray(firstBar.beatUnits)) {
         const playStatuses = firstBar.beatUnits.map(beatUnitData => {
-          return new PlayStatus(beatUnitData.playStatus.status);
+          return PlayStatus.getInstance(beatUnitData.playStatus.status);
         });
         // При применении шаблона явно устанавливаем статусы без сохранения
         app.arrowDisplay.setAllPlayStatuses(playStatuses);
@@ -342,10 +342,10 @@ export class TemplateManager {
     let playStatus;
     if (beatUnitData.playStatus) {
       // Новый формат с объектом playStatus
-      playStatus = new PlayStatus(beatUnitData.playStatus.status);
+      playStatus = PlayStatus.getInstance(beatUnitData.playStatus.status);
     } else {
       // Обратная совместимость
-      playStatus = new PlayStatus(beatUnitData.status || 0);
+      playStatus = PlayStatus.getInstance(beatUnitData.status || 0);
     }
 
     const beatUnit = new BeatUnit(beatUnitData.index, playStatus);

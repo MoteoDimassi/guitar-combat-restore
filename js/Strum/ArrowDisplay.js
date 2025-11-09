@@ -14,11 +14,12 @@ export class ArrowDisplay {
     this.currentCount = 8; // по умолчанию 8 стрелочек
     this.arrowSize = 50; // размер стрелочки в пикселях (уменьшен для лучшего размещения)
     this.arrowSpacing = 15; // расстояние между стрелочками (уменьшено)
-    this.playStatuses = []; // массив состояний воспроизведения для каждой стрелочки
     this.beatUnits = []; // массив BeatUnit для каждой стрелочки
     this.handleCircleClickBound = null; // привязанный обработчик клика для кружочков
     this.preservePlayStatuses = true; // флаг сохранения состояний при изменении аккордов
     this.currentBarIndex = 0; // индекс текущего такта
+    // Механизм событий для синхронизации с BeatUnit
+    this.statusChangeListeners = new Map(); // Map<beatUnitIndex, listenerFunction>
   }
 
   /**
@@ -118,19 +119,22 @@ export class ArrowDisplay {
    * Инициализирует состояния воспроизведения для всех стрелочек
    */
   initializePlayStatuses() {
-    this.playStatuses = [];
+    // Отписываемся от старых событий перед созданием новых BeatUnit
+    this.clearStatusChangeListeners();
+    
     this.beatUnits = [];
     
     for (let i = 0; i < this.currentCount; i++) {
       // Только первая стрелочка активна по умолчанию, остальные - неактивны
       const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
-      const playStatus = new PlayStatus(status);
       
-      // Создаем BeatUnit с текущим статусом
-      const beatUnit = new BeatUnit(i, playStatus);
+      // Создаем BeatUnit с текущим статусом (BeatUnit сам создаст PlayStatus)
+      const beatUnit = new BeatUnit(i, status);
       
-      this.playStatuses.push(playStatus);
       this.beatUnits.push(beatUnit);
+      
+      // Подписываемся на события изменения статуса этого BeatUnit
+      this.subscribeToBeatUnitEvents(beatUnit, i);
     }
     console.log(`🔄 ArrowDisplay: инициализировано ${this.currentCount} BeatUnit (первая - PLAY, остальные - SKIP)`);
   }
@@ -217,11 +221,19 @@ export class ArrowDisplay {
       colorClass = 'text-yellow-400';
     }
 
-    // Получаем состояние воспроизведения для этой стрелочки
-    let playStatus = this.playStatuses[arrow.index];
+    // Получаем состояние воспроизведения для этой стрелочки из BeatUnit
+    let playStatus = null;
+    if (this.beatUnits && this.beatUnits[arrow.index]) {
+      playStatus = this.beatUnits[arrow.index].getPlayStatus();
+    }
+    
+    // Если BeatUnit не существует или не имеет PlayStatus, используем статический экземпляр для отображения
     if (!playStatus || typeof playStatus.getStatusString !== 'function') {
-      // Если playStatus не существует или не является объектом PlayStatus, создаем новый
-      playStatus = new PlayStatus(arrow.index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+      const status = arrow.index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+      console.log(`⚠️ ArrowDisplay.createArrowElement[${arrow.index}]: BeatUnit не имеет PlayStatus, ИСПОЛЬЗУЕМ СТАТИЧЕСКИЙ экземпляр для отображения`);
+      playStatus = PlayStatus.getInstance(status);
+      // НЕ устанавливаем этот статус обратно в BeatUnit, чтобы избежать создания дубликатов
+      console.log(`⚠️ ArrowDisplay.createArrowElement[${arrow.index}]: ИСПОЛЬЗУЕТСЯ СТАТИЧЕСКИЙ PlayStatus для отображения, ID: ${playStatus.constructor.name}_${playStatus.status}`);
     }
     
     arrowDiv.innerHTML = `
@@ -355,32 +367,26 @@ export class ArrowDisplay {
    * @param {number} index - Индекс стрелочки
    */
   handleCircleClick(index) {
-    if (index >= 0 && index < this.playStatuses.length) {
-      let playStatus = this.playStatuses[index];
-      if (!playStatus || typeof playStatus.toggleStatus !== 'function') {
-        // Если playStatus не существует или не является объектом PlayStatus, создаем новый
-        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
-        this.playStatuses[index] = playStatus;
+    if (index >= 0 && index < this.beatUnits.length) {
+      console.log(`🔄 ArrowDisplay.handleCircleClick(${index}): обработка клика`);
+      
+      // Проверяем, есть ли соответствующий BeatUnit
+      if (this.beatUnits && this.beatUnits[index]) {
+        const beatUnit = this.beatUnits[index];
+        const playStatus = beatUnit.getPlayStatus();
+        
+        console.log(`🔄 ArrowDisplay.handleCircleClick(${index}): текущий статус BeatUnit: "${playStatus ? playStatus.getStatusString() : 'null'}" [${playStatus ? playStatus.status : 'null'}]`);
+        
+        // Используем метод BeatUnit.toggleStatus() для изменения статуса
+        // Это обеспечит автоматическое уведомление всех слушателей через события
+        beatUnit.toggleStatus();
+        
+        console.log(`🔄 ArrowDisplay.handleCircleClick(${index}): статус BeatUnit изменен через toggleStatus()`);
+      } else {
+        console.log(`❌ ArrowDisplay.handleCircleClick(${index}): BeatUnit не найден`);
       }
-      
-      // Переключаем состояние воспроизведения по кругу: ○ → ● → ⊗ → ○
-      playStatus.toggleStatus();
-      this.updateDisplay();
-      
-      console.log(`Кружок ${index + 1}: ${playStatus.getStatusString()} (${playStatus.getDisplaySymbol()})`);
-      
-      // Получаем полную информацию о длительности
-      const fullInfo = this.getBeatFullInfo(index);
-      
-      // Вызываем callback для изменения статуса (обратная совместимость)
-      if (this.onPlayStatusChange) {
-        this.onPlayStatusChange(index, playStatus);
-      }
-      
-      // Вызываем новый callback с полной информацией
-      if (this.onBeatClick) {
-        this.onBeatClick(fullInfo);
-      }
+    } else {
+      console.log(`❌ ArrowDisplay.handleCircleClick(${index}): индекс вне диапазона BeatUnit`);
     }
   }
 
@@ -390,19 +396,28 @@ export class ArrowDisplay {
    * @returns {Object} Полная информация о длительности
    */
   getBeatFullInfo(index) {
-    let playStatus = this.playStatuses[index];
-    if (!playStatus || typeof playStatus.getStatusString !== 'function') {
-      // Если playStatus не существует или не является объектом PlayStatus, создаем новый
-      playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
-    }
     const beatUnit = this.beatUnits[index];
+    if (!beatUnit) {
+      console.log(`❌ ArrowDisplay.getBeatFullInfo(${index}): BeatUnit не найден`);
+      return null;
+    }
+    
+    let playStatus = beatUnit.getPlayStatus();
+    if (!playStatus || typeof playStatus.getStatusString !== 'function') {
+      // Если playStatus не существует или не является объектом PlayStatus, используем статический экземпляр
+      const status = index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+      console.log(`⚠️ ArrowDisplay.getBeatFullInfo[${index}]: BeatUnit вернул некорректный PlayStatus, ИСПОЛЬЗУЕМ СТАТИЧЕСКИЙ экземпляр`);
+      playStatus = PlayStatus.getInstance(status);
+      console.log(`🆕 ArrowDisplay.getBeatFullInfo[${index}]: ИСПОЛЬЗУЕТСЯ СТАТИЧЕСКИЙ PlayStatus со статусом ${status}, ID: ${playStatus.constructor.name}_${playStatus.status} (в getBeatFullInfo)`);
+      // НЕ устанавливаем этот статус обратно в BeatUnit, чтобы избежать создания дубликатов
+    }
     
     return {
       barIndex: this.currentBarIndex,
       beatIndex: index,
       playStatus: playStatus,
-      chord: beatUnit ? beatUnit.getChord() : null,
-      syllable: beatUnit ? beatUnit.getSyllable() : null,
+      chord: beatUnit.getChord(),
+      syllable: beatUnit.getSyllable(),
       isPlayed: playStatus.isPlayed(),
       isMuted: playStatus.isMuted(),
       isSkipped: playStatus.isSkipped(),
@@ -429,23 +444,101 @@ export class ArrowDisplay {
    * @param {BeatUnit[]} beatUnits - Массив BeatUnit
    */
   setBeatUnits(beatUnits) {
+    // Отписываемся от старых событий перед установкой новых BeatUnit
+    this.clearStatusChangeListeners();
+    
     this.beatUnits = beatUnits || [];
     
-    // Обновляем массив состояний воспроизведения из BeatUnit
-    // Используем статусы из BeatUnit, которые должны быть правильно установлены в Bar
-    this.playStatuses = this.beatUnits.map((beatUnit, index) => {
+    console.log(`🔄 ArrowDisplay.setBeatUnits: получено ${this.beatUnits.length} BeatUnit`);
+    
+    // Подписываемся на события изменения статуса каждого BeatUnit
+    this.beatUnits.forEach((beatUnit, index) => {
       let playStatus = beatUnit.getPlayStatus();
+      console.log(`🔄 ArrowDisplay.setBeatUnits[${index}]: PlayStatus из BeatUnit: ${playStatus ? `"${playStatus.getStatusString()}" [${playStatus.status}]` : 'null'}`);
+      
       // Если у BeatUnit нет PlayStatus, создаем новый с правильным статусом по умолчанию
       if (!playStatus || typeof playStatus.getStatusString !== 'function') {
-        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+        const status = index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+        console.log(`⚠️ ArrowDisplay.setBeatUnits[${index}]: BeatUnit без PlayStatus, УСТАНАВЛИВАЕМ СТАТИЧЕСКИЙ экземпляр со статусом ${status}`);
+        beatUnit.setPlayStatus(status);
       }
-      return playStatus;
+      
+      // Подписываемся на события изменения статуса этого BeatUnit
+      this.subscribeToBeatUnitEvents(beatUnit, index);
     });
     
     // Обновляем количество стрелочек
     this.currentCount = this.beatUnits.length;
     this.generateArrows();
     this.updateDisplay();
+  }
+
+  /**
+   * Подписывается на события изменения статуса BeatUnit
+   * @param {BeatUnit} beatUnit - BeatUnit для подписки
+   * @param {number} index - Индекс BeatUnit
+   */
+  subscribeToBeatUnitEvents(beatUnit, index) {
+    // Создаем функцию-слушателя для этого BeatUnit
+    const statusChangeListener = (beatUnit, oldStatus, newStatus) => {
+      this.onBeatUnitStatusChange(index, { beatUnit, oldStatus, newStatus });
+    };
+    
+    // Подписываемся на события BeatUnit
+    beatUnit.addStatusChangeListener(statusChangeListener);
+    
+    // Сохраняем ссылку на функцию-слушателя для возможности отписки
+    this.statusChangeListeners.set(index, statusChangeListener);
+    
+    console.log(`📢 ArrowDisplay.subscribeToBeatUnitEvents: подписан на события BeatUnit[${index}]`);
+  }
+
+  /**
+   * Отписывается от всех событий BeatUnit
+   */
+  clearStatusChangeListeners() {
+    console.log(`📢 ArrowDisplay.clearStatusChangeListeners: отписка от ${this.statusChangeListeners.size} слушателей`);
+    
+    // Проходим по всем слушателям и отписываемся
+    this.statusChangeListeners.forEach((listener, index) => {
+      if (this.beatUnits && this.beatUnits[index]) {
+        const beatUnit = this.beatUnits[index];
+        const removed = beatUnit.removeStatusChangeListener(listener);
+        if (removed) {
+          console.log(`📢 ArrowDisplay.clearStatusChangeListeners: отписан от BeatUnit[${index}]`);
+        }
+      }
+    });
+    
+    // Очищаем Map слушателей
+    this.statusChangeListeners.clear();
+  }
+
+  /**
+   * Обрабатывает событие изменения статуса BeatUnit
+   * @param {number} index - Индекс BeatUnit
+   * @param {Object} event - Объект события с beatUnit, oldStatus, newStatus
+   */
+  onBeatUnitStatusChange(index, event) {
+    const { beatUnit, oldStatus, newStatus } = event;
+    
+    console.log(`📢 ArrowDisplay.onBeatUnitStatusChange[${index}]: "${oldStatus ? oldStatus.getStatusString() : 'null'}" -> "${newStatus ? newStatus.getStatusString() : 'null'}"`);
+    
+    // Обновляем отображение
+    this.updateDisplay();
+    
+    // Вызываем callback для изменения статуса (обратная совместимость)
+    if (this.onPlayStatusChange) {
+      this.onPlayStatusChange(index, newStatus);
+    }
+    
+    // Получаем полную информацию о длительности
+    const fullInfo = this.getBeatFullInfo(index);
+    
+    // Вызываем новый callback с полной информацией
+    if (this.onBeatClick) {
+      this.onBeatClick(fullInfo);
+    }
   }
 
   /**
@@ -613,14 +706,15 @@ export class ArrowDisplay {
    * @param {PlayStatus|number} playStatus - Состояние воспроизведения
    */
   setPlayStatus(index, playStatus) {
-    if (index >= 0 && index < this.playStatuses.length) {
-      // Если передано число, создаем объект PlayStatus
-      if (typeof playStatus === 'number') {
-        this.playStatuses[index] = new PlayStatus(playStatus);
-      } else {
-        this.playStatuses[index] = playStatus;
-      }
-      this.updateDisplay();
+    if (index >= 0 && index < this.beatUnits.length) {
+      const beatUnit = this.beatUnits[index];
+      console.log(`🔄 ArrowDisplay.setPlayStatus(${index}): устанавливаем статус в BeatUnit`);
+      
+      // Устанавливаем статус напрямую в BeatUnit
+      // Это обеспечит автоматическое уведомление всех слушателей через события
+      beatUnit.setPlayStatus(playStatus);
+    } else {
+      console.log(`❌ ArrowDisplay.setPlayStatus(${index}): индекс вне диапазона BeatUnit`);
     }
   }
 
@@ -630,13 +724,25 @@ export class ArrowDisplay {
    * @returns {PlayStatus|null} Состояние воспроизведения
    */
   getPlayStatus(index) {
-    if (index >= 0 && index < this.playStatuses.length) {
-      let playStatus = this.playStatuses[index];
+    if (index >= 0 && index < this.beatUnits.length) {
+      // Получаем статус напрямую из BeatUnit
+      const beatUnit = this.beatUnits[index];
+      console.log(`🔄 ArrowDisplay.getPlayStatus(${index}): получаем статус из BeatUnit`);
+      
+      const playStatus = beatUnit.getPlayStatus();
+      
       // Убеждаемся, что у нас есть корректный объект PlayStatus
       if (!playStatus || typeof playStatus.getStatusString !== 'function') {
-        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
-        this.playStatuses[index] = playStatus;
+        console.log(`🔄 ArrowDisplay.getPlayStatus(${index}): BeatUnit вернул некорректный PlayStatus, ИСПОЛЬЗУЕМ СТАТИЧЕСКИЙ экземпляр`);
+        const status = index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+        const newPlayStatus = PlayStatus.getInstance(status);
+        console.log(`🆕 ArrowDisplay.getPlayStatus[${index}]: ИСПОЛЬЗУЕТСЯ СТАТИЧЕСКИЙ PlayStatus со статусом ${status}, ID: ${newPlayStatus.constructor.name}_${newPlayStatus.status} (в getPlayStatus)`);
+        // НЕ устанавливаем этот статус обратно в BeatUnit, чтобы избежать создания дубликатов
+        return newPlayStatus;
       }
+      
+      console.log(`🔄 ArrowDisplay.getPlayStatus(${index}): "${playStatus.getStatusString()}" [${playStatus.status}]`);
+      console.log(`🔄 ArrowDisplay ${index + 1}: PlayStatus object ID: ${playStatus.constructor.name}_${playStatus.status}`);
       return playStatus;
     }
     return null;
@@ -647,7 +753,8 @@ export class ArrowDisplay {
    * @returns {PlayStatus[]} Массив состояний воспроизведения
    */
   getAllPlayStatuses() {
-    return [...this.playStatuses];
+    // Получаем все PlayStatus из BeatUnit
+    return this.beatUnits.map(beatUnit => beatUnit.getPlayStatus());
   }
 
   /**
@@ -658,18 +765,27 @@ export class ArrowDisplay {
     if (Array.isArray(playStatuses)) {
       console.log('🎯 ArrowDisplay.setAllPlayStatuses: устанавливаем', playStatuses.length, 'статусов');
       
-      this.playStatuses = playStatuses.map((status, index) => {
-        // Если передано число, создаем объект PlayStatus
-        if (typeof status === 'number') {
-          return new PlayStatus(status);
+      playStatuses.forEach((status, index) => {
+        if (index < this.beatUnits.length) {
+          const beatUnit = this.beatUnits[index];
+          
+          // Устанавливаем статус напрямую в BeatUnit
+          // BeatUnit сам создаст PlayStatus при необходимости
+          beatUnit.setPlayStatus(status);
+          
+          if (typeof status === 'number') {
+            console.log(`🔄 ArrowDisplay.setAllPlayStatuses[${index}]: установлен статус ${status} в BeatUnit`);
+          } else if (status && typeof status.getStatusString === 'function') {
+            console.log(`🔄 ArrowDisplay.setAllPlayStatuses[${index}]: установлен статус "${status.getStatusString()}" в BeatUnit`);
+          } else {
+            console.log(`⚠️ ArrowDisplay.setAllPlayStatuses[${index}]: некорректный статус, используется стандартный`);
+          }
+        } else {
+          console.log(`❌ ArrowDisplay.setAllPlayStatuses[${index}]: индекс вне диапазона BeatUnit`);
         }
-        // Убеждаемся, что у нас есть корректный объект PlayStatus
-        if (!status || typeof status.getStatusString !== 'function') {
-          return new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
-        }
-        return status;
       });
-      this.updateDisplay();
+      
+      // Отображение обновится автоматически через события BeatUnit
     } else {
       console.warn('⚠️ setAllPlayStatuses получил не массив:', playStatuses);
     }
@@ -697,7 +813,11 @@ export class ArrowDisplay {
    * @returns {Array} Массив сохраненных состояний
    */
   saveCurrentPlayStatuses() {
-    return this.playStatuses.map(status => status.toJSON());
+    // Сохраняем статусы из BeatUnit
+    return this.beatUnits.map(beatUnit => {
+      const playStatus = beatUnit.getPlayStatus();
+      return playStatus ? playStatus.toJSON() : { status: PlayStatus.STATUS.SKIP };
+    });
   }
 
   /**
@@ -710,38 +830,38 @@ export class ArrowDisplay {
       return;
     }
 
-    this.playStatuses = savedStatuses.map((statusData, index) => {
-      let playStatus;
-      if (typeof statusData === 'object' && statusData !== null) {
-        // Если это объект, пытаемся восстановить из JSON
-        playStatus = PlayStatus.fromJSON(statusData);
-      } else if (typeof statusData === 'number') {
-        // Если это число, создаем новый PlayStatus
-        playStatus = new PlayStatus(statusData);
+    // Восстанавливаем статусы в BeatUnit
+    savedStatuses.forEach((statusData, index) => {
+      if (index < this.beatUnits.length) {
+        const beatUnit = this.beatUnits[index];
+        
+        // Устанавливаем статус напрямую в BeatUnit
+        // BeatUnit сам создаст PlayStatus при необходимости
+        console.log(`🔄 ArrowDisplay.restorePlayStatuses[${index}]: УСТАНАВЛИВАЕМ СТАТУС в BeatUnit`);
+        beatUnit.setPlayStatus(statusData);
+        
+        if (typeof statusData === 'object' && statusData !== null) {
+          console.log(`🔄 ArrowDisplay.restorePlayStatuses[${index}]: восстановлен статус из JSON в BeatUnit`);
+        } else if (typeof statusData === 'number') {
+          console.log(`🔄 ArrowDisplay.restorePlayStatuses[${index}]: восстановлен статус ${statusData} в BeatUnit`);
+        } else {
+          console.log(`⚠️ ArrowDisplay.restorePlayStatuses[${index}]: некорректные данные, используется стандартный статус`);
+        }
       } else {
-        // Иначе создаем PlayStatus по умолчанию
-        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+        console.log(`❌ ArrowDisplay.restorePlayStatuses[${index}]: индекс вне диапазона BeatUnit`);
       }
-      
-      // Убеждаемся, что у нас есть корректный объект PlayStatus
-      if (!playStatus || typeof playStatus.getStatusString !== 'function') {
-        playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
-      }
-      
-      return playStatus;
     });
 
-    // Если количество изменилось, дополняем или обрезаем массив
-    while (this.playStatuses.length < this.currentCount) {
-      const newIndex = this.playStatuses.length;
-      this.playStatuses.push(new PlayStatus(newIndex === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP));
-    }
-    
-    if (this.playStatuses.length > this.currentCount) {
-      this.playStatuses = this.playStatuses.slice(0, this.currentCount);
+    // Если количество восстановленных статусов меньше количества BeatUnit,
+    // устанавливаем стандартные статусы для оставшихся
+    for (let i = savedStatuses.length; i < this.beatUnits.length; i++) {
+      const status = i === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+      console.log(`🔄 ArrowDisplay.restorePlayStatuses[${i}]: УСТАНАВЛИВАЕМ СТАНДАРТНЫЙ СТАТИЧЕСКИЙ статус ${status}`);
+      this.beatUnits[i].setPlayStatus(status);
+      console.log(`🔄 ArrowDisplay.restorePlayStatuses[${i}]: установлен стандартный статус ${status}`);
     }
 
-    console.log(`🔄 ArrowDisplay: восстановлено ${this.playStatuses.length} состояний`);
+    console.log(`🔄 ArrowDisplay: восстановлено ${Math.min(savedStatuses.length, this.beatUnits.length)} состояний в BeatUnit`);
   }
 
   /**
@@ -754,7 +874,10 @@ export class ArrowDisplay {
       size: this.arrowSize,
       spacing: this.arrowSpacing,
       arrows: this.getAllArrowsInfo(),
-      playStatuses: this.playStatuses.map(status => status.toJSON())
+      playStatuses: this.beatUnits.map(beatUnit => {
+        const playStatus = beatUnit.getPlayStatus();
+        return playStatus ? playStatus.toJSON() : { status: PlayStatus.STATUS.SKIP };
+      })
     };
   }
 
@@ -785,28 +908,82 @@ export class ArrowDisplay {
     }
 
     if (config.playStatuses && Array.isArray(config.playStatuses)) {
-      this.playStatuses = config.playStatuses.map((statusData, index) => {
-        let playStatus;
-        if (typeof statusData === 'object' && statusData !== null) {
-          // Если это объект, пытаемся восстановить из JSON
-          playStatus = PlayStatus.fromJSON(statusData);
-        } else if (typeof statusData === 'number') {
-          // Если это число, создаем новый PlayStatus
-          playStatus = new PlayStatus(statusData);
+      config.playStatuses.forEach((statusData, index) => {
+        if (index < this.beatUnits.length) {
+          const beatUnit = this.beatUnits[index];
+          
+          // Устанавливаем статус напрямую в BeatUnit
+          // BeatUnit сам создаст PlayStatus при необходимости
+          console.log(`🔄 ArrowDisplay.importConfig[${index}]: УСТАНАВЛИВАЕМ СТАТУС в BeatUnit`);
+          beatUnit.setPlayStatus(statusData);
+          
+          if (typeof statusData === 'object' && statusData !== null) {
+            console.log(`🔄 ArrowDisplay.importConfig[${index}]: восстановлен статус из JSON в BeatUnit`);
+          } else if (typeof statusData === 'number') {
+            console.log(`🔄 ArrowDisplay.importConfig[${index}]: установлен статус ${statusData} в BeatUnit`);
+          } else {
+            console.log(`⚠️ ArrowDisplay.importConfig[${index}]: некорректные данные, используется стандартный статус`);
+          }
         } else {
-          // Иначе создаем PlayStatus по умолчанию
-          playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+          console.log(`❌ ArrowDisplay.importConfig[${index}]: индекс вне диапазона BeatUnit`);
         }
-        
-        // Убеждаемся, что у нас есть корректный объект PlayStatus
-        if (!playStatus || typeof playStatus.getStatusString !== 'function') {
-          playStatus = new PlayStatus(index === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
-        }
-        
-        return playStatus;
       });
     }
     
     this.updateDisplay();
   }
+  
+  /**
+   * Очищает ресурсы при уничтожении объекта
+   * Отписывается от всех событий BeatUnit
+   */
+  destroy() {
+    console.log('🔄 ArrowDisplay.destroy: очистка ресурсов');
+    this.clearStatusChangeListeners();
+    this.container = null;
+    this.countSelect = null;
+    this.arrows = [];
+    this.beatUnits = [];
+    this.onPlayStatusChange = null;
+    this.onBeatClick = null;
+  }
 }
+
+/*
+ * ИЗМЕНЕНИЯ В АРХИТЕКТУРЕ ARROWDISPLAY:
+ *
+ * 1. Удалено прямое создание экземпляров PlayStatus в ArrowDisplay:
+ *    - Все PlayStatus теперь управляются через BeatUnit
+ *    - Удален массив playStatuses из ArrowDisplay
+ *    - BeatUnit стал единым источником правды для статусов воспроизведения
+ *
+ * 2. Обновлены методы для работы с BeatUnit:
+ *    - initializePlayStatuses() создает BeatUnit, которые сами управляют PlayStatus
+ *    - createArrowElement() получает PlayStatus из BeatUnit
+ *    - handleCircleClick() изменяет статус через BeatUnit.toggleStatus()
+ *    - getPlayStatus() получает статус напрямую из BeatUnit
+ *    - setPlayStatus() устанавливает статус напрямую в BeatUnit
+ *    - getBeatFullInfo() использует PlayStatus из BeatUnit
+ *    - setAllPlayStatuses() устанавливает статусы в BeatUnit
+ *    - restorePlayStatuses() восстанавливает статусы в BeatUnit
+ *    - importConfig() импортирует статусы в BeatUnit
+ *    - getAllPlayStatuses() получает все статусы из BeatUnit
+ *    - saveCurrentPlayStatuses() сохраняет статусы из BeatUnit
+ *    - exportConfig() экспортирует статусы из BeatUnit
+ *
+ * 3. Механизм событий для синхронизации с BeatUnit:
+ *    - statusChangeListeners (Map) для хранения слушателей событий BeatUnit
+ *    - subscribeToBeatUnitEvents() для подписки на события BeatUnit
+ *    - clearStatusChangeListeners() для отписки от всех событий
+ *    - onBeatUnitStatusChange() для обработки изменений статуса BeatUnit
+ *
+ * 4. Преимущества новой архитектуры:
+ *    - Единый источник правды для статусов воспроизведения
+ *    - Упрощенная синхронизация между компонентами
+ *    - Снижение дублирования кода
+ *    - Улучшенное разделение ответственности
+ *
+ * 5. Сохранена обратная совместимость с существующим кодом
+ *
+ * 6. Добавлен метод destroy() для корректной очистки ресурсов
+ */

@@ -1,5 +1,35 @@
 // Главный файл приложения Guitar Combat
 // Объединяет все компоненты и управляет общей логикой
+//
+// ЧЕТВЕРТАЯ ФАЗА АРХИТЕКТУРНОГО РЕШЕНИЯ:
+// Упрощение логики работы с новой системой событий BeatUnit
+//
+// Изменения:
+// 1. Упрощен метод updateArrowDisplayWithCurrentBar() - теперь просто передает BeatUnit в ArrowDisplay
+//    без сложной логики восстановления статусов, так как новая система событий обеспечивает
+//    автоматическую синхронизацию статусов между Bar и ArrowDisplay
+//
+// 2. Упрощен метод handlePlayStatusChange() - теперь только логирует изменения и сохраняет данные,
+//    так как синхронизация статусов происходит автоматически через события BeatUnit
+//
+// 3. Упрощен метод handleBeatClick() - теперь только логирует изменения и сохраняет данные,
+//    так как синхронизация статусов происходит автоматически через события BeatUnit
+//
+// 4. Добавлены отладочные логи во все ключевые методы для отслеживания работы новой системы событий:
+//    - createBarsFromChords()
+//    - updateDisplay()
+//    - handleChordsInputChange()
+//    - handleBeatCountChange()
+//    - parseInitialChords()
+//    - loadSavedData()
+//    - clearAllData()
+//    - generateRandomStrum()
+//    - restorePlayStatusesToBars()
+//    - getCurrentBarsPlayStatuses()
+//
+// 5. Сохранена обратная совместимость с существующим кодом
+//
+// 6. Все методы, которые работают со статусами воспроизведения, теперь используют новую систему событий
 
 // Импорты компонентов
 import { ChordBuilder } from './Chords/ChordBuilder.js';
@@ -550,27 +580,38 @@ initChordPlayer() {
    */
   parseInitialChords() {
     try {
+      console.log(`🔄 main.parseInitialChords: начало первоначального парсинга аккордов`);
+      
       if (!this.domElements.chordsInput) {
+        console.log(`🔄 main.parseInitialChords: поле ввода аккордов не найдено`);
         return;
       }
 
       const chordsString = this.domElements.chordsInput.value;
+      console.log(`🔄 main.parseInitialChords: получена строка аккордов: "${chordsString}"`);
+      
       // При первоначальном парсинге не сохраняем предыдущие статусы, чтобы установить правильные: первая стрелка - PLAY, остальные - SKIP
       // Вызываем createBarsFromChords напрямую, чтобы избежать двойного сохранения статусов
       this.chordParser.updateChords(chordsString || '', this.settings.beatCount, this.settings.chordChanges);
+      console.log(`🔄 main.parseInitialChords: вызываем createBarsFromChords без сохраненных статусов`);
       this.createBarsFromChords(); // Не передаем сохраненные статусы при первоначальной загрузке
       
       // Обновляем отображение аккордов
       this.updateChordDisplay();
       
       // Обновляем отображение без сохранения статусов (установим стандартные)
+      console.log(`🔄 main.parseInitialChords: вызываем updateDisplay с preserveArrowStatuses=false`);
       this.updateDisplay(false);
       
       // Убедимся, что установлены правильные статусы
       if (this.arrowDisplay) {
+        console.log(`🔄 main.parseInitialChords: инициализируем статусы стрелочек (первая - PLAY, остальные - SKIP)`);
         this.arrowDisplay.initializePlayStatuses();
         this.arrowDisplay.updateDisplay();
+        console.log(`🔄 main.parseInitialChords: события BeatUnit обеспечат автоматическую синхронизацию статусов`);
       }
+      
+      console.log(`🔄 main.parseInitialChords: первоначальный парсинг аккордов завершен`);
     } catch (error) {
       console.error('Ошибка парсинга начальных аккордов:', error);
     }
@@ -582,38 +623,41 @@ initChordPlayer() {
    */
   handleChordsInputChange(chordsString) {
     try {
-      console.log('🔄 handleChordsInputChange: получена строка аккордов:', chordsString);
+      console.log('🔄 main.handleChordsInputChange: получена строка аккордов:', chordsString);
       
       // Сохраняем текущие статусы стрелочек перед обновлением
       let savedStatuses = null;
       if (this.arrowDisplay) {
         savedStatuses = this.arrowDisplay.saveCurrentPlayStatuses();
+        console.log(`🔄 main.handleChordsInputChange: сохранено ${savedStatuses.length} статусов стрелочек`);
       }
       
       // Сохраняем текущий индекс такта перед созданием новых тактов
       const currentBarIndex = this.barNavigation ? this.barNavigation.getCurrentBarIndex() : 0;
-      console.log('🔄 Сохранен текущий индекс такта:', currentBarIndex);
+      console.log('🔄 main.handleChordsInputChange: сохранен текущий индекс такта:', currentBarIndex);
       
       // Обновляем парсер аккордов
       this.chordParser.updateChords(chordsString, this.settings.beatCount, this.settings.chordChanges);
       
       // Получаем статистику парсинга
       const stats = this.chordParser.getStats();
-      console.log('🔄 Статистика парсинга аккордов:', stats);
+      console.log('🔄 main.handleChordsInputChange: статистика парсинга аккордов:', stats);
       
       // Получаем валидные аккорды для отладки
       const validChords = this.chordParser.getValidChords();
-      console.log('🔄 Валидные аккорды после парсинга:', validChords.map(chord => chord.name));
+      console.log('🔄 main.handleChordsInputChange: валидные аккорды после парсинга:', validChords.map(chord => chord.name));
       
       // Создаем такты на основе аккордов, передавая сохраненные статусы и индекс такта
+      console.log('🔄 main.handleChordsInputChange: вызываем createBarsFromChords');
       this.createBarsFromChords(savedStatuses, currentBarIndex);
       
-      console.log('🔄 Количество тактов после создания:', this.bars.length);
+      console.log('🔄 main.handleChordsInputChange: количество тактов после создания:', this.bars.length);
       
       // Обновляем отображение аккордов
       this.updateChordDisplay();
       
       // Обновляем отображение с восстановлением сохраненных статусов
+      console.log('🔄 main.handleChordsInputChange: вызываем updateDisplay с preserveArrowStatuses=true');
       this.updateDisplay(true);
       
       // Сохраняем данные
@@ -623,6 +667,8 @@ initChordPlayer() {
       if (this.callbacks.onChordsChange) {
         this.callbacks.onChordsChange(chordsString, stats);
       }
+      
+      console.log('🔄 main.handleChordsInputChange: обработка изменения аккордов завершена');
     } catch (error) {
       console.error('Ошибка обработки изменения аккордов:', error);
     }
@@ -634,6 +680,8 @@ initChordPlayer() {
    */
   handleBeatCountChange(beatCount) {
     if (beatCount > 0 && beatCount <= 16) {
+      console.log(`🔄 main.handleBeatCountChange: изменение количества долей с ${this.settings.beatCount} на ${beatCount}`);
+      
       this.settings.beatCount = beatCount;
       // Синхронизируем количество стрелочек
       if (this.domElements.countSelect) {
@@ -644,18 +692,24 @@ initChordPlayer() {
       let savedStatuses = null;
       if (this.arrowDisplay) {
         savedStatuses = this.arrowDisplay.saveCurrentPlayStatuses();
+        console.log(`🔄 main.handleBeatCountChange: сохранено ${savedStatuses.length} статусов стрелочек`);
       }
       
       // При явном изменении количества долей устанавливаем стандартные статусы
       // Первая стрелка - PLAY, остальные - SKIP
       if (this.arrowDisplay) {
-        this.arrowDisplay.setArrowCount(beatCount, false);
+        console.log(`🔄 main.handleBeatCountChange: устанавливаем количество стрелочек: ${beatCount}`);
+        this.arrowDisplay.setArrowCount(beatCount, true);
       }
       
       // Пересоздаем такты с новым количеством долей, передавая сохраненные статусы
+      console.log(`🔄 main.handleBeatCountChange: вызываем createBarsFromChords с сохраненными статусами`);
       this.createBarsFromChords(savedStatuses);
+      console.log(`🔄 main.handleBeatCountChange: вызываем updateDisplay с preserveArrowStatuses=false`);
       this.updateDisplay(false);
       this.saveData();
+      
+      console.log(`🔄 main.handleBeatCountChange: изменение количества долей завершено, события BeatUnit обеспечат автоматическую синхронизацию`);
     }
   }
 
@@ -788,26 +842,34 @@ initChordPlayer() {
    */
   createBarsFromChords(savedStatuses = null, preservedBarIndex = null) {
     try {
+      console.log(`🔄 main.createBarsFromChords: начало создания тактов, savedStatuses=${savedStatuses ? 'переданы' : 'null'}, preservedBarIndex=${preservedBarIndex}`);
+      
       // Сохраняем текущие статусы из существующих тактов перед созданием новых
       const currentStatuses = this.getCurrentBarsPlayStatuses();
+      console.log(`🔄 main.createBarsFromChords: сохранено ${currentStatuses.length} текущих статусов`);
       
       const validChords = this.chordParser.getValidChords();
+      console.log(`🔄 main.createBarsFromChords: получено ${validChords.length} валидных аккордов`);
       
       if (validChords.length === 0) {
         // Создаем один пустой такт
         this.bars = [new Bar(0, this.settings.beatCount)];
+        console.log(`🔄 main.createBarsFromChords: создан один пустой такт с ${this.settings.beatCount} долями`);
       } else {
         // Используем BarSequenceBuilder для создания тактов
         this.barSequenceBuilder.beatCount = this.settings.beatCount;
         const chordNames = validChords.map(chord => chord.name);
         this.bars = this.barSequenceBuilder.buildFromChordArray(chordNames);
+        console.log(`🔄 main.createBarsFromChords: создано ${this.bars.length} тактов с аккордами: ${chordNames.join(', ')}`);
       }
 
       // Восстанавливаем статусы воспроизведения в новых тактах
       // Приоритет: savedStatuses (из handleChordsInputChange) > currentStatuses (из существующих тактов)
       const statusesToRestore = savedStatuses || currentStatuses;
       if (statusesToRestore && statusesToRestore.length > 0) {
+        console.log(`🔄 main.createBarsFromChords: восстановление ${statusesToRestore.length} статусов в тактах`);
         this.restorePlayStatusesToBars(statusesToRestore);
+        console.log(`🔄 main.createBarsFromChords: статусы восстановлены, события BeatUnit обеспечат автоматическую синхронизацию`);
       }
 
       // Обновляем навигацию по тактам
@@ -837,6 +899,8 @@ initChordPlayer() {
           }
         }
       }
+      
+      console.log(`🔄 main.createBarsFromChords: завершено создание тактов, всего ${this.bars.length} тактов`);
     } catch (error) {
       console.error('Ошибка создания тактов из аккордов:', error);
       // Создаем один пустой такт в случае ошибки
@@ -858,21 +922,31 @@ initChordPlayer() {
     const statuses = [];
     
     if (this.bars && this.bars.length > 0) {
-      this.bars.forEach(bar => {
+      console.log(`🔄 main.getCurrentBarsPlayStatuses: получение статусов из ${this.bars.length} тактов`);
+      
+      this.bars.forEach((bar, barIndex) => {
         const barStatuses = [];
         if (bar.beatUnits && bar.beatUnits.length > 0) {
-          bar.beatUnits.forEach(beatUnit => {
+          console.log(`🔄 main.getCurrentBarsPlayStatuses: такт ${barIndex + 1}, ${bar.beatUnits.length} долей`);
+          
+          bar.beatUnits.forEach((beatUnit, beatIndex) => {
             const playStatus = beatUnit.getPlayStatus();
             if (playStatus) {
               barStatuses.push(playStatus.toJSON());
+              console.log(`🔄 main.getCurrentBarsPlayStatuses: такт ${barIndex + 1}, доля ${beatIndex + 1}: "${playStatus.getStatusString()}" [${playStatus.status}]`);
             } else {
               // Если у BeatUnit нет PlayStatus, создаем стандартный
               barStatuses.push({ status: 0 }); // SKIP по умолчанию
+              console.log(`🔄 main.getCurrentBarsPlayStatuses: такт ${barIndex + 1}, доля ${beatIndex + 1}: нет статуса, создан SKIP`);
             }
           });
         }
         statuses.push(barStatuses);
       });
+      
+      console.log(`🔄 main.getCurrentBarsPlayStatuses: получено статусов для ${statuses.length} тактов`);
+    } else {
+      console.log(`🔄 main.getCurrentBarsPlayStatuses: нет тактов для получения статусов`);
     }
     
     return statuses;
@@ -884,12 +958,16 @@ initChordPlayer() {
    */
   restorePlayStatusesToBars(statusesArray) {
     if (!Array.isArray(statusesArray) || statusesArray.length === 0) {
+      console.log(`🔄 main.restorePlayStatusesToBars: нет статусов для восстановления`);
       return;
     }
+    
+    console.log(`🔄 main.restorePlayStatusesToBars: восстановление статусов для ${statusesArray.length} тактов`);
     
     this.bars.forEach((bar, barIndex) => {
       if (barIndex < statusesArray.length && bar.beatUnits) {
         const barStatuses = statusesArray[barIndex];
+        console.log(`🔄 main.restorePlayStatusesToBars: восстановление статусов для такта ${barIndex + 1}, ${barStatuses.length} статусов`);
         
         if (Array.isArray(barStatuses)) {
           barStatuses.forEach((statusData, beatIndex) => {
@@ -900,22 +978,29 @@ initChordPlayer() {
               if (typeof statusData === 'object' && statusData !== null) {
                 // Восстанавливаем из JSON
                 playStatus = PlayStatus.fromJSON(statusData);
+                console.log(`🔄 main.restorePlayStatusesToBars: такт ${barIndex + 1}, доля ${beatIndex + 1}: восстановлен статус из JSON`);
               } else if (typeof statusData === 'number') {
                 // Создаем из числа
-                playStatus = new PlayStatus(statusData);
+                playStatus = PlayStatus.getInstance(statusData);
+                console.log(`🆕 main.restorePlayStatusesToBars[${barIndex + 1},${beatIndex + 1}]: ПОЛУЧЕН PlayStatus из числа ${statusData}, ID: ${playStatus.constructor.name}_${playStatus.status} (в restorePlayStatusesToBars)`);
               } else {
                 // Создаем стандартный статус
-                playStatus = new PlayStatus(beatIndex === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP);
+                const status = beatIndex === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
+                playStatus = PlayStatus.getInstance(status);
+                console.log(`🆕 main.restorePlayStatusesToBars[${barIndex + 1},${beatIndex + 1}]: ПОЛУЧЕН PlayStatus со статусом ${status}, ID: ${playStatus.constructor.name}_${playStatus.status} (в restorePlayStatusesToBars - стандартный)`);
               }
               
+              // Устанавливаем статус в BeatUnit - это автоматически уведомит всех слушателей
               beatUnit.setPlayStatus(playStatus);
+              console.log(`🔄 main.restorePlayStatusesToBars: такт ${barIndex + 1}, доля ${beatIndex + 1}: статус установлен в BeatUnit, события обеспечат синхронизацию`);
             }
           });
         }
       }
     });
     
-    console.log(`🔄 Восстановлены статусы воспроизведения для ${this.bars.length} тактов`);
+    console.log(`🔄 main.restorePlayStatusesToBars: восстановлены статусы воспроизведения для ${this.bars.length} тактов`);
+    console.log(`🔄 main.restorePlayStatusesToBars: события BeatUnit обеспечат автоматическую синхронизацию с ArrowDisplay`);
   }
 
   /**
@@ -979,11 +1064,12 @@ initChordPlayer() {
    */
   updateDisplay(preserveArrowStatuses = true) {
     try {
-      console.log(`🔄 Обновление отображения: ${this.bars.length} тактов, preserveArrowStatuses=${preserveArrowStatuses}`);
+      console.log(`🔄 main.updateDisplay: начало обновления, ${this.bars.length} тактов, preserveArrowStatuses=${preserveArrowStatuses}`);
       
       // Обновляем отображение тактов (если инициализирован)
       if (this.barDisplay && this.domElements.barContainer) {
         this.barDisplay.setBars(this.bars);
+        console.log(`🔄 main.updateDisplay: обновлено отображение тактов`);
       }
       
       // Обновляем навигацию по тактам
@@ -999,7 +1085,9 @@ initChordPlayer() {
       
       // Обновляем отображение стрелочек с BeatUnit из текущего такта
       if (this.arrowDisplay) {
+        console.log(`🔄 main.updateDisplay: вызываем updateArrowDisplayWithCurrentBar с preserveArrowStatuses=${preserveArrowStatuses}`);
         this.updateArrowDisplayWithCurrentBar(preserveArrowStatuses);
+        console.log(`🔄 main.updateDisplay: завершено обновление отображения стрелочек`);
       }
       
       // Обновляем отображение аккордов
@@ -1007,6 +1095,8 @@ initChordPlayer() {
       
       // Обновляем информацию о состоянии
       this.updateStatusInfo();
+      
+      console.log(`🔄 main.updateDisplay: обновление отображения завершено`);
     } catch (error) {
       console.error('Ошибка обновления отображения:', error);
     }
@@ -1018,6 +1108,8 @@ initChordPlayer() {
    */
   updateArrowDisplayWithCurrentBar(preserveArrowStatuses = true) {
     try {
+      console.log(`🔄 main.updateArrowDisplayWithCurrentBar: начало обновления, preserveArrowStatuses=${preserveArrowStatuses}`);
+      
       if (this.bars && this.bars.length > 0 && this.barNavigation) {
         const currentBarIndex = this.barNavigation.getCurrentBarIndex();
         if (currentBarIndex >= 0 && currentBarIndex < this.bars.length) {
@@ -1025,19 +1117,15 @@ initChordPlayer() {
           
           // Устанавливаем BeatUnit из текущего такта
           if (currentBar.beatUnits && this.arrowDisplay) {
-            // Сохраняем текущие статусы перед обновлением
-            const savedStatuses = preserveArrowStatuses ? this.arrowDisplay.saveCurrentPlayStatuses() : null;
+            console.log(`🔄 main.updateArrowDisplayWithCurrentBar: передаем ${currentBar.beatUnits.length} BeatUnit в ArrowDisplay`);
             
+            // УПРОЩЕНИЕ: Просто передаем BeatUnit в ArrowDisplay
+            // Новая система событий автоматически синхронизирует статусы
             this.arrowDisplay.setBeatUnits(currentBar.beatUnits);
             this.arrowDisplay.setCurrentBarIndex(currentBarIndex);
             
-            // Восстанавливаем сохраненные статусы если нужно
-            if (preserveArrowStatuses && savedStatuses) {
-              this.arrowDisplay.restorePlayStatuses(savedStatuses);
-              this.arrowDisplay.updateDisplay();
-            }
-            
             console.log(`🔄 Обновлено отображение стрелочек для такта ${currentBarIndex + 1} с ${currentBar.beatUnits.length} долей`);
+            console.log(`🔄 Синхронизация статусов происходит автоматически через события BeatUnit`);
           }
           
           return;
@@ -1046,14 +1134,16 @@ initChordPlayer() {
       
       // Если нет тактов, используем стандартное поведение
       if (this.arrowDisplay) {
+        console.log(`🔄 main.updateArrowDisplayWithCurrentBar: нет тактов, используем стандартное поведение`);
         // При инициализации всегда устанавливаем правильные статусы: первая стрелка - PLAY, остальные - SKIP
-        this.arrowDisplay.setArrowCount(this.settings.beatCount, false);
+        this.arrowDisplay.setArrowCount(this.settings.beatCount, true);
         console.log(`🔄 Установлено стандартное количество стрелочек: ${this.settings.beatCount}`);
       }
     } catch (error) {
       console.error('Ошибка обновления отображения стрелочек:', error);
       // Если произошла ошибка, используем стандартное поведение
       if (this.arrowDisplay) {
+        console.log(`🔄 main.updateArrowDisplayWithCurrentBar: ошибка, используем стандартное поведение`);
         // При инициализации всегда устанавливаем правильные статусы: первая стрелка - PLAY, остальные - SKIP
         this.arrowDisplay.setArrowCount(this.settings.beatCount, false);
       }
@@ -1066,14 +1156,23 @@ initChordPlayer() {
    * @param {PlayStatus} playStatus - Новое состояние воспроизведения
    */
   handlePlayStatusChange(index, playStatus) {
-    // Обновляем текущий такт с новым состоянием
+    console.log(`🔄 main.handlePlayStatusChange(${index}): "${playStatus.getStatusString()}" [${playStatus.status}]`);
+    console.log(`🔄 main ${index + 1}: PlayStatus object ID: ${playStatus.constructor.name}_${playStatus.status}`);
+    
+    // УПРОЩЕНИЕ: С новой системой событийBeatUnit автоматически синхронизирует статусы
+    // между ArrowDisplay и Bar, поэтому дополнительная логика не требуется
+    
+    // Просто логируем для отладки
     if (this.bars && this.bars.length > 0 && this.barNavigation) {
       const currentBarIndex = this.barNavigation.getCurrentBarIndex();
       if (currentBarIndex >= 0 && currentBarIndex < this.bars.length) {
-        const currentBar = this.bars[currentBarIndex];
-        currentBar.setBeatPlayStatus(index, playStatus);
+        console.log(`🔄 main.handlePlayStatusChange: изменение статуса для такта ${currentBarIndex + 1}, доля ${index + 1}`);
+        console.log(`🔄 Синхронизация статусов происходит автоматически через события BeatUnit`);
       }
     }
+    
+    // Сохраняем данные после изменения статуса
+    this.saveData();
   }
 
   /**
@@ -1083,19 +1182,20 @@ initChordPlayer() {
   handleBeatClick(beatInfo) {
     console.log('🎯 Клик по длительности:', beatInfo);
     
-    // Обновляем текущий такт с новым состоянием
-    if (this.bars && this.bars.length > 0) {
-      const currentBarIndex = this.barNavigation.getCurrentBarIndex();
-      if (currentBarIndex >= 0 && currentBarIndex < this.bars.length) {
-        const currentBar = this.bars[currentBarIndex];
-        currentBar.setBeatPlayStatus(beatInfo.beatIndex, beatInfo.playStatus);
-      }
-    }
+    // УПРОЩЕНИЕ: С новой системой событий BeatUnit автоматически синхронизирует статусы
+    // между ArrowDisplay и Bar, поэтому дополнительная логика не требуется
+    
+    // Просто логируем для отладки
+    console.log(`🔄 main.handleBeatClick: изменение статуса для такта ${beatInfo.barIndex + 1}, доля ${beatInfo.beatIndex + 1}`);
+    console.log(`🔄 Синхронизация статусов происходит автоматически через события BeatUnit`);
     
     // Показываем информацию пользователю (для отладки)
     const chordInfo = beatInfo.chord ? `Аккорд: ${beatInfo.chord.name}` : 'Нет аккорда';
     const syllableInfo = beatInfo.syllable ? `Слог: "${beatInfo.syllable.text}"` : 'Нет слога';
     console.log(`🎵 Такт ${beatInfo.barIndex + 1}, Длительность ${beatInfo.beatIndex + 1}: ${chordInfo}, ${syllableInfo}`);
+    
+    // Сохраняем данные после изменения статуса
+    this.saveData();
   }
 
   /**
@@ -1238,8 +1338,10 @@ initChordPlayer() {
 
       // Устанавливаем правильные статусы: первая стрелка - PLAY, остальные - SKIP
       if (this.arrowDisplay) {
+        console.log(`🔄 main.loadSavedData: настройка отображения стрелочек после загрузки данных`);
         if (this.bars.length === 0) {
           // Если нет тактов, инициализируем с правильными статусами
+          console.log(`🔄 main.loadSavedData: нет тактов, инициализируем статусы стрелочек`);
           this.arrowDisplay.initializePlayStatuses();
         } else if (this.bars.length > 0 && this.barNavigation) {
           // Если есть такты, обновляем отображение с правильными статусами
@@ -1247,7 +1349,9 @@ initChordPlayer() {
           if (currentBarIndex >= 0 && currentBarIndex < this.bars.length) {
             const currentBar = this.bars[currentBarIndex];
             if (currentBar.beatUnits) {
+              console.log(`🔄 main.loadSavedData: устанавливаем BeatUnits из такта ${currentBarIndex + 1}`);
               this.arrowDisplay.setBeatUnits(currentBar.beatUnits);
+              console.log(`🔄 main.loadSavedData: события BeatUnit обеспечат автоматическую синхронизацию статусов`);
             }
           }
         }
@@ -1268,6 +1372,8 @@ initChordPlayer() {
    * Очищает все данные
    */
   clearAllData() {
+    console.log(`🔄 main.clearAllData: начало очистки всех данных`);
+    
     this.bars = [];
     this.chordParser.clear();
 
@@ -1277,12 +1383,16 @@ initChordPlayer() {
 
     // Устанавливаем стандартные статусы: первая стрелка - PLAY, остальные - SKIP
     if (this.arrowDisplay) {
+      console.log(`🔄 main.clearAllData: инициализируем статусы стрелочек (первая - PLAY, остальные - SKIP)`);
       this.arrowDisplay.initializePlayStatuses();
+      console.log(`🔄 main.clearAllData: события BeatUnit обеспечат автоматическую синхронизацию статусов`);
     }
 
+    console.log(`🔄 main.clearAllData: вызываем updateDisplay`);
     this.updateDisplay();
     this.saveData();
-
+    
+    console.log(`🔄 main.clearAllData: очистка данных завершена`);
   }
 
   /**
@@ -1359,14 +1469,20 @@ initChordPlayer() {
    */
   generateRandomStrum() {
     try {
+      console.log(`🔄 main.generateRandomStrum: начало генерации случайного боя`);
+      
       // Получаем текущее количество стрелочек
       const currentCount = this.arrowDisplay.currentCount || 8;
+      console.log(`🔄 main.generateRandomStrum: текущее количество стрелочек: ${currentCount}`);
 
       // Генерируем случайный бой
       const randomPlayStatuses = this.randomStrumGenerator.generateRandomStrum(currentCount);
+      console.log(`🔄 main.generateRandomStrum: сгенерировано ${randomPlayStatuses.length} статусов`);
 
       // Устанавливаем новые состояния в ArrowDisplay
+      console.log(`🔄 main.generateRandomStrum: устанавливаем новые статусы в ArrowDisplay`);
       this.arrowDisplay.setAllPlayStatuses(randomPlayStatuses);
+      console.log(`🔄 main.generateRandomStrum: события BeatUnit обеспечат автоматическую синхронизацию статусов с Bar`);
 
       // Анализируем сгенерированный бой
       const analysis = this.randomStrumGenerator.analyzeStrum(randomPlayStatuses);
@@ -1375,8 +1491,11 @@ initChordPlayer() {
       this.showNotification(
         `Случайный бой сгенерирован! Играющих долей: ${analysis.playCount}/${analysis.total}`
       );
+      
+      console.log(`🔄 main.generateRandomStrum: генерация случайного боя завершена`);
 
     } catch (error) {
+      console.error('Ошибка генерации случайного боя:', error);
       this.showError('Ошибка генерации случайного боя');
     }
   }

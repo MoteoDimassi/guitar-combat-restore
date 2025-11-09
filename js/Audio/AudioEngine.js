@@ -121,6 +121,7 @@ export class AudioEngine {
             }
 
             // Загружаем файл
+            console.log(`Загрузка аудиофайла: ${audioPath}`);
             const response = await fetch(audioPath);
             if (!response.ok) {
                 throw new Error(`Ошибка загрузки аудиофайла: ${response.status}`);
@@ -255,9 +256,9 @@ export class AudioEngine {
             playStatus = octaveOrStatus;
         } else if (typeof octaveOrStatus === 'number') {
             targetOctave = octaveOrStatus;
-            playStatus = new PlayStatus(PlayStatus.STATUS.PLAY);
+            playStatus = PlayStatus.INSTANCES.PLAY;
         } else {
-            playStatus = new PlayStatus(PlayStatus.STATUS.PLAY);
+            playStatus = PlayStatus.INSTANCES.PLAY;
         }
 
         // Обрабатываем статус SKIP

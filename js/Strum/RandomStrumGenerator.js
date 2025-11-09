@@ -27,12 +27,12 @@ export class RandomStrumGenerator {
     const playStatuses = [];
 
     // Первая длительность всегда должна быть PLAY
-    playStatuses.push(new PlayStatus(PlayStatus.STATUS.PLAY));
+    playStatuses.push(PlayStatus.INSTANCES.PLAY);
 
     // Генерируем случайные состояния для остальных длительностей
     for (let i = 1; i < count; i++) {
       const randomStatus = this.getRandomStatus();
-      playStatuses.push(new PlayStatus(randomStatus));
+      playStatuses.push(PlayStatus.getInstance(randomStatus));
     }
 
     return playStatuses;
@@ -112,7 +112,7 @@ export class RandomStrumGenerator {
       
       for (let i = 0; i < Math.min(needed, skipIndices.length); i++) {
         const randomIndex = skipIndices[Math.floor(Math.random() * skipIndices.length)];
-        result[randomIndex] = new PlayStatus(PlayStatus.STATUS.PLAY);
+        result[randomIndex] = PlayStatus.INSTANCES.PLAY;
         skipIndices.splice(skipIndices.indexOf(randomIndex), 1);
         playCount++;
         skipCount--;
@@ -126,7 +126,7 @@ export class RandomStrumGenerator {
       
       for (let i = 0; i < Math.min(needed, playIndices.length); i++) {
         const randomIndex = playIndices[Math.floor(Math.random() * playIndices.length)];
-        result[randomIndex] = new PlayStatus(PlayStatus.STATUS.SKIP);
+        result[randomIndex] = PlayStatus.INSTANCES.SKIP;
         playIndices.splice(playIndices.indexOf(randomIndex), 1);
         playCount--;
         skipCount++;
@@ -140,7 +140,7 @@ export class RandomStrumGenerator {
       
       for (let i = 0; i < Math.min(needed, skipIndices.length); i++) {
         const randomIndex = skipIndices[Math.floor(Math.random() * skipIndices.length)];
-        result[randomIndex] = new PlayStatus(PlayStatus.STATUS.MUTED);
+        result[randomIndex] = PlayStatus.INSTANCES.MUTED;
         skipIndices.splice(skipIndices.indexOf(randomIndex), 1);
         mutedCount++;
         skipCount--;
@@ -153,7 +153,7 @@ export class RandomStrumGenerator {
       
       for (let i = 0; i < Math.min(needed, mutedIndices.length); i++) {
         const randomIndex = mutedIndices[Math.floor(Math.random() * mutedIndices.length)];
-        result[randomIndex] = new PlayStatus(PlayStatus.STATUS.SKIP);
+        result[randomIndex] = PlayStatus.INSTANCES.SKIP;
         mutedIndices.splice(mutedIndices.indexOf(randomIndex), 1);
         mutedCount--;
         skipCount++;
@@ -213,12 +213,12 @@ export class RandomStrumGenerator {
     const playStatuses = [];
     
     // Первая всегда PLAY
-    playStatuses.push(new PlayStatus(PlayStatus.STATUS.PLAY));
+    playStatuses.push(PlayStatus.INSTANCES.PLAY);
     
     // Остальные чередуются PLAY/SKIP
     for (let i = 1; i < count; i++) {
       const status = i % 2 === 0 ? PlayStatus.STATUS.PLAY : PlayStatus.STATUS.SKIP;
-      playStatuses.push(new PlayStatus(status));
+      playStatuses.push(PlayStatus.getInstance(status));
     }
     
     return playStatuses;
@@ -233,7 +233,7 @@ export class RandomStrumGenerator {
     const playStatuses = [];
     
     // Первая всегда PLAY
-    playStatuses.push(new PlayStatus(PlayStatus.STATUS.PLAY));
+    playStatuses.push(PlayStatus.INSTANCES.PLAY);
     
     // Генерируем более сложный паттерн
     for (let i = 1; i < count; i++) {
@@ -250,7 +250,7 @@ export class RandomStrumGenerator {
         status = PlayStatus.STATUS.SKIP;
       }
       
-      playStatuses.push(new PlayStatus(status));
+      playStatuses.push(PlayStatus.getInstance(status));
     }
     
     return playStatuses;
@@ -265,7 +265,7 @@ export class RandomStrumGenerator {
     const playStatuses = [];
     
     // Первая всегда PLAY
-    playStatuses.push(new PlayStatus(PlayStatus.STATUS.PLAY));
+    playStatuses.push(PlayStatus.INSTANCES.PLAY);
     
     // Создаем ритмический паттерн
     for (let i = 1; i < count; i++) {
@@ -291,7 +291,7 @@ export class RandomStrumGenerator {
           status = PlayStatus.STATUS.SKIP;
       }
       
-      playStatuses.push(new PlayStatus(status));
+      playStatuses.push(PlayStatus.getInstance(status));
     }
     
     return playStatuses;
