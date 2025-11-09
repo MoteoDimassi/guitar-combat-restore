@@ -2,6 +2,7 @@ import ChordService from "../domain/services/ChordService.js";
 import BarService from "../domain/services/BarService.js";
 import PlaybackService from "../domain/services/PlaybackService.js";
 import AudioService from "../domain/services/AudioService.js";
+import ChordParserService from "../domain/services/ChordParserService.js";
 import { ConfigService } from "./services/ConfigService.js";
 import AudioEngine from "../infrastructure/audio/AudioEngine.js";
 import AudioRepository from "../infrastructure/audio/AudioRepository.js";
@@ -90,6 +91,22 @@ export function registerServices(container, registry) {
       tags: ["playback", "audio"],
       singleton: true,
       dependencies: ["audioEngine", "barRepository", "eventBus"],
+    }
+  );
+
+  registry.register(
+    "chordParserService",
+    (container) => {
+      return new ChordParserService(
+        container.get("eventBus")
+      );
+    },
+    {
+      description: "Service for parsing chords and creating bars",
+      category: "domain",
+      tags: ["chords", "parsing", "bars"],
+      singleton: true,
+      dependencies: ["eventBus"],
     }
   );
 

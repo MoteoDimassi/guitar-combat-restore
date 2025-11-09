@@ -531,12 +531,19 @@ export class AudioEngine {
    */
   setSampleRate(sampleRate) {
     // В Web Audio API частота дискретизации не может быть изменена после создания AudioContext
-    // Этот метод оставлен для совместимости, но не будет изменять sampleRate
-    console.warn(`AudioEngine: setSampleRate(${sampleRate}) called - sampleRate cannot be changed after AudioContext creation`);
-    console.warn(`Current sampleRate: ${this.audioContext ? this.audioContext.sampleRate : 'N/A'}`);
+    // Проверяем, пытаемся ли установить то же значение, что уже используется
+    if (this.audioContext && this.audioContext.sampleRate === sampleRate) {
+      // Значения совпадают, ничего не делаем
+      return;
+    }
     
     // Сохраняем в конфигурации для возможного использования при пересоздании AudioContext
     this.config.sampleRate = sampleRate;
+    
+    // Только выводим информационное сообщение, а не предупреждение
+    if (this.audioContext) {
+      console.info(`AudioEngine: Requested sampleRate(${sampleRate}) differs from current(${this.audioContext.sampleRate}) - using current sampleRate`);
+    }
   }
 
   /**
@@ -544,11 +551,20 @@ export class AudioEngine {
    */
   setBufferSize(bufferSize) {
     // В Web Audio API размер буфера не может быть изменен после создания AudioContext
-    // Этот метод оставлен для совместимости, но не будет изменять bufferSize
-    console.warn(`AudioEngine: setBufferSize(${bufferSize}) called - bufferSize cannot be changed after AudioContext creation`);
+    // Проверяем, пытаемся ли установить то же значение, что уже используется
+    if (this.audioContext && this.audioContext.baseLatency) {
+      // bufferSize не хранится в AudioContext, но мы можем сохранить значение
+      if (this.config.bufferSize === bufferSize) {
+        // Значения совпадают, ничего не делаем
+        return;
+      }
+    }
     
     // Сохраняем в конфигурации для возможного использования при пересоздании AudioContext
     this.config.bufferSize = bufferSize;
+    
+    // Только выводим информационное сообщение, а не предупреждение
+    console.info(`AudioEngine: bufferSize set to ${bufferSize} (note: bufferSize cannot be changed after AudioContext creation)`);
   }
 
   /**

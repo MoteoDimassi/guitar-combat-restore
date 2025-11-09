@@ -11,6 +11,7 @@ import ChordService from '../domain/services/ChordService.js';
 import BarService from '../domain/services/BarService.js';
 import PlaybackService from '../domain/services/PlaybackService.js';
 import TemplateService from '../domain/services/TemplateService.js';
+import ChordParserService from '../domain/services/ChordParserService.js';
 
 // Импорты инфраструктуры
 import AudioEngine from '../infrastructure/audio/AudioEngine.js';
@@ -186,13 +187,25 @@ export class ApplicationService {
       );
     }, { singleton: true });
 
+    // Инфраструктурные сервисы
+    this.serviceContainer.register('audioEngine', (container) => {
+      return new AudioEngine();
+    }, { singleton: true });
+
+    this.serviceContainer.register('audioService', (container) => {
+      return new AudioService(
+        container.get('eventBus'),
+        container.get('stateManager'),
+        container.get('audioEngine')
+      );
+    }, { singleton: true });
+
     this.serviceContainer.register('templateService', (container) => {
       return new TemplateService(container.get('templateRepository'));
     }, { singleton: true });
 
-    // Инфраструктурные сервисы
-    this.serviceContainer.register('audioEngine', (container) => {
-      return new AudioEngine();
+    this.serviceContainer.register('chordParserService', (container) => {
+      return new ChordParserService(container.get('eventBus'));
     }, { singleton: true });
 
     this.serviceContainer.register('storageService', (container) => {
@@ -212,6 +225,10 @@ export class ApplicationService {
       return new PlaybackController(container.get('eventBus'), container);
     }, { singleton: true });
 
+    this.serviceContainer.register('chordDisplay', (container) => {
+      return new ChordDisplay(document.getElementById('chordDisplay'), container.get('eventBus'));
+    }, { singleton: true });
+
     // UI компоненты
     this.serviceContainer.register('arrowDisplay', (container) => {
       return new ArrowDisplay(
@@ -221,13 +238,36 @@ export class ApplicationService {
       );
     }, { singleton: true });
 
-    this.serviceContainer.register('chordDisplay', (container) => {
-      return new ChordDisplay(document.getElementById('chordDisplay'), container.get('eventBus'));
-    }, { singleton: true });
-
     this.serviceContainer.register('barDisplay', (container) => {
       return new BarDisplay(document.getElementById('barDisplay'), container.get('eventBus'));
     }, { singleton: true });
+  }
+
+  /**
+   * Настройка связей между сервисами
+   */
+  setupServiceConnections() {
+    // Связываем AudioService с ChordParserService
+    const audioService = this.serviceContainer.get('audioService');
+    const chordParserService = this.serviceContainer.get('chordParserService');
+    
+    if (audioService && chordParserService) {
+      audioService.setChordParserService(chordParserService);
+      audioService.setServiceContainer(this.serviceContainer);
+    }
+    
+    // Связываем AudioService с ConfigService
+    const configService = this.serviceContainer.get('configService');
+    if (audioService && configService) {
+      audioService.setConfigService(configService);
+    }
+
+    // Связываем PlaybackService с ChordParserService
+    const playbackService = this.serviceContainer.get('playbackService');
+    if (playbackService && chordParserService) {
+      playbackService.setChordParserService(chordParserService);
+      playbackService.setServiceContainer(this.serviceContainer);
+    }
   }
 
   /**
@@ -240,7 +280,9 @@ export class ApplicationService {
       'chordService',
       'barService',
       'playbackService',
-      'templateService'
+      'templateService',
+      'chordParserService',
+      'audioService'
     ];
 
     for (const serviceName of services) {
@@ -255,6 +297,9 @@ export class ApplicationService {
         throw error;
       }
     }
+
+    // Настраиваем связи между сервисами после их инициализации
+    this.setupServiceConnections();
   }
 
   /**

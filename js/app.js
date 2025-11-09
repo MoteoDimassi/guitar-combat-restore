@@ -94,7 +94,12 @@ class GuitarCombatApp {
     container.get('audioEngine').initialize(container.get('eventBus'));
     
     // Инициализация аудио сервиса
-    container.get('audioService').initialize();
+    const audioService = container.get('audioService');
+    audioService.initialize();
+    
+    // Передаем chordParserService в audioService
+    const chordParserService = container.get('chordParserService');
+    audioService.setChordParserService(chordParserService);
     
     // Регистрируем файловое хранилище
     container.register('fileStorageAdapter', () => new FileStorageAdapter(), { singleton: true });

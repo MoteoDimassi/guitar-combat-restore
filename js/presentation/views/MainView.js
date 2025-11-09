@@ -6,6 +6,7 @@ class MainView {
     this.eventBus = eventBus;
     this.serviceContainer = serviceContainer;
     this.components = {};
+    this.currentBarIndex = 0;
     
     this.init();
   }
@@ -26,6 +27,9 @@ class MainView {
         this.serviceContainer.get('stateManager')
       );
       this.components.arrowDisplay.initialize();
+      
+      // Передаем serviceContainer в ArrowDisplay
+      this.components.arrowDisplay.setServiceContainer(this.serviceContainer);
       
       // Устанавливаем начальные статусы для кругов (первый заполнен, остальные пустые)
       const initialStatuses = ['played', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'];
@@ -52,6 +56,18 @@ class MainView {
       settingsBtn.addEventListener('click', () => {
         this.eventBus.emit('modal:open', { type: 'settings' });
       });
+    }
+
+    // Обработчик ввода аккордов
+    const chordsInput = this.container.querySelector('#chordsInput');
+    
+    if (chordsInput) {
+      chordsInput.addEventListener('input', (e) => {
+        this.handleChordsInput(e.target.value);
+      });
+
+      // Обрабатываем начальное значение при загрузке
+      this.handleChordsInput(chordsInput.value);
     }
     
     // Кнопки навигации по тактам
@@ -171,6 +187,16 @@ class MainView {
         this.components.arrowDisplay.updateAllCircleStatuses(statuses);
       }
     });
+
+    // Обработчик изменения аккордов
+    this.eventBus.on('chords:parsed', (data) => {
+      this.handleChordsParsed(data);
+    });
+
+    // Обработчик изменения текущего такта
+    this.eventBus.on('navigation:barChanged', (data) => {
+      this.handleBarChanged(data);
+    });
     
     // Обработчики событий от ArrowDisplay
     this.eventBus.on('beat:statusChanged', (data) => {
@@ -188,6 +214,98 @@ class MainView {
     this.eventBus.on('error:occurred', (data) => {
       this.showError(data.message);
     });
+  }
+
+  /**
+   * Обработка ввода аккордов
+   */
+  handleChordsInput(chordsString) {
+    try {
+      // Получаем ChordParserService
+      const chordParserService = this.serviceContainer.get('chordParserService');
+      
+      if (chordParserService) {
+        // Парсим аккорды и создаем такты
+        const result = chordParserService.parseChordsToBars(chordsString, 8);
+        
+        // Генерируем событие о результатах парсинга
+        this.eventBus.emit('chords:parsed', {
+          chordsString,
+          bars: result.bars,
+          chords: result.chords,
+          errors: result.errors,
+          totalBars: result.totalBars
+        });
+
+        // Обновляем отображение текущего аккорда
+        this.updateCurrentChordDisplay(result.chords, 0);
+        
+        console.log('MainView: Chords parsed successfully', result);
+      }
+    } catch (error) {
+      console.error('MainView: Error parsing chords', error);
+      this.showError(`Ошибка парсинга аккордов: ${error.message}`);
+    }
+  }
+
+  /**
+   * Обработка результатов парсинга аккордов
+   */
+  handleChordsParsed(data) {
+    const { bars, chords, errors } = data;
+    
+    // Показываем ошибки, если есть
+    if (errors && errors.length > 0) {
+      const errorMessages = errors.map(err => err.message).join(', ');
+      this.showError(`Ошибки в аккордах: ${errorMessages}`);
+    }
+    
+    // Обновляем состояние стрелочек для первого такта
+    if (bars.length > 0 && this.components.arrowDisplay) {
+      // Устанавливаем начальный статус для первого удара
+      const initialStatuses = ['played', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty', 'empty'];
+      this.components.arrowDisplay.updateAllCircleStatuses(initialStatuses);
+    }
+  }
+
+  /**
+   * Обработка изменения такта
+   */
+  handleBarChanged(data) {
+    const { barIndex, bar } = data;
+    
+    // Обновляем отображение аккорда для нового такта
+    if (bar && bar.chords && bar.chords.length > 0) {
+      this.updateCurrentChordDisplay(bar.chords, barIndex);
+    }
+  }
+
+  /**
+   * Обновление отображения текущего аккорда
+   */
+  updateCurrentChordDisplay(chords, barIndex) {
+    const chordDisplay = this.container.querySelector('#chordDisplay');
+    
+    if (chordDisplay && chords.length > 0) {
+      const currentChord = chords[0];
+      const nextChord = chords[1] || null;
+      
+      chordDisplay.innerHTML = `
+        <div class="flex items-center gap-3">
+          <div class="text-white text-lg font-medium">
+            Текущий: <span class="text-[#38e07b]">${currentChord.name}</span>
+          </div>
+          ${nextChord ? `
+            <div class="text-gray-400 text-sm">
+              Следующий: <span>${nextChord.name}</span>
+            </div>
+          ` : ''}
+          <div class="text-gray-500 text-xs">
+            Такт ${barIndex + 1}
+          </div>
+        </div>
+      `;
+    }
   }
 
   showError(message) {

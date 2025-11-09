@@ -1,4 +1,5 @@
 import { EventTypes } from "../../core/EventTypes.js";
+import MusicUtils from "../../shared/utils/MusicUtils.js";
 
 export class AudioService {
   constructor(eventBus, stateManager, audioEngine) {
@@ -6,10 +7,13 @@ export class AudioService {
     this.stateManager = stateManager;
     this.audioEngine = audioEngine;
     this.configService = null;
+    this.chordParserService = null;
 
     this.activePlayback = null;
     this.metronomeEnabled = false;
     this.currentPattern = null;
+    this.currentBarIndex = 0;
+    this.currentBeatIndex = 0;
 
     this.setupEventSubscriptions();
   }
@@ -20,6 +24,13 @@ export class AudioService {
   setConfigService(configService) {
     this.configService = configService;
     this.setupConfigSubscriptions();
+  }
+
+  /**
+   * Установка ChordParserService
+   */
+  setChordParserService(chordParserService) {
+    this.chordParserService = chordParserService;
   }
 
   /**
@@ -78,6 +89,25 @@ export class AudioService {
     // Генерация случайного боя
     this.eventBus.on("generate:strum", () => {
       this.generateRandomStrum();
+    });
+
+    // Изменение статуса стрелочки
+    this.eventBus.on("beat:statusChanged", (event) => {
+      this.handleBeatStatusChanged(event.data);
+    });
+
+    // Изменение текущего такта
+    this.eventBus.on("navigation:previousBar", () => {
+      this.handlePreviousBar();
+    });
+
+    this.eventBus.on("navigation:nextBar", () => {
+      this.handleNextBar();
+    });
+
+    // Воспроизведение бита
+    this.eventBus.on("playback:beat", (event) => {
+      this.handlePlaybackBeat(event.data);
     });
   }
 
@@ -329,6 +359,119 @@ export class AudioService {
 
     // Обновляем состояние воспроизведения
     this.stateManager.setState("playback.currentBeat", beatIndex);
+  }
+
+  /**
+   * Обработка изменения статуса стрелочки
+   */
+  handleBeatStatusChanged(data) {
+    const { beatIndex, status } = data;
+    console.log(`AudioService: Beat ${beatIndex} status changed to: ${status}`);
+  }
+
+  /**
+   * Обработка перехода к предыдущему такту
+   */
+  handlePreviousBar() {
+    if (this.currentBarIndex > 0) {
+      this.currentBarIndex--;
+      this.currentBeatIndex = 0;
+      console.log(`AudioService: Moved to previous bar ${this.currentBarIndex}`);
+    }
+  }
+
+  /**
+   * Обработка перехода к следующему такту
+   */
+  handleNextBar() {
+    if (this.chordParserService) {
+      const totalBars = this.chordParserService.getBarsCount();
+      if (this.currentBarIndex < totalBars - 1) {
+        this.currentBarIndex++;
+        this.currentBeatIndex = 0;
+        console.log(`AudioService: Moved to next bar ${this.currentBarIndex}`);
+      }
+    }
+  }
+
+  /**
+   * Обработка воспроизведения бита с аккордом
+   */
+  handlePlaybackBeat(data) {
+    const { beat } = data;
+    this.currentBeatIndex = beat;
+    
+    // Воспроизводим аккорд если есть ChordParserService
+    if (this.chordParserService) {
+      this.playChordForBeat(this.currentBarIndex, this.currentBeatIndex);
+    }
+  }
+
+  /**
+   * Воспроизведение аккорда для указанного такта и удара
+   */
+  async playChordForBeat(barIndex, beatIndex) {
+    if (!this.chordParserService) {
+      return;
+    }
+
+    try {
+      // Получаем статус стрелочки из ArrowDisplay
+      const arrowDisplay = this.getArrowDisplay();
+      if (!arrowDisplay) {
+        return;
+      }
+
+      const circleStatus = arrowDisplay.getCircleStatus(beatIndex);
+      
+      // Воспроизводим только если стрелочка помечена как 'played'
+      if (circleStatus === 'played') {
+        // Получаем ноты для аккорда
+        const notes = this.chordParserService.getNotesForBeat(barIndex, beatIndex);
+        
+        if (notes.length > 0) {
+          // Воспроизводим ноты аккорда
+          await this.audioEngine.playChord(notes, 2, {
+            volume: 1.0,
+            arpeggio: false,
+            spread: 0.05
+          });
+          
+          console.log(`AudioService: Played chord for bar ${barIndex}, beat ${beatIndex}:`, notes);
+        }
+      }
+    } catch (error) {
+      console.error(`AudioService: Error playing chord for bar ${barIndex}, beat ${beatIndex}:`, error);
+    }
+  }
+
+  /**
+   * Получение компонента ArrowDisplay
+   */
+  getArrowDisplay() {
+    // Пытаемся получить ArrowDisplay из ServiceContainer
+    if (this.serviceContainer) {
+      try {
+        return this.serviceContainer.get('arrowDisplay');
+      } catch (error) {
+        console.warn('AudioService: ArrowDisplay not found in ServiceContainer');
+      }
+    }
+    
+    // Альтернативный способ - получить из DOM
+    const beatRow = document.getElementById('beatRow');
+    if (beatRow && beatRow.arrowDisplay) {
+      return beatRow.arrowDisplay;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Установка ServiceContainer для доступа к другим сервисам
+   */
+  setServiceContainer(serviceContainer) {
+    this.serviceContainer = serviceContainer;
   }
 
   /**

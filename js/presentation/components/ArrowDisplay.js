@@ -5,6 +5,7 @@ class ArrowDisplay {
     this.container = container;
     this.eventBus = eventBus;
     this.stateManager = stateManager;
+    this.serviceContainer = null;
     this.arrows = [];
     this.currentBeat = 0;
     this.isPlaying = false;
@@ -18,6 +19,15 @@ class ArrowDisplay {
     this.circleStatuses = new Array(8).fill('empty');
     // Флаг наличия текста песни
     this.hasSongText = false;
+    // Текущий такт
+    this.currentBarIndex = 0;
+  }
+
+  /**
+   * Установка ServiceContainer
+   */
+  setServiceContainer(serviceContainer) {
+    this.serviceContainer = serviceContainer;
   }
 
   async initialize() {
@@ -295,10 +305,23 @@ class ArrowDisplay {
     
     this.updateCircleStatus(beatIndex, newStatus);
     
+    // Обновляем статус в ChordParserService
+    if (this.serviceContainer) {
+      try {
+        const chordParserService = this.serviceContainer.get('chordParserService');
+        if (chordParserService) {
+          chordParserService.setBeatStatus(this.currentBarIndex, beatIndex, newStatus);
+        }
+      } catch (error) {
+        console.warn('ArrowDisplay: Failed to update beat status in ChordParserService:', error);
+      }
+    }
+    
     // Генерируем событие об изменении статуса
     this.eventBus.emit('beat:statusChanged', {
       beatIndex,
-      status: newStatus
+      status: newStatus,
+      barIndex: this.currentBarIndex
     });
   }
 
@@ -483,6 +506,20 @@ class ArrowDisplay {
         }
       });
     }
+  }
+
+  /**
+   * Установка текущего индекса такта
+   */
+  setCurrentBarIndex(barIndex) {
+    this.currentBarIndex = barIndex;
+  }
+
+  /**
+   * Получение текущего индекса такта
+   */
+  getCurrentBarIndex() {
+    return this.currentBarIndex;
   }
 
   destroy() {

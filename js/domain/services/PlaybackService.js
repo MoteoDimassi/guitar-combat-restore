@@ -12,6 +12,8 @@ class PlaybackService {
     this.audioEngine = audioEngine;
     this.barRepository = barRepository;
     this.eventBus = eventBus;
+    this.serviceContainer = null;
+    this.chordParserService = null;
     
     this.isPlaying = false;
     this.currentBar = 0;
@@ -19,6 +21,20 @@ class PlaybackService {
     this.tempo = 120;
     this.playbackInterval = null;
     this.currentPattern = null;
+  }
+
+  /**
+   * Установка ServiceContainer
+   */
+  setServiceContainer(serviceContainer) {
+    this.serviceContainer = serviceContainer;
+  }
+
+  /**
+   * Установка ChordParserService
+   */
+  setChordParserService(chordParserService) {
+    this.chordParserService = chordParserService;
   }
 
   async play() {
@@ -57,42 +73,58 @@ class PlaybackService {
     const playBeat = async () => {
       if (!this.isPlaying) return;
       
-      const currentBar = bars[this.currentBar];
-      if (!currentBar) {
-        this.nextBar(bars);
-        return;
+      // Генерируем событие о текущем бите
+      if (this.eventBus) {
+        this.eventBus.emit(EventTypes.PLAYBACK_BEAT, {
+          bar: this.currentBar,
+          beat: this.currentBeat,
+          tempo: this.tempo
+        });
       }
       
-      // Проверяем, есть ли у текущего такта beatUnits
-      let beatUnit = null;
-      if (currentBar.beatUnits && currentBar.beatUnits.length > 0) {
-        beatUnit = currentBar.beatUnits[this.currentBeat];
+      // Если есть ChordParserService, используем его для воспроизведения
+      if (this.chordParserService) {
+        // Воспроизведение обрабатывается в AudioService
+        // Здесь только обновляем позицию
       } else {
-        // Если beatUnits нет, используем старую логику с chords
-        const chordsOnBeat = currentBar.chords ? currentBar.chords.filter(chord => chord.position === this.currentBeat) : [];
-        if (chordsOnBeat.length > 0) {
-          // Создаем временный BeatUnit для совместимости
-          beatUnit = {
-            isPlayed: () => true,
-            isMuted: () => false,
-            getChord: () => chordsOnBeat[0]
-          };
+        // Старая логика воспроизведения для совместимости
+        const currentBar = bars[this.currentBar];
+        if (!currentBar) {
+          this.nextBar(bars);
+          return;
         }
-      }
-      
-      if (beatUnit && beatUnit.isPlayed()) {
-        // Воспроизводим ноту
-        const note = beatUnit.isMuted() ? "Mute" : "C";
-        const volume = beatUnit.isMuted() ? 0.3 : 1.0;
         
-        try {
-          await this.audioEngine.playNote(note, 1, {
-            volume,
-            startTime: 0,
-            duration: 0.1
-          });
-        } catch (error) {
-          console.error('Error playing note:', error);
+        // Проверяем, есть ли у текущего такта beatUnits
+        let beatUnit = null;
+        if (currentBar.beatUnits && currentBar.beatUnits.length > 0) {
+          beatUnit = currentBar.beatUnits[this.currentBeat];
+        } else {
+          // Если beatUnits нет, используем старую логику с chords
+          const chordsOnBeat = currentBar.chords ? currentBar.chords.filter(chord => chord.position === this.currentBeat) : [];
+          if (chordsOnBeat.length > 0) {
+            // Создаем временный BeatUnit для совместимости
+            beatUnit = {
+              isPlayed: () => true,
+              isMuted: () => false,
+              getChord: () => chordsOnBeat[0]
+            };
+          }
+        }
+        
+        if (beatUnit && beatUnit.isPlayed()) {
+          // Воспроизводим ноту
+          const note = beatUnit.isMuted() ? "Mute" : "C";
+          const volume = beatUnit.isMuted() ? 0.3 : 1.0;
+          
+          try {
+            await this.audioEngine.playNote(note, 1, {
+              volume,
+              startTime: 0,
+              duration: 0.1
+            });
+          } catch (error) {
+            console.error('Error playing note:', error);
+          }
         }
       }
       
@@ -100,11 +132,24 @@ class PlaybackService {
       this.currentBeat++;
       
       // Переходим к следующему такту если нужно
-      let beatCount = 4; // Значение по умолчанию
-      if (currentBar.beatUnits && currentBar.beatUnits.length > 0) {
-        beatCount = currentBar.beatUnits.length;
-      } else if (currentBar.beats) {
-        beatCount = currentBar.beats;
+      let beatCount = 8; // Значение по умолчанию для стрелочек
+      
+      if (this.chordParserService) {
+        // Получаем количество ударов из ChordParserService
+        const currentBarData = this.chordParserService.getBarByIndex(this.currentBar);
+        if (currentBarData && currentBarData.beatUnits) {
+          beatCount = currentBarData.beatUnits.length;
+        }
+      } else {
+        // Старая логика для совместимости
+        const currentBar = bars[this.currentBar];
+        if (currentBar) {
+          if (currentBar.beatUnits && currentBar.beatUnits.length > 0) {
+            beatCount = currentBar.beatUnits.length;
+          } else if (currentBar.beats) {
+            beatCount = currentBar.beats;
+          }
+        }
       }
       
       if (this.currentBeat >= beatCount) {
