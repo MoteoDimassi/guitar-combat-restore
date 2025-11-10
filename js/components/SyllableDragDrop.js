@@ -46,6 +46,7 @@ export class SyllableDragDrop {
    * Создаёт массив всех слогов из текста песни
    */
   createAllSyllablesFromText() {
+    // Очищаем массив перед созданием новых слогов
     this.allSyllables = [];
     
     const songContent = document.getElementById('song-content');
@@ -83,9 +84,10 @@ export class SyllableDragDrop {
       syllableElements.forEach((syllableEl, arrowIndex) => {
         const syllable = {
           id: `syllable-${globalSyllableId++}`,
-          text: syllableEl.textContent || '',
+          text: (syllableEl.textContent || '').trim(),
           barIndex: barIndex,
           arrowIndex: arrowIndex,
+          // Сохраняем данные для внутреннего использования, но не отображаем их
           word: syllableEl.getAttribute('data-word') || '',
           syllableIndex: syllableEl.getAttribute('data-syllable-index') || '0'
         };
@@ -124,9 +126,6 @@ export class SyllableDragDrop {
     
     syllable.style.cursor = 'grab';
     syllable.setAttribute('draggable', 'true');
-    
-    // Создаем tooltip для слога
-    this.createTooltip(syllable);
     
     syllable.addEventListener('dragstart', (e) => {
       this.draggedElement = syllable;
@@ -255,6 +254,17 @@ export class SyllableDragDrop {
         // Перетаскивание уже размещенного слога
         const syllable = this.allSyllables.find(s => s && s.id === this.draggedSyllableId);
         if (syllable) {
+          // Проверяем, есть ли уже слог в целевой позиции
+          const existingSyllableIndex = this.allSyllables.findIndex(s =>
+            s && s.barIndex === syllable.barIndex && s.arrowIndex === arrowIndex && s.id !== this.draggedSyllableId
+          );
+          
+          // Если в целевой позиции уже есть другой слог, удаляем его
+          if (existingSyllableIndex !== -1) {
+            this.allSyllables.splice(existingSyllableIndex, 1);
+          }
+          
+          // Обновляем позицию перетаскиваемого слога
           syllable.arrowIndex = arrowIndex;
           this.saveSyllablesToStorage();
           
@@ -287,9 +297,42 @@ export class SyllableDragDrop {
     const barSyllables = this.allSyllables.filter(s => s && s.barIndex === barIndex);
     if (!barSyllables || barSyllables.length === 0) return;
 
-    // Размещаем каждый слог в соответствующей drop-зоне
+    // Создаем карту для отслеживания занятых позиций
+    const occupiedPositions = new Set();
+
+    // Группируем слоги по позициям, чтобы избежать дублирования
+    const syllablesByPosition = new Map();
+    
     barSyllables.forEach(syllable => {
       if (!syllable) return;
+      
+      const positionKey = `${barIndex}-${syllable.arrowIndex}`;
+      
+      // Если для этой позиции еще нет слога, добавляем текущий
+      if (!syllablesByPosition.has(positionKey)) {
+        syllablesByPosition.set(positionKey, syllable);
+      } else {
+        // Если уже есть слог для этой позиции, оставляем только первый (самый старый)
+        // и удаляем дубликаты из массива allSyllables
+        const existingSyllable = syllablesByPosition.get(positionKey);
+        const duplicateIndex = this.allSyllables.findIndex(s =>
+          s && s.id === syllable.id &&
+          s.barIndex === syllable.barIndex &&
+          s.arrowIndex === syllable.arrowIndex
+        );
+        
+        if (duplicateIndex !== -1) {
+          this.allSyllables.splice(duplicateIndex, 1);
+        }
+      }
+    });
+
+    // Размещаем каждый уникальный слог в соответствующей drop-зоне
+    syllablesByPosition.forEach(syllable => {
+      if (!syllable) return;
+      
+      const positionKey = `${barIndex}-${syllable.arrowIndex}`;
+      occupiedPositions.add(positionKey);
       
       const dropZone = this.beatRow.element.querySelector(
         `.syllable-drop-zone[data-arrow-index="${syllable.arrowIndex}"]`
@@ -298,6 +341,11 @@ export class SyllableDragDrop {
         this.renderSyllableInZone(dropZone, syllable);
       }
     });
+    
+    // Сохраняем изменения после удаления дубликатов
+    if (syllablesByPosition.size < barSyllables.length) {
+      this.saveSyllablesToStorage();
+    }
   }
 
   /**
@@ -308,18 +356,15 @@ export class SyllableDragDrop {
   renderSyllableInZone(dropZone, syllable) {
     if (!dropZone || !syllable) return;
     
-    const text = syllable.text || '';
+    // Убираем возможные дубликаты в тексте слога
+    const text = (syllable.text || '').trim();
     const id = syllable.id || '';
-    const word = syllable.word || '';
-    const syllableIndex = syllable.syllableIndex || '0';
     
-    // Добавляем атрибуты данных для дополнительной информации
+    // Отображаем только текст слога без дополнительной информации
     dropZone.innerHTML = `
       <div class="placed-syllable" draggable="true"
            data-syllable-id="${id}"
-           data-word="${word}"
-           data-syllable-index="${syllableIndex}"
-           title="Слово: ${word}, Индекс слога: ${syllableIndex}">
+           title="${text}">
         <span class="syllable-text">${text}</span>
         <button class="remove-syllable" data-syllable-id="${id}" title="Удалить слог">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -429,7 +474,16 @@ export class SyllableDragDrop {
    * Пересоздаёт слоги из текста (например, при обновлении текста песни)
    */
   recreateSyllables() {
-    this.createAllSyllablesFromText();
+    // Проверяем, есть ли уже сохраненные слоги
+    const savedSyllables = this.loadSyllablesFromStorage();
+    
+    if (savedSyllables && savedSyllables.length > 0) {
+      // Если есть сохраненные слоги, используем их вместо создания новых
+      this.allSyllables = savedSyllables;
+    } else {
+      // Иначе создаем новые слоги из текста
+      this.createAllSyllablesFromText();
+    }
   }
 
   /**
@@ -455,7 +509,7 @@ export class SyllableDragDrop {
   /**
    * Создает объект слога из DOM-элемента текста песни
    * @param {HTMLElement} element - DOM-элемент слога
-   * @returns {Object} объект слога
+   * @returns {Object|null} объект слога или null, если такой слог уже существует
    */
   createSyllableFromText(element) {
     if (!element) return null;
@@ -464,14 +518,28 @@ export class SyllableDragDrop {
     const currentBarIndex = window.app && window.app.state ?
       window.app.state.currentBarIndex || 0 : 0;
     
+    // Получаем текст слога, убирая возможные дубликаты
+    const syllableText = (element.textContent || '').trim();
+    
+    // Проверяем, нет ли уже такого же слога в этом такте (с любым arrowIndex)
+    const existingSyllable = this.allSyllables.find(s =>
+      s && s.barIndex === currentBarIndex && s.text === syllableText
+    );
+    
+    // Если такой слог уже существует, возвращаем его вместо создания нового
+    if (existingSyllable) {
+      return existingSyllable;
+    }
+    
     // Генерируем уникальный ID
     const id = `syllable-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
     return {
       id: id,
-      text: element.textContent || '',
+      text: syllableText,
       barIndex: currentBarIndex,
       arrowIndex: null, // Будет установлен при drop
+      // Сохраняем данные для внутреннего использования, но не отображаем их
       word: element.getAttribute('data-word') || '',
       syllableIndex: element.getAttribute('data-syllable-index') || '0'
     };
@@ -485,6 +553,32 @@ export class SyllableDragDrop {
    */
   handleTextSyllableDrop(event, dropZone, arrowIndex) {
     if (!this.draggedSyllableData) return;
+    
+    const currentBarIndex = this.draggedSyllableData.barIndex;
+    const syllableText = this.draggedSyllableData.text;
+    
+    // Проверяем, есть ли уже такой же слог в этой позиции
+    const existingSyllableIndex = this.allSyllables.findIndex(s =>
+      s && s.barIndex === currentBarIndex &&
+      s.arrowIndex === arrowIndex &&
+      s.text === syllableText
+    );
+    
+    // Если такой же слог уже есть в этой позиции, просто перерисовываем и выходим
+    if (existingSyllableIndex !== -1) {
+      this.renderBarSyllables(currentBarIndex);
+      return;
+    }
+    
+    // Проверяем, есть ли другой слог в этой позиции (с другим текстом)
+    const otherSyllableIndex = this.allSyllables.findIndex(s =>
+      s && s.barIndex === currentBarIndex && s.arrowIndex === arrowIndex
+    );
+    
+    // Если в этой позиции есть другой слог, удаляем его
+    if (otherSyllableIndex !== -1) {
+      this.allSyllables.splice(otherSyllableIndex, 1);
+    }
     
     // Устанавливаем индекс стрелки
     this.draggedSyllableData.arrowIndex = arrowIndex;
@@ -551,27 +645,5 @@ export class SyllableDragDrop {
     });
   }
 
-  /**
-   * Создает tooltip для слога с дополнительной информацией
-   * @param {HTMLElement} syllable - элемент слога
-   */
-  createTooltip(syllable) {
-    // Проверяем, есть ли уже tooltip
-    if (syllable.querySelector('.syllable-tooltip')) {
-      return;
-    }
-
-    const word = syllable.getAttribute('data-word') || '';
-    const syllableIndex = syllable.getAttribute('data-syllable-index') || '0';
-    const syllableText = syllable.getAttribute('data-syllable-text') || syllable.textContent || '';
-
-    // Создаем tooltip
-    const tooltip = document.createElement('div');
-    tooltip.className = 'syllable-tooltip';
-    tooltip.textContent = `Слово: "${word}", Слог: "${syllableText}" (${parseInt(syllableIndex) + 1})`;
-
-    // Добавляем tooltip в слог
-    syllable.appendChild(tooltip);
-  }
 }
 

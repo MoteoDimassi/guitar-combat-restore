@@ -20,23 +20,35 @@ export class SyllableHighlighter {
 
   processText(text) {
     if (!text) return '';
-    const lines = text.split('\n');
+    // Убираем лишние пробелы в начале и конце текста
+    const cleanText = text.trim();
+    if (!cleanText) return '';
+    
+    const lines = cleanText.split('\n');
     const processedLines = lines.map(line => this.processLine(line));
     return processedLines.join('<br>');
   }
 
   processLine(line) {
+    // Убираем лишние пробелы в начале и конце строки
+    const cleanLine = line.trim();
+    if (!cleanLine) return '';
+    
     // разбиваем на слова/пробелы (пробелы сохраняем)
-    const words = line.split(/(\s+)/);
+    const words = cleanLine.split(/(\s+)/);
     return words.map(word => word.trim() === '' ? word : this.processWord(word)).join('');
   }
 
   processWord(rawWord) {
+    // Убираем лишние пробелы в начале и конце слова
+    const cleanRawWord = rawWord.trim();
+    if (!cleanRawWord) return '';
+    
     // Сохраняем лидирующую и конечную пунктуацию, чтобы hyphenation применялся только к "телу" слова.
-    const m = rawWord.match(/^([^A-Za-zА-Яа-яЁё0-9']*)([A-Za-zА-Яа-яЁё0-9' -]+?)([^A-Za-zА-Яа-яЁё0-9']*)$/u);
+    const m = cleanRawWord.match(/^([^A-Za-zА-Яа-яЁё0-9']*)([A-Za-zА-Яа-яЁё0-9' -]+?)([^A-Za-zА-Яа-яЁё0-9']*)$/u);
     if (!m) {
       // нераспознан — просто экранируем и вернём без span (может быть знак препинания)
-      return this.escapeHtml(rawWord);
+      return this.escapeHtml(cleanRawWord);
     }
     const [, prefix = '', wordBody = '', suffix = ''] = m;
 
@@ -54,20 +66,28 @@ export class SyllableHighlighter {
 
     // Если один слог, создаём один span
     if (syllables.length === 1) {
-      return `${this.escapeHtml(prefix)}<span class="syllable" data-syllable-text="${this.escapeHtml(wordBody)}" data-word="${this.escapeHtml(wordBody)}" data-syllable-index="0">${this.escapeHtml(wordBody)}</span>${this.escapeHtml(suffix)}`;
+      const cleanSyllable = syllables[0].trim();
+      return `${this.escapeHtml(prefix)}<span class="syllable" data-syllable-text="${this.escapeHtml(cleanSyllable)}" data-word="${this.escapeHtml(wordBody)}" data-syllable-index="0">${this.escapeHtml(cleanSyllable)}</span>${this.escapeHtml(suffix)}`;
     }
 
     // Несколько слогов - создаём span для каждого
-    const spans = syllables.map((s, i) => `<span class="syllable" data-syllable-text="${this.escapeHtml(s)}" data-word="${this.escapeHtml(wordBody)}" data-syllable-index="${i}">${this.escapeHtml(s)}</span>`).join('');
+    const spans = syllables.map((s, i) => {
+      const cleanSyllable = s.trim();
+      return `<span class="syllable" data-syllable-text="${this.escapeHtml(cleanSyllable)}" data-word="${this.escapeHtml(wordBody)}" data-syllable-index="${i}">${this.escapeHtml(cleanSyllable)}</span>`;
+    }).join('');
     return `${this.escapeHtml(prefix)}${spans}${this.escapeHtml(suffix)}`;
   }
 
   splitIntoSyllables(word) {
   if (!word) return [word];
 
+  // Убираем лишние пробелы в начале и конце слова
+  const cleanWord = word.trim();
+  if (!cleanWord) return [];
+
   // Фильтр: исключаем служебные слова, цифры, знаки препинания и тире
   const excludedWords = ['припев', 'предприпев', 'куплет', 'проигрыш'];
-  const wordLower = word.toLowerCase().trim();
+  const wordLower = cleanWord.toLowerCase();
   
   // Проверяем, является ли слово служебным
   if (excludedWords.includes(wordLower)) {
@@ -75,29 +95,29 @@ export class SyllableHighlighter {
   }
   
   // Исключаем слова, состоящие только из цифр
-  if (/^\d+$/.test(word)) {
+  if (/^\d+$/.test(cleanWord)) {
     return [];
   }
   
   // Исключаем знаки препинания и тире
-  if (/^[\p{P}\p{S}\-–—−]+$/u.test(word)) {
+  if (/^[\p{P}\p{S}\-–—−]+$/u.test(cleanWord)) {
     return [];
   }
 
-  const isRussian = /[а-яё]/i.test(word);
+  const isRussian = /[а-яё]/i.test(cleanWord);
   
   // Проверка на односимвольные предлоги/союзы - не делим их
   const singleConsonantPrepositions = ['в', 'с', 'к', 'у', 'о', 'и', 'а', 'я'];
-  if (word.length === 1 && isRussian) {
+  if (cleanWord.length === 1 && isRussian) {
     // Односимвольное слово остаётся как есть
-    return [word];
+    return [cleanWord];
   }
 
   // 1. hyphenation (если словарь дал результат — используем его)
   if ((isRussian && this.hyphenRu) || (!isRussian && this.hyphenEn)) {
     try {
       const hyphenator = isRussian ? this.hyphenRu : this.hyphenEn;
-      const hyphenated = hyphenator(word);
+      const hyphenated = hyphenator(cleanWord);
       if (typeof hyphenated === 'string' && hyphenated.includes(this.softHyphen)) {
         const sylls = hyphenated.split(this.softHyphen).filter(Boolean);
         if (sylls.length > 1) return this.mergeSingleConsonants(sylls, isRussian);
@@ -110,9 +130,9 @@ export class SyllableHighlighter {
   // 2. fallback: делим по одной гласной
   const vowels = isRussian ? 'аеёиоуыэюя' : 'aeiouy';
   const regex = new RegExp(`[^${vowels}]*[${vowels}]{1}[^${vowels}]*`, 'gi');
-  let sylls = word.match(regex);
+  let sylls = cleanWord.match(regex);
 
-  if (!sylls || sylls.length <= 1) return [word];
+  if (!sylls || sylls.length <= 1) return [cleanWord];
 
   // 3. дополнительная обработка окончания:
   // если слово заканчивается гласной, а последний слог длиннее 1 символа,
@@ -145,7 +165,7 @@ export class SyllableHighlighter {
     const result = [];
 
     for (let i = 0; i < syllables.length; i++) {
-      const current = syllables[i];
+      const current = syllables[i].trim(); // Убираем возможные пробелы
       
       // Проверяем, является ли текущий слог одиночной согласной
       if (current.length === 1 && !vowelRegex.test(current)) {

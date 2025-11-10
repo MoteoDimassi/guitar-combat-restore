@@ -268,28 +268,32 @@ export class TextUpdateManager {
   createSyllablesForWord(word) {
     if (!word) return [];
 
+    // Убираем лишние пробелы
+    const cleanWord = word.trim();
+    if (!cleanWord) return [];
+
     // Простая логика разбивки на слоги
     // В реальной реализации здесь должен быть вызов SyllableHighlighter
     const vowels = /[аеёиоуыэюя]/i;
     const syllables = [];
     let currentSyllable = '';
 
-    for (let i = 0; i < word.length; i++) {
-      currentSyllable += word[i];
+    for (let i = 0; i < cleanWord.length; i++) {
+      currentSyllable += cleanWord[i];
       
       // Если следующий символ - гласная, завершаем слог
-      if (i < word.length - 1 && vowels.test(word[i + 1])) {
-        syllables.push(currentSyllable);
+      if (i < cleanWord.length - 1 && vowels.test(cleanWord[i + 1])) {
+        syllables.push(currentSyllable.trim());
         currentSyllable = '';
       }
     }
 
     // Добавляем последний слог
     if (currentSyllable) {
-      syllables.push(currentSyllable);
+      syllables.push(currentSyllable.trim());
     }
 
-    return syllables.length > 0 ? syllables : [word];
+    return syllables.length > 0 ? syllables : [cleanWord];
   }
 
   /**

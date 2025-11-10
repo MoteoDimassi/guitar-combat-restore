@@ -122,7 +122,7 @@ export class BarSyllableDisplay {
     const lineElement = syllable.closest('div') || syllable.parentElement;
     const lineText = lineElement ? lineElement.textContent : '';
     
-    // Устанавливаем data-атрибуты
+    // Устанавливаем data-атрибуты для внутреннего использования, но не для отображения
     syllable.setAttribute('data-syllable-text', syllableText);
     syllable.setAttribute('data-word', lineText);
     syllable.setAttribute('data-syllable-index', syllableIndex.toString());
