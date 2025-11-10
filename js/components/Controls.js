@@ -52,6 +52,22 @@ export class Controls {
       });
     }
 
+    // BPM increment/decrement buttons
+    const bpmIncrement = document.getElementById('bpmIncrement');
+    const bpmDecrement = document.getElementById('bpmDecrement');
+    
+    if (bpmIncrement) {
+      bpmIncrement.addEventListener('click', () => {
+        this.adjustBpm(1);
+      });
+    }
+    
+    if (bpmDecrement) {
+      bpmDecrement.addEventListener('click', () => {
+        this.adjustBpm(-1);
+      });
+    }
+
     // Add song text button
     const addSongTextBtn = document.getElementById('addSongTextBtn');
     if (addSongTextBtn) {
@@ -75,7 +91,11 @@ export class Controls {
     // Initialize circle states only if not set or incorrect length
     const currentCircleStates = this.beatRow.getCircleStates();
     if (!currentCircleStates || currentCircleStates.length !== n) {
-      const circleStates = beats.map(beat => beat.play || false);
+      const circleStates = beats.map(beat => {
+        // Преобразуем в числовое значение: 0 или 1
+        if (typeof beat.play === 'number') return beat.play;
+        return beat.play ? 1 : 0;
+      });
       this.beatRow.setCircleStates(circleStates);
     }
 
@@ -128,9 +148,9 @@ export class Controls {
   makeBeats(n) {
     const arr = [];
     for (let i = 0; i < n; i++) {
-      arr.push({ direction: i % 2 === 0 ? 'down' : 'up', play: false });
+      arr.push({ direction: i % 2 === 0 ? 'down' : 'up', play: 0 }); // 0 = не играем
     }
-    arr[0].play = true; // First beat is always playable
+    arr[0].play = 1; // First beat is always playable (1 = играем)
     return arr;
   }
 
@@ -140,9 +160,9 @@ export class Controls {
    */
   generateRandom() {
     const beats = this.makeBeats(this.count);
-    const circleStates = [true]; // First circle always enabled
+    const circleStates = [1]; // First circle always enabled (1 = играем)
     for (let i = 1; i < beats.length; i++) {
-      const shouldPlay = Math.random() > 0.5;
+      const shouldPlay = Math.random() > 0.5 ? 1 : 0; // 1 = играем, 0 = не играем
       beats[i].play = shouldPlay;
       circleStates.push(shouldPlay);
     }
@@ -167,6 +187,31 @@ export class Controls {
     if (window.app) {
       window.app.state.bpm = Number(bpmValue) || 90;
     }
+  }
+
+  /**
+   * Adjusts the BPM value by a specified delta.
+   * Respects the min (40) and max (200) limits.
+   * @param {number} delta - Amount to adjust BPM by (positive or negative)
+   */
+  adjustBpm(delta) {
+    const bpmSlider = document.getElementById('bpm');
+    if (!bpmSlider) return;
+
+    const currentBpm = Number(bpmSlider.value);
+    const minBpm = Number(bpmSlider.min);
+    const maxBpm = Number(bpmSlider.max);
+    
+    let newBpm = currentBpm + delta;
+    
+    // Clamp value within min/max range
+    newBpm = Math.max(minBpm, Math.min(maxBpm, newBpm));
+    
+    // Update slider value
+    bpmSlider.value = newBpm;
+    
+    // Update label and global state
+    this.updateBpmLabel();
   }
 
   /**

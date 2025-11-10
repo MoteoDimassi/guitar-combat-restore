@@ -32,6 +32,7 @@ export class Playback {
     const bpm = Number(document.getElementById('bpm').value) || 90;
     const count = window.app ? window.app.state.count : 8;
     const currentIndex = window.app ? window.app.state.currentIndex : 0;
+    const currentBarIndex = window.app ? window.app.state.currentBarIndex : 0;
 
     // Используем метроном вместо собственной логики
     if (window.app && window.app.metronome) {
@@ -54,21 +55,36 @@ export class Playback {
 
       // ДОБАВИТЬ: Асинхронный запуск с обработкой ошибок
       try {
-        await window.app.metronome.start();
+        // Начинаем воспроизведение с текущего такта
+        await window.app.metronome.start(currentBarIndex);
+
+        // Переменная для отслеживания предыдущего такта
+        let previousBarIndex = currentBarIndex;
 
         // Подписываемся на события метронома
-        window.app.metronome.onBeatCallback = (arrowIndex) => {
+        window.app.metronome.onBeatCallback = (arrowIndex, barIndex) => {
           // Передаем информацию в beatRow для правильной подсветки
           this.beatRow.setCurrentIndex(arrowIndex);
 
           // Обновляем отображение аккордов при каждом ударе
           const ratio = window.app.metronome.getBeatRatio();
           const beatIndex = Math.floor(arrowIndex / ratio);
-          window.app.metronome.updateChordDisplay(arrowIndex, beatIndex);
+          window.app.metronome.updateChordDisplay(arrowIndex, barIndex);
+
+          // Если изменился такт, обновляем слоги
+          if (barIndex !== previousBarIndex) {
+            previousBarIndex = barIndex;
+            
+            // Обновляем текст под стрелочками для нового такта
+            if (window.app.barSyllableDisplay) {
+              window.app.barSyllableDisplay.goToBar(barIndex);
+            }
+          }
 
           // Обновление глобального состояния
           if (window.app) {
             window.app.state.currentIndex = arrowIndex;
+            window.app.state.currentBarIndex = barIndex;
             window.app.state.playing = this.playing;
           }
         };
@@ -97,6 +113,11 @@ export class Playback {
     // Обновление глобального состояния
     if (window.app) {
       window.app.state.playing = this.playing;
+      
+      // ИСПРАВЛЕНИЕ БАГА: Обновляем состояние кнопок навигации при остановке
+      if (window.app.lineNavigation) {
+        window.app.lineNavigation.updateButtonStates();
+      }
     }
   }
 

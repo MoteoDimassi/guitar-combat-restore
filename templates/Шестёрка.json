@@ -1,0 +1,39 @@
+{
+  "beats": [
+    {
+      "direction": "down",
+      "play": 1
+    },
+    {
+      "direction": "up",
+      "play": 0
+    },
+    {
+      "direction": "down",
+      "play": 1
+    },
+    {
+      "direction": "up",
+      "play": 1
+    },
+    {
+      "direction": "down",
+      "play": 0
+    },
+    {
+      "direction": "up",
+      "play": 1
+    },
+    {
+      "direction": "down",
+      "play": 1
+    },
+    {
+      "direction": "up",
+      "play": 1
+    }
+  ],
+  "bpm": 100,
+  "speed": 100,
+  "timestamp": "2025-10-09T07:47:24.576Z"
+}

@@ -104,18 +104,33 @@ export class TemplateManager {
    */
   async applyTemplate(templateName) {
     try {
+      // Сохраняем текущие слоги перед применением шаблона
+      const currentSyllables = this.saveCurrentSyllables();
+
       // Загружаем данные шаблона
       const templateData = await this.loader.loadTemplate(templateName);
 
       // Используем ImportUtils для применения шаблона (уже готовый и протестированный алгоритм)
-      this.importUtils.importData(templateData);
+      // Передаем флаг isFromTemplate = true, чтобы аккорды не импортировались
+      this.importUtils.importData(templateData, true);
+
+      // Восстанавливаем слоги после применения шаблона
+      this.restoreSyllables(currentSyllables);
 
       // Обновляем отображение аккордов после применения шаблона
+      // Используем текущие аккорды пользователя (не из шаблона)
       setTimeout(() => {
         if (window.app && window.app.chordDisplay && window.app.metronome) {
-          const chords = window.app.metronome.getChords();
-          if (chords && chords.length > 0) {
-            window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+          // Получаем аккорды из поля ввода пользователя
+          const chordsInput = document.getElementById('chordsInput');
+          if (chordsInput && chordsInput.value.trim()) {
+            window.app.metronome.updateChords(chordsInput.value);
+            const chords = window.app.metronome.getChords();
+            if (chords && chords.length > 0) {
+              window.app.chordDisplay.setChords(chords[0], chords[1] || chords[0]);
+            } else {
+              window.app.chordDisplay.setChords('--', '--');
+            }
           } else {
             window.app.chordDisplay.setChords('--', '--');
           }
@@ -172,5 +187,34 @@ export class TemplateManager {
   clearCache() {
     this.loader.clearCache();
     this.availableTemplates = [];
+  }
+
+  /**
+   * Сохраняет текущие слоги перед применением шаблона
+   * @returns {Array} массив сохранённых слогов
+   */
+  saveCurrentSyllables() {
+    if (window.app && window.app.syllableDragDrop) {
+      return window.app.syllableDragDrop.allSyllables ? [...window.app.syllableDragDrop.allSyllables] : [];
+    }
+    return [];
+  }
+
+  /**
+   * Восстанавливает слоги после применения шаблона
+   * @param {Array} syllables - массив слогов для восстановления
+   */
+  restoreSyllables(syllables) {
+    if (!syllables || syllables.length === 0) return;
+    
+    if (window.app && window.app.syllableDragDrop) {
+      // Восстанавливаем слоги в SyllableDragDrop
+      window.app.syllableDragDrop.allSyllables = [...syllables];
+      window.app.syllableDragDrop.saveSyllablesToStorage();
+      
+      // Перерисовываем слоги для текущего такта
+      const currentBarIndex = window.app.state.currentBarIndex || 0;
+      window.app.syllableDragDrop.renderBarSyllables(currentBarIndex);
+    }
   }
 }

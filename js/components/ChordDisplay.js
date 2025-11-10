@@ -58,16 +58,17 @@ export class ChordDisplay {
     // Если такт изменился, обновляем аккорды для нового такта
     if (barChanged) {
       this.currentChord = chord;
-      // Получаем следующий аккорд для прогрессии
-      const parsedChords = window.app && window.app.metronome ? window.app.metronome.getChords() : [];
-      if (parsedChords.length > 0) {
-        const nextIndex = (barIndex + 1) % parsedChords.length;
-        this.nextChord = parsedChords[nextIndex];
+      
+      // Используем ChordStore для получения следующего аккорда
+      if (window.app && window.app.chordStore) {
+        this.nextChord = window.app.chordStore.getNextChord(barIndex);
+        
+        // Если следующий совпадает с текущим, ищем следующий уникальный
         if (this.nextChord === this.currentChord) {
-          // Если следующий совпадает с текущим, ищем следующий уникальный
-          for (let i = 2; i <= parsedChords.length; i++) {
-            const candidateIndex = (barIndex + i) % parsedChords.length;
-            const candidate = parsedChords[candidateIndex];
+          const allChords = window.app.chordStore.getAllChords();
+          for (let i = 2; i <= allChords.length; i++) {
+            const candidateIndex = (barIndex + i) % allChords.length;
+            const candidate = allChords[candidateIndex];
             if (candidate !== this.currentChord) {
               this.nextChord = candidate;
               break;
@@ -75,8 +76,27 @@ export class ChordDisplay {
           }
         }
       } else {
-        this.nextChord = null;
+        // Fallback на старую логику через метроном
+        const parsedChords = window.app && window.app.metronome ? window.app.metronome.getChords() : [];
+        if (parsedChords.length > 0) {
+          const nextIndex = (barIndex + 1) % parsedChords.length;
+          this.nextChord = parsedChords[nextIndex];
+          if (this.nextChord === this.currentChord) {
+            // Если следующий совпадает с текущим, ищем следующий уникальный
+            for (let i = 2; i <= parsedChords.length; i++) {
+              const candidateIndex = (barIndex + i) % parsedChords.length;
+              const candidate = parsedChords[candidateIndex];
+              if (candidate !== this.currentChord) {
+                this.nextChord = candidate;
+                break;
+              }
+            }
+          }
+        } else {
+          this.nextChord = null;
+        }
       }
+      
       this.updateChordDisplay();
     }
   }

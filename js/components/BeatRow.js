@@ -3,7 +3,7 @@
 export class BeatRow {
   constructor() {
     this.beats = [];
-    this.circleStates = []; // Состояние кружочков (вкл/выкл звук)
+    this.circleStates = []; // Состояние кружочков (0 = выкл, 1 = вкл, 2 = приглушённые)
     this.highlightedIndices = new Set(); // Для подсветки нескольких стрелочек
     this.count = 8;
   }
@@ -16,7 +16,11 @@ export class BeatRow {
     this.beats = beats;
     // Инициализируем состояния кружочков если они не заданы
     if (this.circleStates.length !== beats.length) {
-      this.circleStates = beats.map(beat => beat.play || false);
+      this.circleStates = beats.map(beat => {
+        // Преобразуем старые boolean значения в новые числовые состояния
+        if (typeof beat.play === 'number') return beat.play;
+        return beat.play ? 1 : 0;
+      });
     }
     this.render();
   }
@@ -107,16 +111,27 @@ export class BeatRow {
       const circle = document.createElement('div');
       circle.className = 'circle-container';
       // Используем состояние кружочка вместо beat.play
-      const circleState = i < this.circleStates.length ? this.circleStates[i] : (beat.play || false);
+      const circleState = i < this.circleStates.length ? this.circleStates[i] : (typeof beat.play === 'number' ? beat.play : (beat.play ? 1 : 0));
       circle.innerHTML = this.circleSvg(circleState);
       circle.addEventListener('click', () => {
         this.toggleCircle(i);
       });
 
+      // Drop-зона для слогов
+      const dropZone = document.createElement('div');
+      dropZone.className = 'syllable-drop-zone';
+      dropZone.setAttribute('data-arrow-index', i);
+
       wrapper.appendChild(arrow);
       wrapper.appendChild(circle);
+      wrapper.appendChild(dropZone);
       this.element.appendChild(wrapper);
     });
+    
+    // Уведомляем об обновлении (для SyllableDragDrop)
+    if (this.onRenderComplete) {
+      this.onRenderComplete();
+    }
   }
 
   arrowSvg(dir, highlighted) {
@@ -139,12 +154,25 @@ export class BeatRow {
       </svg>`;
   }
 
-  circleSvg(on) {
+  circleSvg(state) {
     // Адаптивный размер SVG для мобильных устройств
     const svgSize = window.innerWidth <= 480 ? 20 : 24;
     
-    if (on) return `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#ef4444" /></svg>`;
-    return `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="transparent" stroke="#9ca3af" stroke-width="1.5" /></svg>`;
+    // state: 0 = пустой кружок, 1 = закрашенный, 2 = крестик
+    if (state === 1) {
+      // Закрашенный кружок
+      return `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#ef4444" /></svg>`;
+    } else if (state === 2) {
+      // Крестик в кружке
+      return `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="transparent" stroke="#9ca3af" stroke-width="1.5" />
+        <line x1="8" y1="8" x2="16" y2="16" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" />
+        <line x1="16" y1="8" x2="8" y2="16" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" />
+      </svg>`;
+    } else {
+      // Пустой кружок (state === 0)
+      return `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="transparent" stroke="#9ca3af" stroke-width="1.5" /></svg>`;
+    }
   }
 
   toggleBeat(index) {
@@ -156,7 +184,8 @@ export class BeatRow {
 
   toggleCircle(index) {
     if (index >= 0 && index < this.circleStates.length) {
-      this.circleStates[index] = !this.circleStates[index];
+      // Циклическое переключение: 0 → 1 → 2 → 0
+      this.circleStates[index] = (this.circleStates[index] + 1) % 3;
       this.render();
     }
   }
@@ -165,7 +194,7 @@ export class BeatRow {
     // Возвращаем beats с актуальным состоянием circleStates
     return this.beats.map((beat, index) => ({
       ...beat,
-      play: index < this.circleStates.length ? this.circleStates[index] : (beat.play || false)
+      play: index < this.circleStates.length ? this.circleStates[index] : (typeof beat.play === 'number' ? beat.play : (beat.play ? 1 : 0))
     }));
   }
 
@@ -200,5 +229,9 @@ export class BeatRow {
   
   setOnPositionChange(callback) {
     this.onPositionChange = callback;
+  }
+  
+  setOnRenderComplete(callback) {
+    this.onRenderComplete = callback;
   }
 }

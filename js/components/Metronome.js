@@ -59,10 +59,11 @@ export class Metronome {
    * Starts the metronome playback.
    * Initializes audio context, resets beat counters, and begins scheduling.
    * @async
+   * @param {number} startBarIndex - Индекс такта, с которого начинать воспроизведение (по умолчанию 0)
    * @returns {Promise<void>}
    * @throws {Error} If audio initialization fails
    */
-  async start() {
+  async start(startBarIndex = 0) {
     if (this.isPlaying) return;
     this.isPlaying = true;
 
@@ -75,7 +76,7 @@ export class Metronome {
     }
 
     this.currentBeat = 0;
-    this.barIndex = 0;                   // Reset bar number
+    this.barIndex = startBarIndex;       // Начинаем с указанного такта
     this.nextNoteTime = this.audioManager.getCurrentTime() + 0.05;
     this.scheduler();
   }
@@ -220,7 +221,13 @@ export class Metronome {
    */
   scheduleBeat(secondsPerBeat, totalArrows, ratio) {
     const isAccent = (this.currentBeat === 0);
-    this.audioEngine.scheduleClick(this.nextNoteTime, isAccent);
+    
+    // Получаем громкость метронома из настроек
+    const metronomeVolume = window.app && window.app.settings 
+      ? window.app.settings.getMetronomeVolume() 
+      : 1.0;
+    
+    this.audioEngine.scheduleClick(this.nextNoteTime, isAccent, metronomeVolume);
 
     // фиксируем номер такта для всех стрелочек ЭТОГО удара
     const barAtSchedule = this.barIndex;
@@ -248,7 +255,7 @@ export class Metronome {
 
     setTimeout(() => {
       this.playGuitarSound(arrowIndex, barAtSchedule);
-      if (this.onBeatCallback) this.onBeatCallback(arrowIndex);
+      if (this.onBeatCallback) this.onBeatCallback(arrowIndex, barAtSchedule);
 
       // Обновляем отображение аккордов при каждом ударе
       this.updateChordDisplay(arrowIndex, barAtSchedule);
@@ -267,22 +274,44 @@ export class Metronome {
     // Проверяем состояние кружочка вместо beat.play
     if (window.app && window.app.beatRow) {
       const circleStates = window.app.beatRow.getCircleStates();
-      const shouldPlay = arrowIndex < circleStates.length ? circleStates[arrowIndex] : false;
+      const circleState = arrowIndex < circleStates.length ? circleStates[arrowIndex] : 0;
       
-      if (shouldPlay) {
-        // Получаем аккордные ноты (можно использовать любую логику, не привязанную к beat.play)
+      // 0 = не играть, 1 = обычный звук, 2 = приглушённые струны
+      if (circleState === 1) {
+        // Обычный звук гитары
+        // Получаем громкость боя из настроек
+        const strumVolume = window.app && window.app.settings 
+          ? window.app.settings.getStrumVolume() 
+          : 0.8;
+        
+        // Получаем аккордные ноты из ChordStore
         const arrowInBar = arrowIndex;
-        const chordNotes = this.chordManager.getNotesForPosition(
-          barIndex,
-          arrowInBar,
-          this.actualBeatCount
-        );
+        let chordNotes = null;
+        let chordName = null;
+
+        // Используем ChordStore для получения аккорда
+        if (window.app && window.app.chordStore) {
+          chordName = window.app.chordStore.getChordForPosition(barIndex, arrowInBar);
+          if (chordName) {
+            chordNotes = this.chordManager.getChordNotes(chordName);
+          }
+        }
+
+        // Fallback на старую логику через ChordManager
+        if (!chordNotes) {
+          chordNotes = this.chordManager.getNotesForPosition(
+            barIndex,
+            arrowInBar,
+            this.actualBeatCount
+          );
+          chordName = this.chordManager.getChordNameForPosition(barIndex, arrowInBar, this.actualBeatCount);
+        }
 
         if (Array.isArray(chordNotes) && chordNotes.length) {
           // Определяем инверсию аккорда на основе позиции в такте для разнообразия
           const inversion = arrowInBar % 3; // 0, 1, 2 - три разных инверсии
           const invertedNotes = this.chordManager.getChordNotesWithInversion(
-            this.chordManager.getChordNameForPosition(barIndex, arrowInBar, this.actualBeatCount),
+            chordName,
             inversion
           );
 
@@ -292,7 +321,7 @@ export class Metronome {
               setTimeout(() => {
                 // Разная громкость для разных нот аккорда
                 const volumes = [0.8, 0.6, 0.7]; // Тоника, терция, квинта
-                const volume = volumes[index] || 0.6;
+                const volume = (volumes[index] || 0.6) * strumVolume;
                 this.audioEngine.createGuitarSound(freq, 0.25, volume);
               }, index * 8); // Небольшая арпеджио-задержка
             });
@@ -301,7 +330,7 @@ export class Metronome {
             chordNotes.forEach((freq, index) => {
               setTimeout(() => {
                 const volumes = [0.8, 0.6, 0.7];
-                const volume = volumes[index] || 0.6;
+                const volume = (volumes[index] || 0.6) * strumVolume;
                 this.audioEngine.createGuitarSound(freq, 0.25, volume);
               }, index * 8);
             });
@@ -310,9 +339,18 @@ export class Metronome {
           // Если нет аккорда, воспроизводим одиночную ноту
           const frequencies = [82.41, 110, 146.83, 196, 246.94, 329.63];
           const f = frequencies[arrowIndex % frequencies.length] || 220;
-          this.audioEngine.createGuitarSound(f, 0.3, 0.9);
+          this.audioEngine.createGuitarSound(f, 0.3, 0.9 * strumVolume);
         }
+      } else if (circleState === 2) {
+        // Звук приглушённых струн (щелчок)
+        // Получаем громкость боя из настроек
+        const strumVolume = window.app && window.app.settings 
+          ? window.app.settings.getStrumVolume() 
+          : 0.8;
+        
+        this.audioEngine.createMutedStrumSound(0.7 * strumVolume);
       }
+      // Если circleState === 0, ничего не воспроизводим
     }
   }
 
@@ -339,11 +377,18 @@ export class Metronome {
    * @param {number} barIndex - Current bar index
    */
   updateChordDisplay(arrowIndex, barIndex) {
-    if (window.app && window.app.chordDisplay) {
-      // Получаем текущий аккорд для данной позиции
-      const currentChord = this.chordManager.getChordNameForPosition(barIndex, arrowIndex, this.actualBeatCount);
+    if (window.app && window.app.chordDisplay && window.app.chordStore) {
+      // Используем ChordStore для получения текущего аккорда
+      const currentChord = window.app.chordStore.getChordForPosition(barIndex, arrowIndex);
+      
       if (currentChord) {
         window.app.chordDisplay.updateCurrentChord(currentChord, barIndex, arrowIndex);
+      } else {
+        // Fallback на старую логику через ChordManager
+        const fallbackChord = this.chordManager.getChordNameForPosition(barIndex, arrowIndex, this.actualBeatCount);
+        if (fallbackChord) {
+          window.app.chordDisplay.updateCurrentChord(fallbackChord, barIndex, arrowIndex);
+        }
       }
     }
   }

@@ -2,41 +2,41 @@
   "beats": [
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": false
+      "play": 0
     },
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": true
+      "play": 1
     },
     {
       "direction": "down",
-      "play": false
+      "play": 0
     },
     {
       "direction": "up",
-      "play": true
+      "play": 1
     },
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": false
+      "play": 1
     }
   ],
-  "bpm": 80,
+  "bpm": 105,
   "speed": 100,
   "chords": [
     "Am F Dm E"
   ],
-  "timestamp": "2025-09-11T13:21:24.550Z"
+  "timestamp": "2025-10-08T15:03:56.316Z"
 }

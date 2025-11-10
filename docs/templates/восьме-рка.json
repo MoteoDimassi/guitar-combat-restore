@@ -2,73 +2,73 @@
   "beats": [
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": false
+      "play": 0
     },
     {
       "direction": "down",
-      "play": false
+      "play": 0
     },
     {
       "direction": "up",
-      "play": false
+      "play": 0
     },
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": false
+      "play": 0
     },
     {
       "direction": "down",
-      "play": false
+      "play": 0
     },
     {
       "direction": "up",
-      "play": true
+      "play": 1
     },
     {
       "direction": "down",
-      "play": false
+      "play": 0
     },
     {
       "direction": "up",
-      "play": true
+      "play": 1
     },
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": false
+      "play": 0
     },
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": false
+      "play": 0
     },
     {
       "direction": "down",
-      "play": true
+      "play": 1
     },
     {
       "direction": "up",
-      "play": true
+      "play": 1
     }
   ],
-  "bpm": 88,
+  "bpm": 74,
   "speed": 100,
   "chords": [
-    "Em7 C G Dsus4"
+    "Am F Dm E"
   ],
-  "timestamp": "2025-09-11T14:18:02.052Z"
+  "timestamp": "2025-10-08T15:06:50.532Z"
 }

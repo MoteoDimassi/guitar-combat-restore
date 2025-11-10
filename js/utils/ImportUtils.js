@@ -69,18 +69,46 @@ export class ImportUtils {
     event.target.value = '';
   }
 
-  importData(data) {
+  importData(data, isFromTemplate = false) {
     if (!data || !data.beats) {
       this.showErrorNotification('Неверный формат файла. Файл должен содержать данные боя.');
       return;
     }
 
+    // Проверяем, является ли это полным экспортом песни
+    if (data.songText && window.app && window.app.songImporter) {
+      try {
+        window.app.songImporter.importFromJSON(data);
+        this.showSuccessNotification('Песня успешно импортирована!');
+        return;
+      } catch (error) {
+        console.error('Ошибка импорта полной песни:', error);
+        this.showErrorNotification('Ошибка при импорте песни: ' + error.message);
+        return;
+      }
+    }
+
     try {
       // 1. Нормализуем биты
-      const normalizedBeats = data.beats.map(beat => ({
-        direction: beat.direction || 'down',
-        play: !!beat.play  // строго булевое значение
-      }));
+      const normalizedBeats = data.beats.map(beat => {
+        // Преобразуем старые boolean значения в новые числовые состояния
+        let playState;
+        if (typeof beat.play === 'number') {
+          // Уже числовое значение (0, 1, 2)
+          playState = beat.play;
+        } else if (beat.play === true) {
+          // Старый формат: true → 1 (заполненный)
+          playState = 1;
+        } else {
+          // Старый формат: false → 0 (пустой)
+          playState = 0;
+        }
+        
+        return {
+          direction: beat.direction || 'down',
+          play: playState
+        };
+      });
 
       if (!this.beatRow) return;
 
@@ -111,8 +139,8 @@ export class ImportUtils {
         }
       }
 
-      // 7. Обновляем аккорды
-      if (data.chords && document.getElementById('chordsInput')) {
+      // 7. Обновляем аккорды (только если импорт НЕ из шаблона)
+      if (!isFromTemplate && data.chords && document.getElementById('chordsInput')) {
         const chordsInput = document.getElementById('chordsInput');
         chordsInput.value = Array.isArray(data.chords) ? data.chords.join(' ') : data.chords;
         if (window.app && window.app.metronome) {
