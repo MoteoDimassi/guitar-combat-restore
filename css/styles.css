@@ -1556,39 +1556,43 @@ body {
 
 /* Яркая подсветка при наведении перетаскиваемого элемента */
 .syllable-drop-zone.drop-zone-active {
-  border-color: #38e07b;
-  background-color: rgba(56, 224, 123, 0.15);
-  transform: scale(1.02);
-  box-shadow: 0 0 20px rgba(56, 224, 123, 0.3);
+  /* Используем те же стили, что и у базового syllable-drop-zone, чтобы избежать мерцания */
+  min-height: 32px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 2px dashed rgba(156, 163, 175, 0.5);
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(31, 41, 55, 0.5);
+  position: relative;
+  overflow: hidden;
 }
 
 /* Пульсирующая анимация для активной drop-зоны */
 .syllable-drop-zone.drop-zone-active::before {
+  /* Используем те же стили, что и у базового syllable-drop-zone для пустой зоны */
+  content: "Перетащите слог сюда";
+  color: rgba(156, 163, 175, 0.7);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+}
+
+/* Анимированный индикатор для активной drop-зоны */
+.syllable-drop-zone.drop-zone-active::after {
+  /* Используем те же стили, что и у базового syllable-drop-zone для пустой зоны */
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: 8px;
-  border: 2px solid #38e07b;
-  animation: pulse 1.5s infinite;
-  pointer-events: none;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.05);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(56, 224, 123, 0.1), transparent);
+  animation: shimmer 3s infinite;
 }
 
 /* Улучшенные стили для размещенного слога */
@@ -1704,7 +1708,8 @@ body {
     margin: 1px;
   }
   
-  .syllable-drop-zone {
+  .syllable-drop-zone,
+  .syllable-drop-zone.drop-zone-active {
     min-height: 28px;
     margin-top: 6px;
     padding: 4px 6px;
@@ -1753,14 +1758,14 @@ body {
 
 @keyframes success-pulse {
   0% {
-    background-color: rgba(56, 224, 123, 0.2);
+    background-color: rgba(31, 41, 55, 0.5); /* Используем тот же цвет, что и у базовой зоны */
   }
   50% {
     background-color: rgba(56, 224, 123, 0.4);
     transform: scale(1.05);
   }
   100% {
-    background-color: rgba(56, 224, 123, 0.2);
+    background-color: rgba(31, 41, 55, 0.5); /* Возвращаем к исходному цвету */
     transform: scale(1);
   }
 }
