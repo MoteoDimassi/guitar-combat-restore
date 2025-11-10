@@ -137,7 +137,7 @@ export class SyllableDragDrop {
       syllable.style.cursor = 'grabbing';
       
       // Устанавливаем данные для передачи
-      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.effectAllowed = 'move'; // Изменяем с copy на move
       e.dataTransfer.setData('text/plain', syllable.textContent);
       e.dataTransfer.setData('source', 'text');
     });
