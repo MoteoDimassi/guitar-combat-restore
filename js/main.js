@@ -117,7 +117,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Связываем обновление drop-зон с рендерингом beatRow
   beatRow.setOnRenderComplete(() => {
-    syllableDragDrop.updateDropZones();
+    // Небольшая задержка для гарантированного обновления DOM
+    setTimeout(() => {
+      syllableDragDrop.updateDropZones();
+    }, 10);
   });
 
   // Функция для управления видимостью кнопок песни

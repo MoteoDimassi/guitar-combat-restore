@@ -26,6 +26,12 @@ export class BarSyllableDisplay {
   init() {
     this.buildLineToBarMap();
     this.bindSyllableClickEvents();
+    
+    // Инициализируем или обновляем syllableDragDrop если он доступен
+    if (window.app && window.app.syllableDragDrop) {
+      // Обновляем drop-зоны после инициализации
+      window.app.syllableDragDrop.updateDropZones();
+    }
   }
 
   /**
@@ -63,7 +69,7 @@ export class BarSyllableDisplay {
   }
 
   /**
-   * Привязывает обработчики кликов к слогам
+   * Привязывает обработчики кликов к слогам и добавляет функциональность перетаскивания
    */
   bindSyllableClickEvents() {
     const songContent = document.getElementById('song-content');
@@ -79,6 +85,10 @@ export class BarSyllableDisplay {
       const syllablesInLine = Array.from(lineEl.querySelectorAll('.syllable'));
       
       syllablesInLine.forEach((syllable, syllableIndex) => {
+        // Добавляем необходимые data-атрибуты для корректной работы перетаскивания
+        this.addSyllableDataAttributes(syllable, lineIndex, syllableIndex);
+        
+        // Добавляем обработчик клика
         syllable.addEventListener('click', (e) => {
           e.stopPropagation();
           this.onSyllableClick(lineIndex, syllableIndex, syllable);
@@ -86,8 +96,39 @@ export class BarSyllableDisplay {
 
         // Добавляем визуальный эффект при наведении
         syllable.style.cursor = 'pointer';
+        
+        // Добавляем класс для стилизации
+        syllable.classList.add('song-syllable');
+        
+        // Добавляем функциональность перетаскивания, если доступен syllableDragDrop
+        if (window.app && window.app.syllableDragDrop) {
+          window.app.syllableDragDrop.makeSyllableDraggable(syllable);
+        }
       });
     });
+  }
+
+  /**
+   * Добавляет необходимые data-атрибуты для слога
+   * @param {HTMLElement} syllable - элемент слога
+   * @param {number} lineIndex - индекс строки
+   * @param {number} syllableIndex - индекс слога в строке
+   */
+  addSyllableDataAttributes(syllable, lineIndex, syllableIndex) {
+    // Получаем текст слога
+    const syllableText = syllable.textContent || '';
+    
+    // Определяем исходное слово (для простоты берем весь текст строки)
+    const lineElement = syllable.closest('div') || syllable.parentElement;
+    const lineText = lineElement ? lineElement.textContent : '';
+    
+    // Устанавливаем data-атрибуты
+    syllable.setAttribute('data-syllable-text', syllableText);
+    syllable.setAttribute('data-word', lineText);
+    syllable.setAttribute('data-syllable-index', syllableIndex.toString());
+    
+    // Добавляем дополнительный атрибут для идентификации строки
+    syllable.setAttribute('data-line-index', lineIndex.toString());
   }
 
   /**
@@ -158,15 +199,21 @@ export class BarSyllableDisplay {
       el.classList.remove('syllable-selected');
       el.style.backgroundColor = '';
       el.style.color = '';
+      el.style.transform = '';
     });
 
-    // Выделяем текущий слог
+    // Выделяем текущий слог с улучшенной анимацией
     if (syllableElement) {
       syllableElement.classList.add('syllable-selected');
       syllableElement.style.backgroundColor = '#38e07b';
       syllableElement.style.color = '#111827';
       syllableElement.style.padding = '2px 4px';
       syllableElement.style.borderRadius = '3px';
+      syllableElement.style.transform = 'scale(1.05)';
+      syllableElement.style.boxShadow = '0 4px 8px rgba(56, 224, 123, 0.3)';
+      
+      // Добавляем пульсирующую анимацию для выделенного слога
+      syllableElement.style.animation = 'pulse 1s infinite';
     }
   }
 
@@ -177,24 +224,28 @@ export class BarSyllableDisplay {
     const songContent = document.getElementById('song-content');
     if (!songContent) return;
 
-    // Убираем выделение со всех строк
+    // Убираем выделение со всех строк с плавной анимацией
     const allLines = this.getLineElements(songContent);
     allLines.forEach(lineEl => {
       const syllables = lineEl.querySelectorAll('.syllable');
       syllables.forEach(syl => {
         if (!syl.classList.contains('syllable-selected')) {
           syl.style.opacity = '0.5';
+          syl.style.transform = 'scale(0.95)';
+          syl.style.transition = 'all 0.3s ease';
         }
       });
     });
 
-    // Выделяем текущую строку
+    // Выделяем текущую строку с плавной анимацией
     if (lineIndex >= 0 && lineIndex < allLines.length) {
       this.activeLine = allLines[lineIndex];
       const syllables = this.activeLine.querySelectorAll('.syllable');
       syllables.forEach(syl => {
         if (!syl.classList.contains('syllable-selected')) {
           syl.style.opacity = '1';
+          syl.style.transform = 'scale(1)';
+          syl.style.transition = 'all 0.3s ease';
         }
       });
     }
@@ -207,8 +258,12 @@ export class BarSyllableDisplay {
     const bar = this.barManager.getBar(barIndex);
     if (!bar) return;
 
-    // Просто отображаем слоги для этого такта используя новую систему
+    // Отображаем слоги для этого такта используя систему перетаскивания
     if (window.app && window.app.syllableDragDrop) {
+      // Убеждаемся, что drop-зоны обновлены
+      window.app.syllableDragDrop.updateDropZones();
+      
+      // Отображаем слоги для текущего такта
       window.app.syllableDragDrop.renderBarSyllables(barIndex);
     }
   }
@@ -329,6 +384,14 @@ export class BarSyllableDisplay {
     this.buildLineToBarMap();
     this.bindSyllableClickEvents();
     
+    // Обновляем syllableDragDrop при изменении текста
+    if (window.app && window.app.syllableDragDrop) {
+      // Пересоздаем слоги из обновленного текста
+      window.app.syllableDragDrop.recreateSyllables();
+      // Обновляем drop-зоны
+      window.app.syllableDragDrop.updateDropZones();
+    }
+    
     if (this.currentBarIndex >= 0) {
       this.displayBarSyllables(this.currentBarIndex);
     }
@@ -367,6 +430,10 @@ export class BarSyllableDisplay {
       el.style.opacity = '';
       el.style.padding = '';
       el.style.borderRadius = '';
+      el.style.transform = '';
+      el.style.boxShadow = '';
+      el.style.animation = '';
+      el.style.transition = '';
     });
   }
 }

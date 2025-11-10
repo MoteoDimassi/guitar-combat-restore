@@ -116,12 +116,39 @@ export class SyllableDragDrop {
   }
 
   /**
-   * Делает слог перетаскиваемым (НЕ используется больше, т.к. перетаскиваются размещённые слоги)
+   * Делает слог перетаскиваемым из текста песни
    * @param {HTMLElement} syllable - элемент слога
    */
   makeSyllableDraggable(syllable) {
-    // Слоги из текста больше не перетаскиваются напрямую
-    // Вся логика работает через размещённые слоги
+    if (!syllable) return;
+    
+    syllable.style.cursor = 'grab';
+    syllable.setAttribute('draggable', 'true');
+    
+    // Создаем tooltip для слога
+    this.createTooltip(syllable);
+    
+    syllable.addEventListener('dragstart', (e) => {
+      this.draggedElement = syllable;
+      this.draggedSyllableData = this.createSyllableFromText(syllable);
+      
+      // Добавляем визуальный эффект
+      syllable.classList.add('dragging');
+      syllable.style.cursor = 'grabbing';
+      
+      // Устанавливаем данные для передачи
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', syllable.textContent);
+      e.dataTransfer.setData('source', 'text');
+    });
+    
+    syllable.addEventListener('dragend', (e) => {
+      // Убираем визуальный эффект
+      syllable.classList.remove('dragging');
+      syllable.style.cursor = 'grab';
+      this.draggedElement = null;
+      this.draggedSyllableData = null;
+    });
   }
 
   /**
@@ -139,7 +166,6 @@ export class SyllableDragDrop {
 
       // Добавляем визуальный эффект
       placedSyllable.classList.add('dragging');
-      placedSyllable.style.opacity = '0.5';
 
       // Устанавливаем данные для передачи
       e.dataTransfer.effectAllowed = 'move';
@@ -149,22 +175,8 @@ export class SyllableDragDrop {
     placedSyllable.addEventListener('dragend', (e) => {
       // Убираем визуальный эффект
       placedSyllable.classList.remove('dragging');
-      placedSyllable.style.opacity = '1';
       this.draggedElement = null;
       this.draggedSyllableId = null;
-    });
-
-    // Добавляем эффект наведения
-    placedSyllable.addEventListener('mouseenter', () => {
-      if (!placedSyllable.classList.contains('dragging')) {
-        placedSyllable.style.opacity = '0.8';
-      }
-    });
-
-    placedSyllable.addEventListener('mouseleave', () => {
-      if (!placedSyllable.classList.contains('dragging')) {
-        placedSyllable.style.opacity = '1';
-      }
     });
   }
 
@@ -175,7 +187,7 @@ export class SyllableDragDrop {
     if (!this.beatRow || !this.beatRow.element) return;
 
     // Получаем все wrapper-ы стрелок
-    const wrappers = this.beatRow.element.querySelectorAll('.beat-wrapper, .flex.flex-col');
+    const wrappers = this.beatRow.element.querySelectorAll('.flex.flex-col.items-center.gap-2.select-none.flex-shrink-0');
     
     wrappers.forEach((wrapper, index) => {
       // Проверяем, есть ли уже drop-зона
@@ -198,7 +210,7 @@ export class SyllableDragDrop {
     // Обновляем видимость drop-зон после их создания/обновления
     this.updateDropZonesVisibility();
     
-    // ВАЖНО: Восстанавливаем слоги для текущего такта после перерендера BeatRow
+    // Восстанавливаем слоги для текущего такта
     this.restoreCurrentBarSyllables();
   }
 
@@ -217,16 +229,30 @@ export class SyllableDragDrop {
     });
 
     dropZone.addEventListener('dragleave', (e) => {
-      // Убираем подсветку
-      dropZone.classList.remove('drop-zone-active');
+      // Убираем подсветку только если курсор действительно покинул зону
+      if (!dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('drop-zone-active');
+      }
     });
 
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.classList.remove('drop-zone-active');
 
-      if (this.draggedSyllableId && this.allSyllables && this.allSyllables.length > 0) {
-        // Находим слог в массиве и меняем его arrowIndex
+      // Добавляем визуальную обратную связь для успешного drop
+      dropZone.classList.add('drop-success');
+      setTimeout(() => {
+        dropZone.classList.remove('drop-success');
+      }, 500);
+
+      // Проверяем, перетаскиваем ли мы слог из текста песни или уже размещенный слог
+      const source = e.dataTransfer.getData('source');
+      
+      if (source === 'text' && this.draggedSyllableData) {
+        // Перетаскивание из текста песни
+        this.handleTextSyllableDrop(e, dropZone, arrowIndex);
+      } else if (this.draggedSyllableId && this.allSyllables && this.allSyllables.length > 0) {
+        // Перетаскивание уже размещенного слога
         const syllable = this.allSyllables.find(s => s && s.id === this.draggedSyllableId);
         if (syllable) {
           syllable.arrowIndex = arrowIndex;
@@ -284,9 +310,16 @@ export class SyllableDragDrop {
     
     const text = syllable.text || '';
     const id = syllable.id || '';
+    const word = syllable.word || '';
+    const syllableIndex = syllable.syllableIndex || '0';
     
+    // Добавляем атрибуты данных для дополнительной информации
     dropZone.innerHTML = `
-      <div class="placed-syllable" draggable="true">
+      <div class="placed-syllable" draggable="true"
+           data-syllable-id="${id}"
+           data-word="${word}"
+           data-syllable-index="${syllableIndex}"
+           title="Слово: ${word}, Индекс слога: ${syllableIndex}">
         <span class="syllable-text">${text}</span>
         <button class="remove-syllable" data-syllable-id="${id}" title="Удалить слог">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,6 +453,65 @@ export class SyllableDragDrop {
   }
 
   /**
+   * Создает объект слога из DOM-элемента текста песни
+   * @param {HTMLElement} element - DOM-элемент слога
+   * @returns {Object} объект слога
+   */
+  createSyllableFromText(element) {
+    if (!element) return null;
+    
+    // Получаем текущий активный такт
+    const currentBarIndex = window.app && window.app.state ?
+      window.app.state.currentBarIndex || 0 : 0;
+    
+    // Генерируем уникальный ID
+    const id = `syllable-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    return {
+      id: id,
+      text: element.textContent || '',
+      barIndex: currentBarIndex,
+      arrowIndex: null, // Будет установлен при drop
+      word: element.getAttribute('data-word') || '',
+      syllableIndex: element.getAttribute('data-syllable-index') || '0'
+    };
+  }
+
+  /**
+   * Обрабатывает drop слога из текста песни
+   * @param {DragEvent} event - событие drop
+   * @param {HTMLElement} dropZone - drop-зона
+   * @param {number} arrowIndex - индекс стрелки
+   */
+  handleTextSyllableDrop(event, dropZone, arrowIndex) {
+    if (!this.draggedSyllableData) return;
+    
+    // Устанавливаем индекс стрелки
+    this.draggedSyllableData.arrowIndex = arrowIndex;
+    
+    // Добавляем слог в общий массив
+    this.allSyllables.push(this.draggedSyllableData);
+    
+    // Сохраняем состояние
+    this.saveSyllablesToStorage();
+    
+    // Обновляем позиции слогов
+    this.updateSyllablePositions();
+    
+    // Перерисовываем текущий такт
+    this.renderBarSyllables(this.draggedSyllableData.barIndex);
+  }
+
+  /**
+   * Обновляет позиции слогов после добавления
+   */
+  updateSyllablePositions() {
+    // Этот метод может быть расширен для дополнительной логики
+    // обновления позиций слогов, если это необходимо
+    console.log('Позиции слогов обновлены');
+  }
+
+  /**
    * Обновляет видимость drop-зон в зависимости от наличия текста песни
    */
   updateDropZonesVisibility() {
@@ -457,6 +549,29 @@ export class SyllableDragDrop {
       zone.style.display = 'none';
       zone.classList.add('hidden');
     });
+  }
+
+  /**
+   * Создает tooltip для слога с дополнительной информацией
+   * @param {HTMLElement} syllable - элемент слога
+   */
+  createTooltip(syllable) {
+    // Проверяем, есть ли уже tooltip
+    if (syllable.querySelector('.syllable-tooltip')) {
+      return;
+    }
+
+    const word = syllable.getAttribute('data-word') || '';
+    const syllableIndex = syllable.getAttribute('data-syllable-index') || '0';
+    const syllableText = syllable.getAttribute('data-syllable-text') || syllable.textContent || '';
+
+    // Создаем tooltip
+    const tooltip = document.createElement('div');
+    tooltip.className = 'syllable-tooltip';
+    tooltip.textContent = `Слово: "${word}", Слог: "${syllableText}" (${parseInt(syllableIndex) + 1})`;
+
+    // Добавляем tooltip в слог
+    syllable.appendChild(tooltip);
   }
 }
 

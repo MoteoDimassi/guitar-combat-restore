@@ -54,11 +54,11 @@ export class SyllableHighlighter {
 
     // Если один слог, создаём один span
     if (syllables.length === 1) {
-      return `${this.escapeHtml(prefix)}<span class="syllable">${this.escapeHtml(wordBody)}</span>${this.escapeHtml(suffix)}`;
+      return `${this.escapeHtml(prefix)}<span class="syllable" data-syllable-text="${this.escapeHtml(wordBody)}" data-word="${this.escapeHtml(wordBody)}" data-syllable-index="0">${this.escapeHtml(wordBody)}</span>${this.escapeHtml(suffix)}`;
     }
 
     // Несколько слогов - создаём span для каждого
-    const spans = syllables.map((s, i) => `<span class="syllable" data-syllable-index="${i}" data-word="${this.escapeHtml(wordBody)}">${this.escapeHtml(s)}</span>`).join('');
+    const spans = syllables.map((s, i) => `<span class="syllable" data-syllable-text="${this.escapeHtml(s)}" data-word="${this.escapeHtml(wordBody)}" data-syllable-index="${i}">${this.escapeHtml(s)}</span>`).join('');
     return `${this.escapeHtml(prefix)}${spans}${this.escapeHtml(suffix)}`;
   }
 
@@ -183,8 +183,20 @@ export class SyllableHighlighter {
     if (!container) return;
     const syllables = container.querySelectorAll('.syllable');
     syllables.forEach(syllable => {
-      syllable.addEventListener('mouseenter', () => syllable.classList.add('syllable-highlight'));
-      syllable.addEventListener('mouseleave', () => syllable.classList.remove('syllable-highlight'));
+      syllable.addEventListener('mouseenter', () => {
+        syllable.classList.add('syllable-highlight');
+        // Добавляем класс для подсветки при наведении
+        syllable.classList.add('syllable-hover');
+      });
+      syllable.addEventListener('mouseleave', () => {
+        syllable.classList.remove('syllable-highlight');
+        syllable.classList.remove('syllable-hover');
+      });
+      
+      // Добавляем поддержку перетаскивания, если доступен syllableDragDrop
+      if (window.app && window.app.syllableDragDrop) {
+        window.app.syllableDragDrop.makeSyllableDraggable(syllable);
+      }
     });
   }
 

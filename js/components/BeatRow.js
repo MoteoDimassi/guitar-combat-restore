@@ -117,14 +117,8 @@ export class BeatRow {
         this.toggleCircle(i);
       });
 
-      // Drop-зона для слогов
-      const dropZone = document.createElement('div');
-      dropZone.className = 'syllable-drop-zone';
-      dropZone.setAttribute('data-arrow-index', i);
-
       wrapper.appendChild(arrow);
       wrapper.appendChild(circle);
-      wrapper.appendChild(dropZone);
       this.element.appendChild(wrapper);
     });
     

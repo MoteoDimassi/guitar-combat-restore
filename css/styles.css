@@ -1470,86 +1470,173 @@ body {
 
 /* Стили для drag-and-drop слогов */
 
-.syllable {
+/* Базовые стили для перетаскиваемых слогов из текста песни */
+.syllable, .song-syllable {
   position: relative;
   display: inline-block;
-  padding: 2px 4px;
+  padding: 3px 6px;
+  margin: 1px;
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
+  cursor: grab;
+  border: 1px solid transparent;
+  background-color: rgba(56, 224, 123, 0.05);
 }
 
+/* Эффекты при наведении на перетаскиваемый слог */
 .syllable:hover,
-.syllable-hover {
+.song-syllable:hover,
+.syllable-hover,
+.song-syllable-hover {
   background-color: rgba(56, 224, 123, 0.2);
-  cursor: pointer;
+  border-color: rgba(56, 224, 123, 0.4);
+  cursor: grab;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
 }
 
-.syllable.dragging {
-  opacity: 0.5;
+/* Стили для состояния перетаскивания */
+.syllable.dragging,
+.song-syllable.dragging {
+  opacity: 0.6;
   cursor: grabbing;
+  transform: scale(1.05) rotate(2deg);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  background-color: rgba(56, 224, 123, 0.3);
+  border-color: #38e07b;
+  z-index: 1000;
 }
 
-/* Drop-зона для слогов под стрелками */
-
+/* Улучшенные стили для drop-зон */
 .syllable-drop-zone {
-  min-height: 28px;
+  min-height: 32px;
   margin-top: 8px;
-  padding: 4px 8px;
-  border: 2px dashed transparent;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  padding: 6px 8px;
+  border: 2px dashed rgba(156, 163, 175, 0.5); /* Увеличить контрастность */
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(31, 41, 55, 0.5);
+  background-color: rgba(31, 41, 55, 0.5); /* Увеличить непрозрачность */
+  position: relative;
+  overflow: hidden;
 }
 
+/* Улучшенная индикация пустой drop-зоны */
+.syllable-drop-zone:empty::before {
+  content: "Перетащите слог сюда";
+  color: rgba(156, 163, 175, 0.7); /* Увеличить контрастность */
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+}
+
+/* Анимированный индикатор для пустой drop-зоны */
 .syllable-drop-zone:empty::after {
   content: '';
-  display: block;
+  position: absolute;
+  top: 0;
+  left: -100%;
   width: 100%;
-  height: 24px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(56, 224, 123, 0.1), transparent);
+  animation: shimmer 3s infinite;
 }
 
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Яркая подсветка при наведении перетаскиваемого элемента */
 .syllable-drop-zone.drop-zone-active {
   border-color: #38e07b;
-  background-color: rgba(56, 224, 123, 0.1);
-  transform: scale(1.05);
+  background-color: rgba(56, 224, 123, 0.15);
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(56, 224, 123, 0.3);
 }
 
-/* Размещенный слог */
+/* Пульсирующая анимация для активной drop-зоны */
+.syllable-drop-zone.drop-zone-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  border: 2px solid #38e07b;
+  animation: pulse 1.5s infinite;
+  pointer-events: none;
+}
 
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Улучшенные стили для размещенного слога */
 .placed-syllable {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 6px;
+  padding: 6px 10px;
   background-color: rgba(56, 224, 123, 0.2);
   border: 1px solid #38e07b;
-  border-radius: 4px;
+  border-radius: 6px;
   color: white;
   font-size: 14px;
   width: 100%;
+  transition: all 0.2s ease;
+  cursor: move;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.placed-syllable:hover {
+  background-color: rgba(56, 224, 123, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Стили для перетаскиваемого размещенного слога */
+.placed-syllable.dragging {
+  opacity: 0.7;
+  transform: scale(1.05) rotate(1deg);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
 }
 
 .syllable-text {
   flex: 1;
   text-align: center;
   font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .remove-syllable {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   background-color: rgba(239, 68, 68, 0.8);
   border: none;
@@ -1558,38 +1645,124 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  opacity: 0.8;
 }
 
 .remove-syllable:hover {
   background-color: rgba(239, 68, 68, 1);
-  transform: scale(1.1);
+  transform: scale(1.2);
+  opacity: 1;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+/* Дополнительные стили для tooltip с информацией о слоге */
+.syllable-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(17, 24, 39, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.syllable-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(17, 24, 39, 0.9);
+}
+
+.syllable:hover .syllable-tooltip {
+  opacity: 1;
+}
+
+/* Подсветка слога при наведении */
+.syllable-highlight,
+.song-syllable-highlight {
+  background-color: rgba(56, 224, 123, 0.3);
+  box-shadow: 0 0 10px rgba(56, 224, 123, 0.5);
+  border-color: #38e07b;
 }
 
 /* Адаптивные размеры для мобильных устройств */
-
 @media (max-width: 480px) {
-  .syllable-drop-zone {
-    min-height: 24px;
-    margin-top: 4px;
+  .syllable,
+  .song-syllable {
     padding: 2px 4px;
+    margin: 1px;
+  }
+  
+  .syllable-drop-zone {
+    min-height: 28px;
+    margin-top: 6px;
+    padding: 4px 6px;
   }
 
   .placed-syllable {
-    padding: 2px 4px;
+    padding: 4px 6px;
     font-size: 12px;
+    gap: 4px;
   }
 
   .remove-syllable {
     width: 16px;
     height: 16px;
   }
+  
+  .syllable-tooltip {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
 }
 
-/* Подсветка слога при наведении */
+/* Дополнительные анимации для улучшения UX */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
 
-.syllable-highlight {
-  background-color: rgba(56, 224, 123, 0.3);
-  box-shadow: 0 0 10px rgba(56, 224, 123, 0.5);
+.placed-syllable {
+  animation: bounce-in 0.3s ease-out;
+}
+
+/* Визуальная обратная связь для успешного drop */
+.drop-success {
+  animation: success-pulse 0.5s ease-out;
+}
+
+@keyframes success-pulse {
+  0% {
+    background-color: rgba(56, 224, 123, 0.2);
+  }
+  50% {
+    background-color: rgba(56, 224, 123, 0.4);
+    transform: scale(1.05);
+  }
+  100% {
+    background-color: rgba(56, 224, 123, 0.2);
+    transform: scale(1);
+  }
 }
 
 .placeholder\:text-gray-500::-moz-placeholder {
