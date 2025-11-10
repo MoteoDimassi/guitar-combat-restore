@@ -1,7 +1,3 @@
-// Установи: npm install hyphen
-import { hyphenateSync as hyphenateRu } from 'hyphen/ru';
-import { hyphenateSync as hyphenateEn } from 'hyphen/en-us';
-
 /**
  * SyllableHighlighter — класс для разделения текста на слоги и подсветки.
  */
@@ -9,16 +5,10 @@ export class SyllableHighlighter {
   constructor() {
     // soft hyphen (реальный символ, не HTML-entity)
     this.softHyphen = '\u00AD';
-
-    try {
-      // hyphenateSync возвращает строку с \u00AD между слогами (см. README hyphen).
-      this.hyphenRu = hyphenateRu;
-      this.hyphenEn = hyphenateEn;
-    } catch (error) {
-      console.warn('Hyphen initialization failed, falling back to regex:', error);
-      this.hyphenRu = null;
-      this.hyphenEn = null;
-    }
+    
+    // Библиотека hyphenation удалена, используем только fallback-метод
+    this.hyphenRu = null;
+    this.hyphenEn = null;
   }
 
   processText(text) {
@@ -58,21 +48,8 @@ export class SyllableHighlighter {
 
   const isRussian = /[а-яё]/i.test(word);
 
-  // 1. hyphenation (если словарь дал результат — используем его)
-  if ((isRussian && this.hyphenRu) || (!isRussian && this.hyphenEn)) {
-    try {
-      const hyphenator = isRussian ? this.hyphenRu : this.hyphenEn;
-      const hyphenated = hyphenator(word);
-      if (typeof hyphenated === 'string' && hyphenated.includes(this.softHyphen)) {
-        const sylls = hyphenated.split(this.softHyphen).filter(Boolean);
-        if (sylls.length > 1) return sylls;
-      }
-    } catch (err) {
-      console.warn('Hyphenation failed, fallback:', err);
-    }
-  }
-
-  // 2. fallback: делим по одной гласной
+  // Используем fallback-метод для разделения на слоги по гласным
+  // Библиотека hyphenation была удалена из проекта
   const vowels = isRussian ? 'аеёиоуыэюя' : 'aeiouy';
   const regex = new RegExp(`[^${vowels}]*[${vowels}]{1}[^${vowels}]*`, 'gi');
   let sylls = word.match(regex);

@@ -26,9 +26,5 @@
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2"
   },
-  "dependencies": {
-    "hyphen": "^1.10.6",
-    "hyphenation.en-us": "^0.2.1",
-    "hyphenation.ru": "^0.2.1"
-  }
+  "dependencies": {}
 }
