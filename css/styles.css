@@ -1554,45 +1554,62 @@ body {
   100% { left: 100%; }
 }
 
+/* Пульсирующая анимация для активной drop-зоны */
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 15px rgba(56, 224, 123, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(56, 224, 123, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(56, 224, 123, 0.4);
+  }
+}
+
 /* Яркая подсветка при наведении перетаскиваемого элемента */
 .syllable-drop-zone.drop-zone-active {
-  /* Используем те же стили, что и у базового syllable-drop-zone, чтобы избежать мерцания */
+  /* Используем те же стили, что и у базового syllable-drop-zone, но с яркими зелёными акцентами */
   min-height: 32px;
   margin-top: 8px;
   padding: 6px 8px;
-  border: 2px dashed rgba(156, 163, 175, 0.5);
+  border: 2px dashed #38e07b; /* Яркий зелёный цвет вместо серого */
   border-radius: 8px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(31, 41, 55, 0.5);
+  background-color: rgba(56, 224, 123, 0.15); /* Зелёный фон с низкой непрозрачностью */
   position: relative;
   overflow: hidden;
+  box-shadow: 0 0 15px rgba(56, 224, 123, 0.4); /* Зелёное свечение */
+  transform: scale(1.02); /* Легкое увеличение для привлечения внимания */
+  animation: pulse-green 1.5s infinite; /* Добавляем пульсирующую анимацию */
 }
 
 /* Пульсирующая анимация для активной drop-зоны */
 .syllable-drop-zone.drop-zone-active::before {
-  /* Используем те же стили, что и у базового syllable-drop-zone для пустой зоны */
+  /* Используем те же стили, что и у базового syllable-drop-zone для пустой зоны, но с ярким зелёным цветом */
   content: "Перетащите слог сюда";
-  color: rgba(156, 163, 175, 0.7);
+  color: #38e07b; /* Яркий зелёный цвет текста */
   font-size: 12px;
   font-style: italic;
   text-align: center;
   width: 100%;
+  font-weight: 600; /* Увеличиваем жирность текста для лучшей видимости */
 }
 
 /* Анимированный индикатор для активной drop-зоны */
 .syllable-drop-zone.drop-zone-active::after {
-  /* Используем те же стили, что и у базового syllable-drop-zone для пустой зоны */
+  /* Улучшаем анимацию с более ярким зелёным цветом */
   content: '';
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(56, 224, 123, 0.1), transparent);
-  animation: shimmer 3s infinite;
+  background: linear-gradient(90deg, transparent, rgba(56, 224, 123, 0.3), transparent); /* Увеличиваем яркость */
+  animation: shimmer 1.5s infinite; /* Ускоряем анимацию для более заметного эффекта */
 }
 
 /* Улучшенные стили для размещенного слога */

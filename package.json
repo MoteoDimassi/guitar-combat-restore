@@ -4,6 +4,8 @@
   "description": "Конструктор боя для гитары",
   "main": "index.js",
   "scripts": {
+    "clean": "rm -rf node_modules dist build .cache",
+    "rebuild": "npm run clean && npm install && npm run build",
     "build:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css",
     "watch:css": "npx tailwindcss -i ./css/input.css -o ./css/styles.css --watch",
     "dev": "npm run watch:css",
