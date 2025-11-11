@@ -45,6 +45,14 @@ export class BeatRow {
       const arrow = this.getArrowElement(index);
       if (arrow) {
         arrow.classList.remove('arrow-highlighted');
+        // Возвращаем оригинальный цвет SVG
+        const svg = arrow.querySelector('svg');
+        if (svg) {
+          const paths = svg.querySelectorAll('path');
+          paths.forEach(path => {
+            path.setAttribute('stroke', '#374151');
+          });
+        }
       }
     });
     
@@ -56,6 +64,14 @@ export class BeatRow {
       const arrow = this.getArrowElement(arrowIndex);
       if (arrow) {
         arrow.classList.add('arrow-highlighted');
+        // Устанавливаем зеленый цвет для SVG
+        const svg = arrow.querySelector('svg');
+        if (svg) {
+          const paths = svg.querySelectorAll('path');
+          paths.forEach(path => {
+            path.setAttribute('stroke', '#38e07b');
+          });
+        }
       }
     }
     // Убираем вызов render() для избежания полной перерисовки DOM
@@ -68,6 +84,14 @@ export class BeatRow {
       const arrow = this.getArrowElement(index);
       if (arrow) {
         arrow.classList.remove('arrow-highlighted');
+        // Возвращаем оригинальный цвет SVG
+        const svg = arrow.querySelector('svg');
+        if (svg) {
+          const paths = svg.querySelectorAll('path');
+          paths.forEach(path => {
+            path.setAttribute('stroke', '#374151');
+          });
+        }
       }
     });
     
@@ -79,6 +103,14 @@ export class BeatRow {
         const arrow = this.getArrowElement(index);
         if (arrow) {
           arrow.classList.add('arrow-highlighted');
+          // Устанавливаем зеленый цвет для SVG
+          const svg = arrow.querySelector('svg');
+          if (svg) {
+            const paths = svg.querySelectorAll('path');
+            paths.forEach(path => {
+              path.setAttribute('stroke', '#38e07b');
+            });
+          }
         }
       }
     });
@@ -182,11 +214,11 @@ export class BeatRow {
   }
 
   arrowSvg(dir, highlighted) {
-    // Возвращаем динамическое определение цвета для полной закраски стрелочки
+    // Для активных стрелочек всегда используем зеленый цвет как в примере
     const stroke = highlighted ? '#38e07b' : '#374151';
-    const fill = highlighted ? '#38e07b' : 'none'; // Полная заливка для активной стрелочки
+    const fill = 'none'; // Всегда без заливки как в примере
     const opacity = highlighted ? '1' : '0.9';
-    const strokeWidth = highlighted ? '2' : '2'; // Оставляем стандартную толщину
+    const strokeWidth = '2'; // Всегда толщина 2 как в примере
     
     // Адаптивный размер SVG для мобильных устройств
     const svgWidth = window.innerWidth <= 480 ? 20 : 36;
@@ -264,6 +296,14 @@ export class BeatRow {
       const arrow = this.getArrowElement(i);
       if (arrow) {
         arrow.classList.remove('arrow-highlighted');
+        // Возвращаем оригинальный цвет SVG
+        const svg = arrow.querySelector('svg');
+        if (svg) {
+          const paths = svg.querySelectorAll('path');
+          paths.forEach(path => {
+            path.setAttribute('stroke', '#374151');
+          });
+        }
       }
     });
     
@@ -274,6 +314,14 @@ export class BeatRow {
     const arrow = this.getArrowElement(index);
     if (arrow) {
       arrow.classList.add('arrow-highlighted');
+      // Устанавливаем зеленый цвет для SVG
+      const svg = arrow.querySelector('svg');
+      if (svg) {
+        const paths = svg.querySelectorAll('path');
+        paths.forEach(path => {
+          path.setAttribute('stroke', '#38e07b');
+        });
+      }
     }
     
     // Обновляем глобальное состояние
