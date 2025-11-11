@@ -59,9 +59,9 @@ export class BeatRow {
     if (!this.element) return;
     
     // Обновление классов в зависимости от количества элементов
-    this.element.className = 'grid gap-4 w-full px-4';
+    this.element.className = 'grid gap-4 w-full px-4 beat-grid';
     
-    // Адаптивное количество колонок
+    // Адаптивное количество колонок с улучшенной логикой для больших экранов
     if (window.innerWidth <= 480) {
       // На мобильных устройствах используем авто-размер для лучшей адаптации
       this.element.style.gridTemplateColumns = 'repeat(auto-fit, minmax(24px, 1fr))';
@@ -69,8 +69,15 @@ export class BeatRow {
       this.element.style.gridTemplateColumns = 'repeat(4, 1fr)';
     } else if (this.count <= 8) {
       this.element.style.gridTemplateColumns = 'repeat(8, 1fr)';
-    } else {
+    } else if (this.count <= 12) {
+      this.element.style.gridTemplateColumns = 'repeat(12, 1fr)';
+    } else if (this.count <= 16) {
       this.element.style.gridTemplateColumns = 'repeat(16, 1fr)';
+    } else if (this.count <= 20) {
+      this.element.style.gridTemplateColumns = 'repeat(20, 1fr)';
+    } else {
+      // Для очень большого количества стрелочек используем автоматическую адаптацию
+      this.element.style.gridTemplateColumns = `repeat(${this.count}, minmax(25px, 1fr))`;
     }
   }
 
@@ -82,7 +89,7 @@ export class BeatRow {
     
     this.beats.forEach((beat, i) => {
       const wrapper = document.createElement('div');
-      wrapper.className = 'flex flex-col items-center gap-2 select-none flex-shrink-0';
+      wrapper.className = 'flex flex-col items-center gap-2 select-none flex-shrink-0 beat-container';
       
       // Адаптивная ширина в зависимости от количества элементов и размера экрана
       if (window.innerWidth <= 480) {
@@ -92,8 +99,16 @@ export class BeatRow {
         wrapper.classList.add('beat-wrapper-large');
       } else if (this.count <= 8) {
         wrapper.classList.add('beat-wrapper-medium');
-      } else {
+      } else if (this.count <= 12) {
         wrapper.classList.add('beat-wrapper-small');
+        wrapper.style.width = '35px';
+      } else if (this.count <= 16) {
+        wrapper.classList.add('beat-wrapper-extra-small');
+        wrapper.style.width = '28px';
+      } else {
+        // Для очень большого количества стрелочек используем автоматическую адаптацию
+        wrapper.classList.add('beat-wrapper-extra-small');
+        wrapper.style.width = '25px';
       }
 
       // Стрелка (SVG)

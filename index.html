@@ -59,8 +59,8 @@
       </header>
 
       <!-- Main Content -->
-      <main class="flex flex-1 justify-center py-10 px-4">
-        <div class="layout-content-container flex w-full max-w-6xl flex-col items-center gap-8">
+      <main class="flex flex-1 justify-center py-10 px-4 overflow-x-hidden">
+        <div class="layout-content-container flex w-full flex-col items-center gap-8 px-4">
           <div class="w-full max-w-2xl text-center">
             <h1 class="text-white text-4xl md:text-5xl font-bold leading-tight tracking-tighter">Guitar Strumming Pattern Generator</h1>
             <p class="text-gray-400 text-base md:text-lg font-normal leading-normal mt-4">
@@ -68,9 +68,9 @@
             </p>
           </div>
           
-          <div class="flex w-full flex-col md:flex-row items-start gap-6 md:gap-8">
+          <div class="flex w-full flex-col md:flex-row items-start gap-6 md:gap-8 min-w-0">
             <!-- Основная область боя -->
-            <div class="flex flex-1 flex-col items-center gap-6 rounded-lg bg-gray-900/50 p-4 md:p-6 border border-gray-800 w-full relative">
+            <div class="flex flex-1 flex-col items-center gap-6 rounded-lg bg-gray-900/50 p-4 md:p-6 border border-gray-800 w-full relative min-w-0 overflow-hidden beat-area-container">
               <div class="w-full relative">
                 <div class="flex items-center justify-between pb-2">
                   <label class="text-white text-lg font-medium leading-normal" for="chordsInput">Аккорды</label>
@@ -90,7 +90,7 @@
               </div>
 
               <!-- Область визуализации боя -->
-              <div class="relative w-full h-[400px] bg-gray-900 rounded-md border border-gray-800 overflow-x-auto overflow-y-hidden flex flex-col items-center justify-center">
+              <div class="relative w-full min-w-0 flex-1 min-h-[400px] bg-gray-900 rounded-md border border-gray-800 overflow-x-auto overflow-y-hidden flex flex-col items-center justify-center beat-visualization-container">
                 <!-- Кнопка настроек -->
                 <div class="absolute top-3 right-3 z-20">
                   <button id="settingsBtn" class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
@@ -140,7 +140,7 @@
                   <!-- Аккорды будут отображаться здесь динамически -->
                 </div>
                 <div class="flex justify-center w-full">
-                  <div id="beatRow" class="grid grid-cols-8 gap-4 px-4">
+                  <div id="beatRow" class="grid grid-cols-8 gap-4 px-4 beat-grid">
                     <!-- Стрелки будут генерироваться здесь динамически -->
                   </div>
                 </div>
