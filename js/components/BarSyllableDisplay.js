@@ -256,8 +256,7 @@ export class BarSyllableDisplay {
    */
   displayBarSyllables(barIndex) {
     const bar = this.barManager.getBar(barIndex);
-    if (!bar) return;
-
+    
     // Отображаем слоги для этого такта используя систему перетаскивания
     if (window.app && window.app.syllableDragDrop) {
       // Убеждаемся, что drop-зоны обновлены
@@ -265,6 +264,14 @@ export class BarSyllableDisplay {
       
       // Отображаем слоги для текущего такта
       window.app.syllableDragDrop.renderBarSyllables(barIndex);
+    }
+    
+    // Если такта нет, но есть аккорды, все равно обновляем drop-зоны
+    if (!bar && window.app && window.app.syllableDragDrop) {
+      const totalBars = this.getBarCountFromChords();
+      if (barIndex < totalBars) {
+        window.app.syllableDragDrop.updateDropZones();
+      }
     }
   }
 
@@ -274,7 +281,14 @@ export class BarSyllableDisplay {
    */
   nextLine() {
     const nextBarIndex = this.currentBarIndex + 1;
-    if (nextBarIndex < this.barManager.getBarCount()) {
+    let totalBars = this.barManager.getBarCount();
+    
+    // Если тактов нет, используем количество аккордов
+    if (totalBars === 0) {
+      totalBars = this.getBarCountFromChords();
+    }
+    
+    if (nextBarIndex < totalBars) {
       this.goToBar(nextBarIndex);
     }
   }
@@ -293,14 +307,21 @@ export class BarSyllableDisplay {
    * Переходит к указанному такту
    */
   goToBar(barIndex) {
-    if (barIndex < 0 || barIndex >= this.barManager.getBarCount()) {
+    let totalBars = this.barManager.getBarCount();
+    
+    // Если тактов нет, используем количество аккордов
+    if (totalBars === 0) {
+      totalBars = this.getBarCountFromChords();
+    }
+    
+    if (barIndex < 0 || barIndex >= totalBars) {
       return;
     }
 
     this.currentBarIndex = barIndex;
     this.currentSyllableIndex = 0;
 
-    // Находим соответствующую строку
+    // Находим соответствующую строку (если есть текст)
     let lineIndex = -1;
     for (const [line, bar] of this.lineToBarMap.entries()) {
       if (bar === barIndex) {
@@ -354,27 +375,35 @@ export class BarSyllableDisplay {
     const currentBar = this.barManager.getBar(barIndex);
     const nextBar = this.barManager.getBar(barIndex + 1);
 
-    if (!currentBar) {
-      return;
-    }
+    if (currentBar) {
+      // Получаем аккорды из тактов
+      const currentChord = currentBar.getChord();
+      
+      // Если есть следующий такт, берем его аккорд, иначе используем текущий
+      let nextChord = currentChord;
+      if (nextBar) {
+        nextChord = nextBar.getChord();
+      } else {
+        // Если это последний такт, берем аккорд первого такта (зацикливание)
+        const firstBar = this.barManager.getBar(0);
+        if (firstBar) {
+          nextChord = firstBar.getChord();
+        }
+      }
 
-    // Получаем аккорды из тактов
-    const currentChord = currentBar.getChord();
-    
-    // Если есть следующий такт, берем его аккорд, иначе используем текущий
-    let nextChord = currentChord;
-    if (nextBar) {
-      nextChord = nextBar.getChord();
+      // Обновляем ChordDisplay
+      window.app.chordDisplay.updateCurrentChord(currentChord, barIndex, 0);
     } else {
-      // Если это последний такт, берем аккорд первого такта (зацикливание)
-      const firstBar = this.barManager.getBar(0);
-      if (firstBar) {
-        nextChord = firstBar.getChord();
+      // Если такта нет, но есть аккорды в ChordStore, используем их
+      if (window.app.chordStore) {
+        const currentChord = window.app.chordStore.getChordForBar(barIndex);
+        const nextChord = window.app.chordStore.getNextChord(barIndex);
+        
+        if (currentChord) {
+          window.app.chordDisplay.updateCurrentChord(currentChord, barIndex, 0);
+        }
       }
     }
-
-    // Обновляем ChordDisplay
-    window.app.chordDisplay.updateCurrentChord(currentChord, barIndex, 0);
   }
 
   /**
@@ -435,6 +464,26 @@ export class BarSyllableDisplay {
       el.style.animation = '';
       el.style.transition = '';
     });
+  }
+
+  /**
+   * Получает количество тактов из аккордов
+   */
+  getBarCountFromChords() {
+    // Проверяем наличие аккордов в ChordStore
+    if (window.app && window.app.chordStore) {
+      const chordCount = window.app.chordStore.getChordCount();
+      return chordCount > 0 ? chordCount : 1;
+    }
+    
+    // Fallback: проверяем поле ввода аккордов
+    const chordsInput = document.getElementById('chordsInput');
+    if (chordsInput && chordsInput.value.trim()) {
+      const chords = chordsInput.value.trim().split(' ').filter(ch => ch.length > 0);
+      return chords.length > 0 ? chords.length : 1;
+    }
+    
+    return 1; // Минимум один такт
   }
 }
 
