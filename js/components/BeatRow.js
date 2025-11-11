@@ -6,6 +6,8 @@ export class BeatRow {
     this.circleStates = []; // Состояние кружочков (0 = выкл, 1 = вкл, 2 = приглушённые)
     this.highlightedIndices = new Set(); // Для подсветки нескольких стрелочек
     this.count = 8;
+    this.arrowElements = []; // Кэш для быстрого доступа к элементам стрелочек
+    this.circleElements = []; // Кэш для быстрого доступа к элементам кружочков
   }
 
   init() {
@@ -37,22 +39,50 @@ export class BeatRow {
 
   setCurrentIndex(arrowIndex) {
     // Подсвечиваем только одну стрелочку по индексу (для обратной совместимости)
+    
+    // Убираем подсветку с предыдущих элементов
+    this.highlightedIndices.forEach(index => {
+      const arrow = this.getArrowElement(index);
+      if (arrow) {
+        arrow.classList.remove('arrow-highlighted');
+      }
+    });
+    
     this.highlightedIndices.clear();
+    
     if (arrowIndex >= 0 && arrowIndex < this.beats.length) {
       this.highlightedIndices.add(arrowIndex);
+      // Добавляем подсветку только одному элементу
+      const arrow = this.getArrowElement(arrowIndex);
+      if (arrow) {
+        arrow.classList.add('arrow-highlighted');
+      }
     }
-    this.render();
+    // Убираем вызов render() для избежания полной перерисовки DOM
   }
   
   // Новый метод для подсветки нескольких стрелочек
   setHighlightedIndices(indices) {
+    // Убираем подсветку с предыдущих элементов
+    this.highlightedIndices.forEach(index => {
+      const arrow = this.getArrowElement(index);
+      if (arrow) {
+        arrow.classList.remove('arrow-highlighted');
+      }
+    });
+    
     this.highlightedIndices.clear();
     indices.forEach(index => {
       if (index >= 0 && index < this.beats.length) {
         this.highlightedIndices.add(index);
+        // Добавляем подсветку только нужным элементам
+        const arrow = this.getArrowElement(index);
+        if (arrow) {
+          arrow.classList.add('arrow-highlighted');
+        }
       }
     });
-    this.render();
+    // Убираем вызов render() для избежания полной перерисовки DOM
   }
 
   updateLayout() {
@@ -86,6 +116,10 @@ export class BeatRow {
     
     this.element.innerHTML = '';
     this.updateLayout();
+    
+    // Очищаем кэши элементов
+    this.arrowElements = [];
+    this.circleElements = [];
     
     this.beats.forEach((beat, i) => {
       const wrapper = document.createElement('div');
@@ -135,6 +169,10 @@ export class BeatRow {
       wrapper.appendChild(arrow);
       wrapper.appendChild(circle);
       this.element.appendChild(wrapper);
+      
+      // Сохраняем ссылки на элементы для быстрого доступа
+      this.arrowElements.push(arrow);
+      this.circleElements.push(circle);
     });
     
     // Уведомляем об обновлении (для SyllableDragDrop)
@@ -144,22 +182,25 @@ export class BeatRow {
   }
 
   arrowSvg(dir, highlighted) {
+    // Возвращаем динамическое определение цвета для полной закраски стрелочки
     const stroke = highlighted ? '#38e07b' : '#374151';
+    const fill = highlighted ? '#38e07b' : 'none'; // Полная заливка для активной стрелочки
     const opacity = highlighted ? '1' : '0.9';
+    const strokeWidth = highlighted ? '2' : '2'; // Оставляем стандартную толщину
     
     // Адаптивный размер SVG для мобильных устройств
     const svgWidth = window.innerWidth <= 480 ? 20 : 36;
     const svgHeight = window.innerWidth <= 480 ? 24 : 48;
     
     if (dir === 'down') return `
-      <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 3v14" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
-        <path d="M19 10l-7 7-7-7" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
+      <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3v14" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
+        <path d="M19 10l-7 7-7-7" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
       </svg>`;
     return `
-      <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 21V7" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
-        <path d="M5 14l7-7 7 7" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
+      <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 24 24" fill="${fill}" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 21V7" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
+        <path d="M5 14l7-7 7 7" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}" />
       </svg>`;
   }
 
@@ -195,7 +236,12 @@ export class BeatRow {
     if (index >= 0 && index < this.circleStates.length) {
       // Циклическое переключение: 0 → 1 → 2 → 0
       this.circleStates[index] = (this.circleStates[index] + 1) % 3;
-      this.render();
+      
+      // Обновляем только конкретный кружочек вместо полной перерисовки
+      const circle = this.getCircleElement(index);
+      if (circle) {
+        circle.innerHTML = this.circleSvg(this.circleStates[index]);
+      }
     }
   }
 
@@ -213,9 +259,22 @@ export class BeatRow {
   
   onArrowClick(index) {
     // Устанавливаем текущую позицию воспроизведения
+    // Убираем подсветку с предыдущих элементов
+    this.highlightedIndices.forEach(i => {
+      const arrow = this.getArrowElement(i);
+      if (arrow) {
+        arrow.classList.remove('arrow-highlighted');
+      }
+    });
+    
     this.highlightedIndices.clear();
     this.highlightedIndices.add(index);
-    this.render();
+    
+    // Добавляем подсветку только выбранному элементу
+    const arrow = this.getArrowElement(index);
+    if (arrow) {
+      arrow.classList.add('arrow-highlighted');
+    }
     
     // Обновляем глобальное состояние
     if (window.app) {
@@ -242,5 +301,29 @@ export class BeatRow {
   
   setOnRenderComplete(callback) {
     this.onRenderComplete = callback;
+  }
+  
+  /**
+   * Получает элемент стрелочки по индексу
+   * @param {number} index - индекс стрелочки
+   * @returns {HTMLElement|null} элемент стрелочки или null
+   */
+  getArrowElement(index) {
+    if (!this.arrowElements || index < 0 || index >= this.arrowElements.length) {
+      return null;
+    }
+    return this.arrowElements[index];
+  }
+  
+  /**
+   * Получает элемент кружочка по индексу
+   * @param {number} index - индекс кружочка
+   * @returns {HTMLElement|null} элемент кружочка или null
+   */
+  getCircleElement(index) {
+    if (!this.circleElements || index < 0 || index >= this.circleElements.length) {
+      return null;
+    }
+    return this.circleElements[index];
   }
 }

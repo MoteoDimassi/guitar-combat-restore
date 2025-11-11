@@ -268,7 +268,7 @@ export class SyllableDragDrop {
           syllable.arrowIndex = arrowIndex;
           this.saveSyllablesToStorage();
           
-          // Перерисовываем текущий такт
+          // Используем полную перерисовку для надежности
           if (typeof syllable.barIndex !== 'undefined') {
             this.renderBarSyllables(syllable.barIndex);
           }
@@ -403,7 +403,7 @@ export class SyllableDragDrop {
       this.allSyllables.splice(index, 1);
       this.saveSyllablesToStorage();
       
-      // Перерисовываем такт
+      // Используем полную перерисовку для надежности при удалении
       if (syllable && typeof syllable.barIndex !== 'undefined') {
         this.renderBarSyllables(syllable.barIndex);
       }
@@ -592,7 +592,7 @@ export class SyllableDragDrop {
     // Обновляем позиции слогов
     this.updateSyllablePositions();
     
-    // Перерисовываем текущий такт
+    // Используем полную перерисовку для надежности при добавлении нового слога
     this.renderBarSyllables(this.draggedSyllableData.barIndex);
   }
 
@@ -644,6 +644,7 @@ export class SyllableDragDrop {
       zone.classList.add('hidden');
     });
   }
+
 
 }
 

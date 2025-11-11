@@ -63,30 +63,33 @@ export class Playback {
 
         // Подписываемся на события метронома
         window.app.metronome.onBeatCallback = (arrowIndex, barIndex) => {
-          // Передаем информацию в beatRow для правильной подсветки
-          this.beatRow.setCurrentIndex(arrowIndex);
+          // Используем requestAnimationFrame для сглаживания анимаций
+          requestAnimationFrame(() => {
+            // Передаем информацию в beatRow для правильной подсветки
+            this.beatRow.setCurrentIndex(arrowIndex);
 
-          // Обновляем отображение аккордов при каждом ударе
-          const ratio = window.app.metronome.getBeatRatio();
-          const beatIndex = Math.floor(arrowIndex / ratio);
-          window.app.metronome.updateChordDisplay(arrowIndex, barIndex);
+            // Обновляем отображение аккордов при каждом ударе
+            const ratio = window.app.metronome.getBeatRatio();
+            const beatIndex = Math.floor(arrowIndex / ratio);
+            window.app.metronome.updateChordDisplay(arrowIndex, barIndex);
 
-          // Если изменился такт, обновляем слоги
-          if (barIndex !== previousBarIndex) {
-            previousBarIndex = barIndex;
-            
-            // Обновляем текст под стрелочками для нового такта
-            if (window.app.barSyllableDisplay) {
-              window.app.barSyllableDisplay.goToBar(barIndex);
+            // Если изменился такт, обновляем слоги
+            if (barIndex !== previousBarIndex) {
+              previousBarIndex = barIndex;
+              
+              // Обновляем текст под стрелочками для нового такта
+              if (window.app.barSyllableDisplay) {
+                window.app.barSyllableDisplay.goToBar(barIndex);
+              }
             }
-          }
 
-          // Обновление глобального состояния
-          if (window.app) {
-            window.app.state.currentIndex = arrowIndex;
-            window.app.state.currentBarIndex = barIndex;
-            window.app.state.playing = this.playing;
-          }
+            // Обновление глобального состояния
+            if (window.app) {
+              window.app.state.currentIndex = arrowIndex;
+              window.app.state.currentBarIndex = barIndex;
+              window.app.state.playing = this.playing;
+            }
+          });
         };
       } catch (error) {
         console.error('Playback: Failed to start metronome:', error);

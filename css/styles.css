@@ -1474,6 +1474,65 @@ body {
 
 /* Стили для drag-and-drop слогов */
 
+/* Плавные переходы для стрелочек - ИЗМЕНЕНИЕ */
+.arrow-container {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: stroke, opacity, filter, transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  position: relative;
+}
+
+.arrow-container svg {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: stroke, opacity, filter, transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Дополнительный эффект для активной стрелочки - контейнер */
+.arrow-container.arrow-highlighted {
+  z-index: 10;
+  transform: translateZ(0) scale(1.05);
+}
+
+/* Стиль для подсвеченной стрелочки - НОВОЕ */
+.arrow-container.arrow-highlighted svg {
+  fill: #38e07b !important;
+  stroke: #38e07b !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 8px rgba(56, 224, 123, 0.6));
+  transform: scale(1.05);
+  animation: arrow-pulse 0.6s ease-in-out infinite alternate;
+}
+
+/* Анимация пульсации для активной стрелочки */
+@keyframes arrow-pulse {
+  0% {
+    filter: drop-shadow(0 0 8px rgba(56, 224, 123, 0.6));
+    transform: scale(1.05);
+  }
+  100% {
+    filter: drop-shadow(0 0 12px rgba(56, 224, 123, 0.8));
+    transform: scale(1.08);
+  }
+}
+
+/* Плавные переходы для кружочков - НОВОЕ */
+.circle-container {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: fill, stroke;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.circle-container svg {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: fill, stroke;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
 /* Базовые стили для перетаскиваемых слогов из текста песни */
 .syllable, .song-syllable {
   position: relative;
