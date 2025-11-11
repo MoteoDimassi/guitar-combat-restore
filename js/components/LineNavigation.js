@@ -19,8 +19,15 @@ export class LineNavigation {
    * Инициализация компонента
    */
   init() {
-    // Проверяем, есть ли текст песни
-    this.updateVisibility();
+    // Всегда создаем кнопки навигации
+    this.createButtons();
+    
+    // Добавляем слушатель изменений в ChordStore
+    if (window.app && window.app.chordStore) {
+      window.app.chordStore.addChangeListener(() => {
+        this.updateButtonStates();
+      });
+    }
   }
 
   /**
@@ -190,7 +197,17 @@ export class LineNavigation {
     if (!this.prevButton || !this.nextButton) return;
 
     const currentBarIndex = this.barSyllableDisplay.getCurrentBarIndex();
-    const totalBars = this.barManager.getBarCount();
+    let totalBars = this.barManager.getBarCount();
+    
+    // Если тактов нет, но есть аккорды, используем количество аккордов
+    if (totalBars === 0) {
+      totalBars = this.getBarCountFromChords();
+    }
+    
+    // Если тактов все еще нет, создаем один такт по умолчанию
+    if (totalBars === 0) {
+      totalBars = 1;
+    }
 
     // Деактивируем кнопку "Назад" если на первом такте
     if (currentBarIndex === 0) {
@@ -216,17 +233,14 @@ export class LineNavigation {
   }
 
   /**
-   * Обновляет видимость кнопок в зависимости от наличия текста песни
+   * Обновляет видимость кнопок - теперь они всегда видны
    */
   updateVisibility() {
-    const hasSongText = this.hasSongText();
-
-    if (hasSongText && !this.buttonsCreated) {
+    // Всегда создаем кнопки, если их еще нет
+    if (!this.buttonsCreated) {
       this.createButtons();
-    } else if (!hasSongText && this.buttonsCreated) {
-      this.removeButtons();
     }
-
+    
     if (this.buttonsCreated) {
       this.updateButtonStates();
     }
@@ -242,6 +256,26 @@ export class LineNavigation {
     } catch (e) {
       return false;
     }
+  }
+
+  /**
+   * Получает количество тактов из аккордов
+   */
+  getBarCountFromChords() {
+    // Проверяем наличие аккордов в ChordStore
+    if (window.app && window.app.chordStore) {
+      const chordCount = window.app.chordStore.getChordCount();
+      return chordCount > 0 ? chordCount : 1;
+    }
+    
+    // Fallback: проверяем поле ввода аккордов
+    const chordsInput = document.getElementById('chordsInput');
+    if (chordsInput && chordsInput.value.trim()) {
+      const chords = chordsInput.value.trim().split(' ').filter(ch => ch.length > 0);
+      return chords.length > 0 ? chords.length : 1;
+    }
+    
+    return 1; // Минимум один такт
   }
 
   /**

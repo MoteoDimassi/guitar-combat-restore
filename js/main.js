@@ -95,6 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   syllableDragDrop.init();
   settings.init();
   barSyllableDisplay.init();
+  lineNavigation.init(); // Инициализируем навигацию всегда
   playbackSync.init();
   optionsMenu.init();
   
@@ -197,10 +198,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const chordsString = chordsInput.value;
 
       // Обновляем ChordStore - центральное хранилище аккордов
-      if (window.app && window.app.chordStore) {
-        window.app.chordStore.updateFromString(chordsString);
-        window.app.chordStore.saveToLocalStorage();
-      }
+        if (window.app && window.app.chordStore) {
+          window.app.chordStore.updateFromString(chordsString);
+          window.app.chordStore.saveToLocalStorage();
+          
+          // Обновляем состояние кнопок навигации при изменении аккордов
+          if (window.app.lineNavigation) {
+            window.app.lineNavigation.updateButtonStates();
+          }
+        }
 
       // Обновляем аккорды в метрономе (для обратной совместимости)
       if (window.app && window.app.metronome) {
@@ -363,6 +369,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Обновляем видимость кнопок
     updateSongButtons();
+    
+    // Обновляем состояние кнопок навигации
+    if (window.app && window.app.lineNavigation) {
+      window.app.lineNavigation.updateVisibility();
+    }
   };
 
   // Вызываем функцию для загрузки текста песни

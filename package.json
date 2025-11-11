@@ -12,6 +12,7 @@
     "build": "npm run generate-manifest && webpack --mode=production",
     "generate-manifest": "node scripts/generate-manifest.js",
     "start": "webpack serve --mode=development",
+    "full-start": "npm run clean && npm install && npm run rebuild && npm start",
     "docs": "jsdoc js/ -d docs"
   },
   "devDependencies": {
